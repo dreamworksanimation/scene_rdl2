@@ -1,0 +1,33 @@
+Import('env')
+
+# -----------------------------------------------------------------------------
+# Test configuration.
+
+name = 'common_fb_util'
+
+sources = [
+    'main.cc',
+    'TestPixelBuffer.cc',
+    'TestRunningStats.cc',
+    'TestSnapshotUtil.cc',
+]
+
+components = [
+    'common_platform',
+    'common_fb_util',
+    'fb_util_ispc',
+    'tbb'
+]
+
+()
+env.DWAUseComponents(components)
+
+# -----------------------------------------------------------------------------
+if 'icc' in env['CC']:
+    pass # For now.
+elif 'gcc' in env['CC']:
+    env['CXXFLAGS'].append('-Wno-conversion') # W: Conversion from type to type may alter its value
+    env['CXXFLAGS'].append('-w') # The only warning we're seeing is the above one but for some reason it doesn't work
+
+env['RUN_TEST_ENV']['SOFTMAP_PATH'] = env.subst('${INSTALL_DIR}:${BASE_MAP_DIR}')
+test = env.DWAPdevUnitTest(name, sources, "", COMPONENTS=components)

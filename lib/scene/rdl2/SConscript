@@ -1,0 +1,162 @@
+Import('env')
+
+from ansi_colors import colorize
+import os
+import glob
+
+# -----------------------------------------------------------------------------
+# Library configuration.
+
+name = 'scene_rdl2'
+
+components = [
+    'boost_headers',
+    'common_except',
+    'common_fb_util',
+    'common_math',
+    'common_platform',
+    'lua',
+    'render_logging',
+    'render_util',
+    'tbb'
+]
+
+include_paths = [
+    env.Dir('#include').srcnode()
+]
+
+# Lua source files for the RDLA library.
+lua_sources = [
+    'rdlalib/constructors.lua',
+    'rdlalib/transforms.lua'
+]
+rdlalib = env.Lua2cc('rdlalib.cc', lua_sources)
+
+# C++ source files.
+sources = [
+    'AsciiReader.cc',
+    'AsciiWriter.cc',
+    'Attribute.cc',
+    'BinaryReader.cc',
+    'BinaryWriter.cc',
+    'Camera.cc',
+    'Displacement.cc',
+    'DisplayFilter.cc',
+    'Dso.cc',
+    'DsoFinder.cc',
+    'EnvMap.cc',
+    'Geometry.cc',
+    'GeometrySet.cc',
+    'Joint.cc',
+    'Layer.cc',
+    'Light.cc',
+    'LightFilter.cc',
+    'LightFilterSet.cc',
+    'LightSet.cc',
+    'Map.cc',
+    'Material.cc',
+    'Metadata.cc',
+    'Node.cc',
+    'NormalMap.cc',
+    'ObjectFactory.cc',
+    'RenderOutput.cc',
+    'RootShader.cc',
+    'SceneClass.cc',
+    'SceneContext.cc',
+    'SceneObject.cc',
+    'SceneVariables.cc',
+    'ShadowReceiverSet.cc',
+    'ShadowSet.cc',
+    'TraceSet.cc',
+    'Types.cc',
+    'UserData.cc',
+    'Utils.cc',
+    'ValueContainerDeq.cc',
+    'ValueContainerEnq.cc',
+    'ValueContainerUtil.cc',
+    'VolumeShader.cc'
+]
+
+if 'icc' in env['CC']:
+    pass # For now.
+elif 'gcc' in env['CC']:
+    env.AppendUnique(CXXFLAGS=['-std=c++17'])
+elif 'clang' in env['CC']:
+    pass # For now.
+
+# With the exception of the above warnings, we're currently warning clean, so
+# let's keep it that way.
+env.DWAForceWarningAsError()
+
+# -----------------------------------------------------------------------------
+
+env.Prepend(CPPPATH=include_paths + [env.Dir('.')])
+env.DWAUseComponents(components)
+
+lib = env.DWASharedLibrary(name, sources)
+env.Depends(lib, rdlalib)
+target = env.DWAInstallLib(lib)
+
+env.DWAComponent(
+    name,
+    LIBS       = [target],
+    CPPPATH    = include_paths,
+    COMPONENTS = components
+)
+env.DWAInstallSConscriptStub(
+    name,
+    LIBS=target,
+    CPPPATH=[env.Dir('$INSTALL_DIR/include')],
+    COMPONENTS=components)
+
+publicHeaders = env.DWAGlob('*.h')
+"""
+publicHeaders = [
+            'AsciiReader.h',
+            'AsciiWriter.h',
+            'Attribute.h',
+            'AttributeKey.h',
+            'BinaryReader.h',
+            'BinaryWriter.h',
+            'Camera.h',
+            'CommonAttributes.h',
+            'Displacement.h',
+            'DisplayFilter.h',
+            'Dso.h',
+            'DsoFinder.h',
+            'EnvMap.h',
+            #'FileUtils.h',
+            'Geometry.h',
+            'GeometrySet.h',
+            'ISPCSupport.h',
+            'Joint.h'
+            'Layer.h',
+            'Light.h',
+            'LightFilter.h',
+            'LightFilterSet.h',
+            'LightSet.h',
+            'Macros.h',
+            'Map.h',
+            'Material.h',
+            'Node.h',
+            'ObjectFactory.h',
+            'Proxies.h',
+            'rdl2.h',
+            'RenderOutput.h',
+            'RootShader.h',
+            'SceneClass.h',
+            'SceneContext.h',
+            'SceneObject.h',
+            'SceneVariables.h',
+            'ShadowReceiverSet.h',
+            'ShadowSet.h',
+            'Slice.h',
+            'TraceSet.h',
+            'Types.h',
+            'UserData.h',
+            ]
+"""
+
+env.DWAInstallInclude(publicHeaders, 'scene_rdl2/scene/rdl2')
+result = env.DWARdl2BuiltinToJson('SceneContext.cc')
+env.DWAInstallRdl2BuiltinJson(result)

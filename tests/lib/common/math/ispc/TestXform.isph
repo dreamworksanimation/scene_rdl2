@@ -1,0 +1,817 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathXform.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Xform.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3_ctor(m00,..., t2)
+// Xform3 = Xform_ctor(vx, vx, vz, t)
+// Xform3 = Xform_ctor(m, t)
+//----------------------------------------------------------------------
+#define XFORM3_CTOR_12_CMP(VU, XFORMT)                                  \
+    VU XFORMT xform = XFORMT##_ctor(m00, m01, m02,                      \
+                                    m10, m11, m12,                      \
+                                    m20, m21, m22,                      \
+                                    t0, t1, t2);                        \
+    if (any(xform.l.vx.x != m00) || any(xform.l.vx.y != m01) || any(xform.l.vx.z != m02) || \
+        any(xform.l.vy.x != m10) || any(xform.l.vy.y != m11) || any(xform.l.vy.z != m12) || \
+        any(xform.l.vz.x != m20) || any(xform.l.vz.y != m21) || any(xform.l.vz.z != m22) || \
+        any(xform.p.x != t0) || any(xform.p.y != t1) || any(xform.p.z != t2)) { \
+        ++error;                                                        \
+    }
+#define XFORM3_CTOR_12_TEST(XFORMT, FTYPE)      \
+    {                                           \
+        VAR FTYPE m00 = 1. * pi;                \
+        VAR FTYPE m01 = 2. * pi;                \
+        VAR FTYPE m02 = 3. * pi;                \
+        VAR FTYPE m10 = 4. * pi;                \
+        VAR FTYPE m11 = 5. * pi;                \
+        VAR FTYPE m12 = 6. * pi;                \
+        VAR FTYPE m20 = 7. * pi;                \
+        VAR FTYPE m21 = 8. * pi;                \
+        VAR FTYPE m22 = 9. * pi;                \
+        VAR FTYPE t0 = 10. * pi;                \
+        VAR FTYPE t1 = 11. * pi;                \
+        VAR FTYPE t2 = 12. * pi;                \
+        XFORM3_CTOR_12_CMP(VAR, XFORMT);        \
+    }                                           \
+    {                                           \
+        VAR FTYPE m00 = 1. * pi;                \
+        VAR FTYPE m01 = 2. * pi;                \
+        VAR FTYPE m02 = 3. * pi;                \
+        VAR FTYPE m10 = 4. * pi;                \
+        UNI FTYPE m11 = 5.;                     \
+        VAR FTYPE m12 = 6. * pi;                \
+        VAR FTYPE m20 = 7. * pi;                \
+        VAR FTYPE m21 = 8. * pi;                \
+        UNI FTYPE m22 = 9.;                     \
+        VAR FTYPE t0 = 10. * pi;                \
+        UNI FTYPE t1 = 11.;                     \
+        VAR FTYPE t2 = 12. * pi;                \
+        XFORM3_CTOR_12_CMP(VAR, XFORMT);        \
+    }                                           \
+    {                                           \
+        UNI FTYPE m00 = 1.;                     \
+        UNI FTYPE m01 = 2.;                     \
+        UNI FTYPE m02 = 3.;                     \
+        UNI FTYPE m10 = 4.;                     \
+        UNI FTYPE m11 = 5.;                     \
+        UNI FTYPE m12 = 6.;                     \
+        UNI FTYPE m20 = 7.;                     \
+        UNI FTYPE m21 = 8.;                     \
+        UNI FTYPE m22 = 9.;                     \
+        UNI FTYPE t0 = 10.;                     \
+        UNI FTYPE t1 = 11.;                     \
+        UNI FTYPE t2 = 12.;                     \
+        XFORM3_CTOR_12_CMP(VAR, XFORMT);        \
+    }                                           \
+
+#define XFORM3_CTOR_4_TEST(XFORMT, VU, VX, VY, VZ, T)                   \
+    {                                                                   \
+        VU XFORMT xform = XFORMT##_ctor(VX, VY, VZ, T);                 \
+        if (any(xform.l.vx.x != VX.x) || any(xform.l.vx.y != VX.y) || any(xform.l.vx.z != VX.z) || \
+            any(xform.l.vy.x != VY.x) || any(xform.l.vy.y != VY.y) || any(xform.l.vy.z != VY.z) || \
+            any(xform.l.vz.x != VZ.x) || any(xform.l.vz.y != VZ.y) || any(xform.l.vz.z != VZ.z) || \
+            any(xform.p.x != T.x) || any(xform.p.y != T.y) || any(xform.p.z != T.z)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define XFORM3_CTOR_2_TEST(XFORMT, VU, M, T)                            \
+    {                                                                   \
+        VU XFORMT xform = XFORMT##_ctor(M, T);                          \
+        if (any(xform.l.vx.x != M.vx.x) || any(xform.l.vx.y != M.vx.y) || any(xform.l.vx.z != M.vx.z) || \
+            any(xform.l.vy.x != M.vy.x) || any(xform.l.vy.y != M.vy.y) || any(xform.l.vy.z != M.vy.z) || \
+            any(xform.l.vz.x != M.vz.x) || any(xform.l.vz.y != M.vz.y) || any(xform.l.vz.z != M.vz.z) || \
+            any(xform.p.x != T.x) || any(xform.p.y != T.y) || any(xform.p.z != T.z)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_CTOR_12_TEST(Xform3f, float);
+
+    {
+        VAR Vec3f vvx = Vec3f_ctor(1. * pi, 2. * pi, 3. * pi);
+        VAR Vec3f vvy = Vec3f_ctor(4. * pi, 5. * pi, 6. * pi);
+        VAR Vec3f vvz = Vec3f_ctor(7. * pi, 8. * pi, 9. * pi);
+        VAR Vec3f vt = Vec3f_ctor(10. * pi, 11. * pi, 12. * pi);
+        UNI Vec3f uvx = Vec3f_ctor(1.     , 2.     , 3.     );
+        UNI Vec3f uvy = Vec3f_ctor(4.     , 5.     , 6.     );
+        UNI Vec3f uvz = Vec3f_ctor(7.     , 8.     , 9.     );
+        UNI Vec3f ut = Vec3f_ctor(10.     , 11.     , 12.     );
+
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, vvy, vvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, vvy, vvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, vvy, uvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, vvy, uvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, uvy, vvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, uvy, vvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, uvy, uvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, vvx, uvy, uvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, vvy, vvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, vvy, vvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, vvy, uvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, vvy, uvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, uvy, vvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, uvy, vvz, ut);
+        XFORM3_CTOR_4_TEST(Xform3f, VAR, uvx, uvy, uvz, vt);
+        XFORM3_CTOR_4_TEST(Xform3f, UNI, uvx, uvy, uvz, ut);
+    }
+
+    {
+        VAR Mat3f vm = Mat3f_ctor(1. * pi, 2. * pi, 3. * pi,
+                                  4. * pi, 5. * pi, 6. * pi,
+                                  7. * pi, 8. * pi, 9. * pi);
+        VAR Vec3f vt = Vec3f_ctor(10. * pi, 11. * pi, 12. * pi);
+        UNI Mat3f um = Mat3f_ctor(1., 2., 3.,
+                                  4., 5., 6.,
+                                  7., 8., 9.);
+        UNI Vec3f ut = Vec3f_ctor(10., 11., 12.);
+
+        XFORM3_CTOR_2_TEST(Xform3f, VAR, vm, vt);
+        XFORM3_CTOR_2_TEST(Xform3f, VAR, um, vt);
+        XFORM3_CTOR_2_TEST(Xform3f, VAR, vm, ut);
+        XFORM3_CTOR_2_TEST(Xform3f, UNI, um, ut);
+    }
+
+    return error;
+}
+
+//---------------------------------------------------------------------
+// Xform3 = Inverse(Xform3)
+// Xform3 = rcp(Xform3)
+//---------------------------------------------------------------------
+#define XFORM3_INVERSE_TEST(XFTYPE, INVERSE, RCP, IDENTITY, ISEQUAL, TOL) \
+    {                                                                   \
+        VAR XFTYPE vm = XFTYPE##_ctor(1. * pi, 2. * pi, 3. * pi,        \
+                                      0., 1. * pi, 4. * pi,             \
+                                      5. * pi, 6. * pi, 0.,             \
+                                      1. * pi, 2. * pi, 3. * pi);       \
+        VAR XFTYPE vmInv = INVERSE(vm);                                 \
+        VAR XFTYPE vmMult = vmInv * vm;                                 \
+        if (any(!ISEQUAL(vmMult, IDENTITY(), TOL))) {                   \
+            ++error;                                                    \
+        }                                                               \
+                                                                        \
+        VAR XFTYPE vmRcp = RCP(vm);                                     \
+        if (any(!ISEQUAL(vmInv, vmRcp))) {                              \
+            ++error;                                                    \
+        }                                                               \
+                                                                        \
+        UNI XFTYPE um = XFTYPE##_ctor(1., 2., 3.,                       \
+                                      0., 1., 4.,                       \
+                                      5., 6., 0.,                       \
+                                      1., 2., 3.);                      \
+        UNI XFTYPE umInv = INVERSE(um);                                 \
+        UNI XFTYPE umMult = umInv * um;                                 \
+                                                                        \
+        if (any(!ISEQUAL(umMult, IDENTITY(), TOL))) {                   \
+            ++error;                                                    \
+        }                                                               \
+                                                                        \
+        UNI XFTYPE umRcp = RCP(um);                                     \
+        if (any(!ISEQUAL(umInv, umRcp))) {                              \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testInverse()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_INVERSE_TEST(Xform3f, inverse, rcp,
+                        Xform3f_identity, isEqual, 1e-4);
+    return error;
+        
+        
+}
+
+//----------------------------------------------------------------------
+// Vec3 = row0(Xform3)
+// Vec3 = row1(Xform3)
+// Vec3 = row2(Xform3)
+// Vec3 = row3(Xform3)
+//----------------------------------------------------------------------
+#define XFORM3_ROW_TEST(VU, XFTYPE, PID)                                \
+    {                                                                   \
+        VU XFTYPE x0 = XFTYPE##_ctor(13. * PID, 14. * PID, 15. * PID,   \
+                                     16. * PID, 17. * PID, 18. * PID,   \
+                                     19. * PID, 20. * PID, 21. * PID,   \
+                                     22. * PID, 23. * PID, 24. * PID);  \
+        if (any(!isEqual(row0(x0), x0.l.vx)) ||                         \
+            any(!isEqual(row1(x0), x0.l.vy)) ||                         \
+            any(!isEqual(row2(x0), x0.l.vz)) ||                         \
+            any(!isEqual(row3(x0), x0.p))) {                            \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testRow()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_ROW_TEST(VAR, Xform3f, pi);
+    XFORM3_ROW_TEST(UNI, Xform3f, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3_identity()
+// setToIdentity(Xform3)
+//----------------------------------------------------------------------
+
+#define XFORM3_IDENTITY_TEST(XFTYPE, SET_TO_IDENTITY)                   \
+    {                                                                   \
+        XFTYPE id = XFTYPE##_identity();                                \
+        if (any(id.l.vx.x != 1.) || any(id.l.vx.y != 0.) || any(id.l.vx.z != 0.) || \
+            any(id.l.vy.x != 0.) || any(id.l.vy.y != 1.) || any(id.l.vy.z != 0.) || \
+            any(id.l.vz.x != 0.) || any(id.l.vz.y != 0.) || any(id.l.vz.z != 1.) || \
+            any(id.p.x != 0.) || any(id.p.y != 0.) || any(id.p.z != 0.)) { \
+            ++error;                                                    \
+        }                                                               \
+        XFTYPE id2;                                                     \
+        SET_TO_IDENTITY(id2);                                           \
+        if (any(id2.l.vx.x != 1.) || any(id2.l.vx.y != 0.) || any(id2.l.vx.z != 0.) || \
+            any(id2.l.vy.x != 0.) || any(id2.l.vy.y != 1.) || any(id2.l.vy.z != 0.) || \
+            any(id2.l.vz.x != 0.) || any(id2.l.vz.y != 0.) || any(id2.l.vz.z != 1.) || \
+            any(id2.p.x != 0.) || any(id2.p.y != 0.) || any(id2.p.z != 0.)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIdentity()
+{
+    uniform int error = 0;
+
+    XFORM3_IDENTITY_TEST(Xform3f, setToIdentity);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3_translate(Vec3)
+// setToTranslation(Xform3, Vec3)
+//----------------------------------------------------------------------
+
+#define XFORM3_TRANSLATION_TEST(VU, PID, XFTYPE, VTYPE, SET_TO_TRANSLATION) \
+    {                                                                   \
+        VU VTYPE  v = VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID);       \
+        VU XFTYPE t = XFTYPE##_translate(v);                            \
+        if (any(t.l.vx.x != 1.) || any(t.l.vx.y != 0.) || any(t.l.vx.z != 0.) || \
+            any(t.l.vy.x != 0.) || any(t.l.vy.y != 1.) || any(t.l.vy.z != 0.) || \
+            any(t.l.vz.x != 0.) || any(t.l.vz.y != 0.) || any(t.l.vz.z != 1.) || \
+            any(t.p.x != v.x) || any(t.p.y != v.y) || any(t.p.z != v.z)) { \
+            ++error;                                                    \
+        }                                                               \
+        VU XFTYPE t2;                                                   \
+        SET_TO_TRANSLATION(t2, v);                                      \
+        if (any(t2.l.vx.x != 1.) || any(t2.l.vx.y != 0.) || any(t2.l.vx.z != 0.) || \
+            any(t2.l.vy.x != 0.) || any(t2.l.vy.y != 1.) || any(t2.l.vy.z != 0.) || \
+            any(t2.l.vz.x != 0.) || any(t2.l.vz.y != 0.) || any(t2.l.vz.z != 1.) || \
+            any(t2.p.x != v.x) || any(t2.p.y != v.y) || any(t2.p.z != v.z)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTranslation()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_TRANSLATION_TEST(VAR, pi, Xform3f, Vec3f, setToTranslation);
+    XFORM3_TRANSLATION_TEST(UNI, 1., Xform3f, Vec3f, setToTranslation);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3_rotate(Vec3, float)
+// setToRotation(Xform3, float)
+//   We'll rotate each primary acis onto the other and use "transformPoint"
+//   to ensure that the translation component is zero
+//----------------------------------------------------------------------
+#define SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT) \
+    SET_TO_ROTATION(xf, xaxis, angle);                                  \
+    res = TRANSFORM_POINT(xf, zaxis);                                   \
+    if (any(!isEqual(res, yaxis))) {                                    \
+        ++error;                                                        \
+    }                                                                   \
+    SET_TO_ROTATION(xf, yaxis, angle);                                  \
+    res = TRANSFORM_POINT(xf, xaxis);                                   \
+    if (any(!isEqual(res, zaxis))) {                                    \
+        ++error;                                                        \
+    }                                                                   \
+    SET_TO_ROTATION(xf, zaxis, angle);                                  \
+    res = TRANSFORM_POINT(xf, yaxis);                                   \
+    if (any(!isEqual(res, xaxis))) {                                    \
+        ++error;                                                        \
+    }                                                                   \
+    SET_TO_ROTATION(xf, axis, angle);                                   \
+    if (any(!isEqual(xf, XFTYPE##_rotate(axis, angle)))) {              \
+        ++error;                                                        \
+    }
+#define SET_TO_ROTATION_TEST(XFTYPE, VTYPE, FTYPE, SET_TO_ROTATION, TRANSFORM_POINT) \
+    {                                                                   \
+        VAR XFTYPE xf;                                                  \
+        VAR VTYPE xaxis = VTYPE##_ctor((VAR FTYPE) 1., (VAR FTYPE) 0., (VAR FTYPE) 0.); \
+        VAR VTYPE yaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 1., (VAR FTYPE) 0.); \
+        VAR VTYPE zaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 0., (VAR FTYPE) 1.); \
+        VAR VTYPE axis = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        VAR FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT); \
+    }                                                                   \
+    {                                                                   \
+        VAR XFTYPE xf;                                                  \
+        VAR VTYPE xaxis = VTYPE##_ctor((VAR FTYPE) 1., (VAR FTYPE) 0., (VAR FTYPE) 0.); \
+        VAR VTYPE yaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 1., (VAR FTYPE) 0.); \
+        VAR VTYPE zaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 0., (VAR FTYPE) 1.); \
+        VAR VTYPE axis = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT); \
+    }                                                                   \
+    {                                                                   \
+        VAR XFTYPE xf;                                                  \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        VAR FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT); \
+    }                                                                   \
+    {                                                                   \
+        VAR XFTYPE xf;                                                  \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT); \
+    }                                                                   \
+    {                                                                   \
+        UNI XFTYPE xf;                                                  \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        UNI VTYPE res;                                                  \
+        SET_TO_ROTATION_TEST_AND_CMP(XFTYPE, SET_TO_ROTATION, TRANSFORM_POINT); \
+    }
+
+inline uniform int
+testRotation()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    SET_TO_ROTATION_TEST(Xform3f, Vec3f, float, setToRotation, transformPoint);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3_scale(Vec3)
+// setToScale(Xform3, Vec3)
+//----------------------------------------------------------------------
+#define XFORM3_SCALE_TEST(VU, VTYPE, XFTYPE, PID, SET_TO_SCALE)         \
+    {                                                                   \
+        VU VTYPE s = VTYPE##_ctor(PID * 1., PID * 2., PID * 3.);        \
+        VU XFTYPE xf = XFTYPE##_scale(s);                               \
+        if (any(xf.l.vx.x != s.x) || any(xf.l.vx.y != 0.)  || any(xf.l.vx.z != 0.) || \
+            any(xf.l.vy.x != 0.)  || any(xf.l.vy.y != s.y) || any(xf.l.vy.z != 0.) || \
+            any(xf.l.vz.x != 0.)  || any(xf.l.vz.y != 0.)  || any(xf.l.vz.z != s.z) || \
+            any(xf.p.x != 0.) || any(xf.p.y != 0.) || any(xf.p.z != 0.)) { \
+            ++error;                                                    \
+        }                                                               \
+        VU XFTYPE xf2;                                                  \
+        SET_TO_SCALE(xf2, s);                                           \
+        if (any(xf2.l.vx.x != s.x) || any(xf2.l.vx.y != 0.)  || any(xf2.l.vx.z != 0.) || \
+            any(xf2.l.vy.x != 0.)  || any(xf2.l.vy.y != s.y) || any(xf2.l.vy.z != 0.) || \
+            any(xf2.l.vz.x != 0.)  || any(xf2.l.vz.y != 0.)  || any(xf2.l.vz.z != s.z) || \
+            any(xf2.p.x != 0.) || any(xf2.p.y != 0.) || any(xf2.p.z != 0.)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testScale()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_SCALE_TEST(VAR, Vec3f, Xform3f, pi, setToScale);
+    XFORM3_SCALE_TEST(UNI, Vec3f, Xform3f, 1., setToScale);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = lookAtPoint(Vec3 eye, Vec3 point, Vec3 up)
+//----------------------------------------------------------------------
+#define XFORM3_LOOK_AT_POINT_TEST(VU, VTYPE, XFTYPE, LOOK_AT_POINT, PID) \
+    {                                                                   \
+        VU VTYPE eye = VTYPE##_ctor(0., 0., 0.);                        \
+        VU VTYPE point = VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID);    \
+        VU VTYPE up = VTYPE##_ctor(0., 1., 0.);                         \
+        VU XFTYPE xf = LOOK_AT_POINT(eye, point, up);                   \
+        VU VTYPE p = transformPoint(xf, VTYPE##_ctor(0., 0., -length(point))); \
+        if (any(!isEqual(p, point, 1e-5))) {                            \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLookAtPoint()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_LOOK_AT_POINT_TEST(VAR, Vec3f, Xform3f, lookAtPoint, pi);
+    XFORM3_LOOK_AT_POINT_TEST(UNI, Vec3f, Xform3f, lookAtPoint, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3 + Xform3
+//----------------------------------------------------------------------
+#define XFORM3_ADD_TEST(VU, XFTYPE, PID)                                \
+    {                                                                   \
+        VU XFTYPE x0 = XFTYPE##_ctor(1. * PID, 2. * PID, 3. * PID,      \
+                                     4. * PID, 5. * PID, 6. * PID,      \
+                                     7. * PID, 8. * PID, 9. * PID,      \
+                                     10. * PID, 11. * PID, 12. * PID);  \
+        VU XFTYPE x1 = XFTYPE##_ctor(13. * PID, 14. * PID, 15. * PID,   \
+                                     16. * PID, 17. * PID, 18. * PID,   \
+                                     19. * PID, 20. * PID, 21. * PID,   \
+                                     22. * PID, 23. * PID, 24. * PID);  \
+        VU XFTYPE res = x0 + x1;                                        \
+        if (any(!isEqual(res.l.vx.x, x0.l.vx.x + x1.l.vx.x)) ||         \
+            any(!isEqual(res.l.vx.y, x0.l.vx.y + x1.l.vx.y)) ||         \
+            any(!isEqual(res.l.vx.z, x0.l.vx.z + x1.l.vx.z)) ||         \
+                                                                        \
+            any(!isEqual(res.l.vy.x, x0.l.vy.x + x1.l.vy.x)) ||         \
+            any(!isEqual(res.l.vy.y, x0.l.vy.y + x1.l.vy.y)) ||         \
+            any(!isEqual(res.l.vy.z, x0.l.vy.z + x1.l.vy.z)) ||         \
+                                                                        \
+            any(!isEqual(res.l.vz.x, x0.l.vz.x + x1.l.vz.x)) ||         \
+            any(!isEqual(res.l.vz.y, x0.l.vz.y + x1.l.vz.y)) ||         \
+            any(!isEqual(res.l.vz.z, x0.l.vz.z + x1.l.vz.z)) ||         \
+                                                                        \
+            any(!isEqual(res.p.x, x0.p.x + x1.p.x)) ||                  \
+            any(!isEqual(res.p.y, x0.p.y + x1.p.y)) ||                  \
+            any(!isEqual(res.p.z, x0.p.z + x1.p.z))) {                  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testAdd()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_ADD_TEST(VAR, Xform3f, pi);
+    XFORM3_ADD_TEST(UNI, Xform3f, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3 - Xform3
+//----------------------------------------------------------------------
+#define XFORM3_MINUS_TEST(VU, XFTYPE, PID)                              \
+    {                                                                   \
+        VU XFTYPE x0 = XFTYPE##_ctor(1. * PID, 2. * PID, 3. * PID,      \
+                                     4. * PID, 5. * PID, 6. * PID,      \
+                                     7. * PID, 8. * PID, 9. * PID,      \
+                                     10. * PID, 11. * PID, 12. * PID);  \
+        VU XFTYPE x1 = XFTYPE##_ctor(13. * PID, 14. * PID, 15. * PID,   \
+                                     16. * PID, 17. * PID, 18. * PID,   \
+                                     19. * PID, 20. * PID, 21. * PID,   \
+                                     22. * PID, 23. * PID, 24. * PID);  \
+        VU XFTYPE res = x0 - x1;                                        \
+        if (any(!isEqual(res.l.vx.x, x0.l.vx.x - x1.l.vx.x)) ||         \
+            any(!isEqual(res.l.vx.y, x0.l.vx.y - x1.l.vx.y)) ||         \
+            any(!isEqual(res.l.vx.z, x0.l.vx.z - x1.l.vx.z)) ||         \
+                                                                        \
+            any(!isEqual(res.l.vy.x, x0.l.vy.x - x1.l.vy.x)) ||         \
+            any(!isEqual(res.l.vy.y, x0.l.vy.y - x1.l.vy.y)) ||         \
+            any(!isEqual(res.l.vy.z, x0.l.vy.z - x1.l.vy.z)) ||         \
+                                                                        \
+            any(!isEqual(res.l.vz.x, x0.l.vz.x - x1.l.vz.x)) ||         \
+            any(!isEqual(res.l.vz.y, x0.l.vz.y - x1.l.vz.y)) ||         \
+            any(!isEqual(res.l.vz.z, x0.l.vz.z - x1.l.vz.z)) ||         \
+                                                                        \
+            any(!isEqual(res.p.x, x0.p.x - x1.p.x)) ||                  \
+            any(!isEqual(res.p.y, x0.p.y - x1.p.y)) ||                  \
+            any(!isEqual(res.p.z, x0.p.z - x1.p.z))) {                  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_MINUS_TEST(VAR, Xform3f, pi);
+    XFORM3_MINUS_TEST(UNI, Xform3f, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = s * Xform3
+//----------------------------------------------------------------------
+#define S_MULT_XFORM3_TEST(VU, XFTYPE, FTYPE, PID)                      \
+    {                                                                   \
+        VU FTYPE x0 = 1. * PID;                                         \
+        VU XFTYPE x1 = XFTYPE##_ctor(13. * PID, 14. * PID, 15. * PID,   \
+                                     16. * PID, 17. * PID, 18. * PID,   \
+                                     19. * PID, 20. * PID, 21. * PID,   \
+                                     22. * PID, 23. * PID, 24. * PID);  \
+        VU XFTYPE res = x0 * x1;                                        \
+        if (any(!isEqual(res.l.vx.x, x0 * x1.l.vx.x)) ||                \
+            any(!isEqual(res.l.vx.y, x0 * x1.l.vx.y)) ||                \
+            any(!isEqual(res.l.vx.z, x0 * x1.l.vx.z)) ||                \
+                                                                        \
+            any(!isEqual(res.l.vy.x, x0 * x1.l.vy.x)) ||                \
+            any(!isEqual(res.l.vy.y, x0 * x1.l.vy.y)) ||                \
+            any(!isEqual(res.l.vy.z, x0 * x1.l.vy.z)) ||                \
+                                                                        \
+            any(!isEqual(res.l.vz.x, x0 * x1.l.vz.x)) ||                \
+            any(!isEqual(res.l.vz.y, x0 * x1.l.vz.y)) ||                \
+            any(!isEqual(res.l.vz.z, x0 * x1.l.vz.z)) ||                \
+                                                                        \
+            any(!isEqual(res.p.x, x0 * x1.p.x)) ||                      \
+            any(!isEqual(res.p.y, x0 * x1.p.y)) ||                      \
+            any(!isEqual(res.p.z, x0 * x1.p.z))) {                      \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testSMultXform()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    S_MULT_XFORM3_TEST(VAR, Xform3f, float, pi);
+    S_MULT_XFORM3_TEST(UNI, Xform3f, float, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3 = Xform3 * Xform3
+//----------------------------------------------------------------------
+
+#define XFORM_MULT_XFORM_TEST(VU, FTYPE, VTYPE, XFTYPE, PID)            \
+    {                                                                   \
+        VU VTYPE s = VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID);        \
+        VU VTYPE axis = VTYPE##_ctor(4. * PID, 5. * PID, 6. * PID);     \
+        VU FTYPE ang = PI / 3.;                                         \
+        VU VTYPE t = VTYPE##_ctor(7. * PID, 8. * PID, 9. * PID);        \
+                                                                        \
+        VU XFTYPE scale = XFTYPE##_scale(s);                            \
+        VU XFTYPE rot   = XFTYPE##_rotate(axis, ang);                   \
+        VU XFTYPE trans = XFTYPE##_translate(t);                        \
+                                                                        \
+        VU VTYPE p = VTYPE##_ctor(10. * PID, 11. * PID, 12. * PID);     \
+        VU VTYPE p0 = transformPoint(trans, transformPoint(rot, transformPoint(scale, p))); \
+        VU VTYPE p1 = transformPoint(scale * rot * trans, p);           \
+        if (any(!isEqual(p0.x, p1.x)) ||                                \
+            any(!isEqual(p0.y, p1.y)) ||                                \
+            any(!isEqual(p0.z, p1.z))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testXformMultXform()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM_MULT_XFORM_TEST(VAR, float, Vec3f, Xform3f, pi);
+    XFORM_MULT_XFORM_TEST(UNI, float, Vec3f, Xform3f, 1.);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3 = transformPoint(Xform3, Vec3)
+//----------------------------------------------------------------------
+
+#define XFORM3_TRANSFORM_POINT_TEST(VU, FTYPE, VTYPE, XFTYPE, PID, TRANSFORM_POINT) \
+    {                                                                   \
+        VU XFTYPE xform =                                               \
+            XFTYPE##_scale(VTYPE##_ctor(2. * PID, 4 * PID, 6 * PID)) *  \
+            XFTYPE##_translate(VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID)); \
+        VU VTYPE p = VTYPE##_ctor(1. * PID, 1. * PID, 1. * PID);        \
+        VU VTYPE tp = TRANSFORM_POINT(xform, p);                        \
+        if (any(!isEqual(tp.x, (VU FTYPE) (2. * PID * PID + 1. * PID))) || \
+            any(!isEqual(tp.y, (VU FTYPE) (4. * PID * PID + 2. * PID))) || \
+            any(!isEqual(tp.z, (VU FTYPE) (6. * PID * PID + 3. * PID)))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransformPoint()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_TRANSFORM_POINT_TEST(VAR, float, Vec3f, Xform3f, pi, transformPoint);
+    XFORM3_TRANSFORM_POINT_TEST(UNI, float, Vec3f, Xform3f, 1., transformPoint);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3 = transformVector(Xform3, Vec3)
+//----------------------------------------------------------------------
+
+#define XFORM3_TRANSFORM_VECTOR_TEST(VU, VTYPE, XFTYPE, PID, TRANSFORM_VECTOR) \
+    {                                                                   \
+        VU XFTYPE xform1 =                                              \
+            XFTYPE##_scale(VTYPE##_ctor(2. * PID, 4 * PID, 6 * PID)) *  \
+            XFTYPE##_rotate(VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID), PI / 3.) * \
+            XFTYPE##_translate(VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID)); \
+        VU XFTYPE xform2 =                                              \
+            XFTYPE##_scale(VTYPE##_ctor(2. * PID, 4 * PID, 6 * PID)) *  \
+            XFTYPE##_rotate(VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID), PI / 3.); \
+        VU VTYPE p = VTYPE##_ctor(1. * PID, 1. * PID, 1. * PID);        \
+        VU VTYPE tp1 = TRANSFORM_VECTOR(xform1, p);                     \
+        VU VTYPE tp2 = TRANSFORM_VECTOR(xform2, p);                     \
+        if (any(!isEqual(tp1, tp2))) {                                  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransformVector()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_TRANSFORM_VECTOR_TEST(VAR, Vec3f, Xform3f, pi, transformVector);
+    XFORM3_TRANSFORM_VECTOR_TEST(UNI, Vec3f, Xform3f, 1., transformVector);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3 = transformNormal(Xform3, Vec3)
+//----------------------------------------------------------------------
+
+#define XFORM3_TRANSFORM_NORMAL_TEST(VU, VTYPE, XFTYPE, PID, TRANSFORM_NORMAL) \
+    {                                                                   \
+        VU XFTYPE xform =                                               \
+            XFTYPE##_rotate(VTYPE##_ctor(1. * PID, 1. * PID, 1. * PID), PI / 3.); \
+        VU VTYPE p = VTYPE##_ctor(1. * PID, 2. * PID, 3. * PID);        \
+        VU VTYPE tp = TRANSFORM_NORMAL(xform, p);                       \
+        if (any(!isEqual(tp.x, dot(xform.l.vx, p))) ||                  \
+            any(!isEqual(tp.y, dot(xform.l.vy, p))) ||                  \
+            any(!isEqual(tp.z, dot(xform.l.vz, p)))) {                  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransformNormal()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_TRANSFORM_NORMAL_TEST(VAR, Vec3f, Xform3f, pi, transformNormal);
+    XFORM3_TRANSFORM_NORMAL_TEST(UNI, Vec3f, Xform3f, 1., transformNormal);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqual(Xform3, Xform3, tol)
+// bool = isEqual(Xform3, Xform3)
+//----------------------------------------------------------------------
+
+#define XFORM3_ISEQUAL_TEST(VU, FTYPE, XFTYPE, PID, ISEQUAL)            \
+    {                                                                   \
+        VU XFTYPE xf0 = XFTYPE##_ctor(1. * PID, 2. * PID, 3. * PID,     \
+                                      4. * PID, 5. * PID, 6. * PID,     \
+                                      7. * PID, 8. * PID, 9. * PID,     \
+                                      10. * PID, 11. * PID, 12. * PID); \
+        VU XFTYPE xf1 = xf0;                                            \
+        if (any(!ISEQUAL(xf0, xf1)),                                    \
+            any(!ISEQUAL(xf0, xf1, (FTYPE) 1e-3))) {                    \
+            ++error;                                                    \
+        }                                                               \
+                                                                        \
+        xf1.l.vx.x += .1;                                               \
+                                                                        \
+        if (any(ISEQUAL(xf0, xf1)) ||                                   \
+            any(ISEQUAL(xf0, xf1, 1e-3))) {                             \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_ISEQUAL_TEST(VAR, float, Xform3f, pi, isEqual);
+    XFORM3_ISEQUAL_TEST(UNI, float, Xform3f, 1., isEqual);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqualFixedEps(Xform3, Xform3, tol)
+// bool = isEqualFixedEps(Xform3, Xform3)
+//----------------------------------------------------------------------
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM3_ISEQUAL_TEST(VAR, float, Xform3f, pi, isEqualFixedEps);
+    XFORM3_ISEQUAL_TEST(UNI, float, Xform3f, 1., isEqualFixedEps);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Xform3f = slerp(Xform3fComponent, Xform3fComponent, f)
+//----------------------------------------------------------------------
+
+#define XFORM_SLERP_TEST(VU, PID)                                              \
+    {                                                                          \
+        VU Vec3f s1 = Vec3f_ctor(1. * PID, 2. * PID, 3. * PID);                \
+        VU Vec3f axis1 = Vec3f_ctor(4. * PID, 5. * PID, 6. * PID);             \
+        VU float ang1 = PI / 3.;                                               \
+        VU XformComponent3f c1;                                                \
+        c1.t = Vec3f_ctor(7. * PID, 8. * PID, 9. * PID);                       \
+        c1.r = Quaternion3f_ctor(axis1, ang1);                                 \
+        c1.s = Mat3f_scale(s1);                                                \
+        VU Vec3f s2 = Vec3f_ctor(10. * PID, 11. * PID, 12. * PID);             \
+        VU Vec3f axis2 = Vec3f_ctor(13. * PID, 14. * PID, 15. * PID);          \
+        VU float ang2 = PI / 6.;                                               \
+        VU XformComponent3f c2;                                                \
+        c2.t = Vec3f_ctor(16. * PID, 17. * PID, 18. * PID);                    \
+        c2.r = Quaternion3f_ctor(axis2, ang2);                                 \
+        c2.s = Mat3f_scale(s2);                                                \
+        VU float time = 0.1 * PID;                                             \
+        VU Xform3f res = slerp(c1, c2, time);                                  \
+        VU Vec3f tLerp = lerp(c1.t, c2.t, time);                               \
+        VU Quaternion3f rLerp = slerp(c1.r, c2.r, time);                       \
+        VU Mat3f sLerp = (1.-time)*c1.s + time*c2.s;                           \
+        VU Xform3f compare = Xform3f_ctor(sLerp * Mat3f_ctor(rLerp), tLerp);   \
+        if (any(!isEqual(res, compare))){                                      \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testSlerp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    XFORM_SLERP_TEST(VAR, pi);
+    XFORM_SLERP_TEST(UNI, 1.);
+
+    return error;
+}
+
+
+

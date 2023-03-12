@@ -1,0 +1,711 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Mat4.isph
+/// @brief
+/// defines the 4x4 matrix type Mat4 and its methods
+/// @details
+/// The Mat4 class can be used to represent R^4 -> R^4 transformations.
+/// Primarily this means scales, rotations, translations, and projections of
+/// 3D homogeneous points, vectors, and normals stored as Vec4.  The matrices
+/// are encoded such that when vec4' = vec4 *
+/// mat4, vec4' is the transformed version of vec4 - i.e. matrix on the right,
+/// vector on the left.  To reduce ambiguity, a set of transform() functions
+/// are given that can be used in lieu of the raw "*" operator.
+
+#pragma once
+
+#include "asA.isph"
+#include "Constants.isph"
+#include "Mat3.isph"
+#include "Math.isph"
+#include "Variform.isph"
+#include "Vec3.isph"
+#include "Vec4.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+// Mat4f;
+#define MATH_DECLARE_MAT4(TYPE, NAME)           \
+    struct NAME                                 \
+    {                                           \
+        TYPE vx;                                \
+        TYPE vy;                                \
+        TYPE vz;                                \
+        TYPE vw;                                \
+    };
+/// @struct Mat4f
+/// @brief a single precision 4x4 matrix
+MATH_DECLARE_MAT4(Vec4f, Mat4f);
+
+//---------------------------------------------------------------------------
+// Construction
+//---------------------------------------------------------------------------
+
+// Mat4f = Mat4f_ctor(Vec4f, Vec4f, Vec4f, Vec4f);
+/** \cond */
+#define MATH_MAT4_CTOR_4()                      \
+    {                                           \
+        result.vx = p0;                         \
+        result.vy = p1;                         \
+        result.vz = p2;                         \
+        result.vw = p3;                         \
+    }
+/** \endcond */
+/// @{
+/// construct a mat4 from 4 vec4
+MATH_DEFINE_QUATERNION_VARIFORM(Mat4f_ctor, Mat4f,
+                                Vec4f, Vec4f, Vec4f, Vec4f,
+                                MATH_MAT4_CTOR_4())
+/// @}
+
+//----------------------------------------------------------------------
+// Binary operators
+//----------------------------------------------------------------------
+
+// Mat4f = Mat4f + Mat4f;
+/** \cond */
+#define MATH_MAT4_ADD()                         \
+    {                                           \
+        result.vx = p0.vx + p1.vx;              \
+        result.vy = p0.vy + p1.vy;              \
+        result.vz = p0.vz + p1.vz;              \
+        result.vw = p0.vw + p1.vw;              \
+    }
+/** \endcond */
+/// @{
+/// add two matrices
+MATH_DEFINE_BINARY_VARIFORM(operator+, Mat4f, Mat4f, Mat4f, MATH_MAT4_ADD())
+/// @}
+
+//  Mat4f = Mat4f - Mat4f;
+/** \cond */
+#define MATH_MAT4_MINUS()                       \
+    {                                           \
+        result.vx = p0.vx - p1.vx;              \
+        result.vy = p0.vy - p1.vy;              \
+        result.vz = p0.vz - p1.vz;              \
+        result.vw = p0.vw - p1.vw;              \
+    }
+/** \endcond */
+/// @{
+/// subtract two matrices
+MATH_DEFINE_BINARY_VARIFORM(operator-, Mat4f, Mat4f, Mat4f, MATH_MAT4_MINUS())
+/// @}
+
+// Mat4f = float * Mat4f;
+/// @{
+/// scalar * Mat4
+/** \cond */
+#define MATH_S_MULT_MAT4()                      \
+    {                                           \
+        result.vx = p0 * p1.vx;                 \
+        result.vy = p0 * p1.vy;                 \
+        result.vz = p0 * p1.vz;                 \
+        result.vw = p0 * p1.vw;                 \
+    }
+/** \endcond */
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat4f, float, Mat4f, MATH_S_MULT_MAT4())
+/// @}
+
+//  Mat4f = Mat4f * float;
+/** \cond */
+#define MATH_MAT4_MULT_S()                      \
+    {                                           \
+        result.vx = p0.vx * p1;                 \
+        result.vy = p0.vy * p1;                 \
+        result.vz = p0.vz * p1;                 \
+        result.vw = p0.vw * p1;                 \
+    }
+/** \endcond */
+/// @{
+/// Mat4 * scalar
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat4f, Mat4f, float, MATH_MAT4_MULT_S())
+/// @}
+
+// Vec4f = Vec4f * Mat4f;
+/** \cond */
+#define MATH_VEC4_MULT_MAT4()                                           \
+    {                                                                   \
+        result.x = p0.x * p1.vx.x + p0.y * p1.vy.x + p0.z * p1.vz.x + p0.w * p1.vw.x; \
+        result.y = p0.x * p1.vx.y + p0.y * p1.vy.y + p0.z * p1.vz.y + p0.w * p1.vw.y; \
+        result.z = p0.x * p1.vx.z + p0.y * p1.vy.z + p0.z * p1.vz.z + p0.w * p1.vw.z; \
+        result.w = p0.x * p1.vx.w + p0.y * p1.vy.w + p0.z * p1.vz.w + p0.w * p1.vw.w; \
+    }
+/** \endcond */
+/// @{
+/// Vec4 * Mat4
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Vec4f, Mat4f, MATH_VEC4_MULT_MAT4())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4Dual3f, Vec4Dual3f, Mat4f,
+                            MATH_VEC4_MULT_MAT4())
+/// @}
+
+// Vec4f = Mat4f * Vec4f;
+/** \cond */
+#define MATH_MAT4_MULT_VEC4()                   \
+    {                                           \
+        result.x = dot(p0.vx, p1);              \
+        result.y = dot(p0.vy, p1);              \
+        result.z = dot(p0.vz, p1);              \
+        result.w = dot(p0.vw, p1);              \
+    }
+/** \endcond */
+/// @{
+/// Mat4 * Vec4
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Mat4f, Vec4f, MATH_MAT4_MULT_VEC4())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4Dual3f, Mat4f, Vec4Dual3f,
+                            MATH_MAT4_MULT_VEC4())
+/// @}
+
+// Mat4f = Mat4f * Mat4f;
+/** \cond */
+#define MATH_MAT4_MULT()                        \
+    {                                           \
+        result.vx = p0.vx * p1;                 \
+        result.vy = p0.vy * p1;                 \
+        result.vz = p0.vz * p1;                 \
+        result.vw = p0.vw * p1;                 \
+    }
+/** \endcond */
+/// @{
+/// Mat4 * Mat4
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat4f, Mat4f, Mat4f, MATH_MAT4_MULT())
+/// @}
+
+//  bool = isEqual(Mat4f, Mat4f, float);
+/** \cond */
+#define MATH_MAT4_ISEQUAL()                     \
+    {                                           \
+        result =                                \
+            isEqual(p0.vx, p1.vx, p2) &&        \
+            isEqual(p0.vy, p1.vy, p2) &&        \
+            isEqual(p0.vz, p1.vz, p2) &&        \
+            isEqual(p0.vw, p1.vw, p2);          \
+    }
+/** \endcond */
+/// @{
+/// are two matrices equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Mat4f, Mat4f, float, MATH_MAT4_ISEQUAL())
+/// @}
+
+// bool = isEqual(Mat4f, Mat4f);
+/// @{
+/// are two matrices equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Mat4f, Mat4f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+//  bool = isEqualFixedEps(Mat4f, Mat4f, float);
+/** \cond */
+#define MATH_MAT4_IS_EQUAL_FIXED_EPS()                  \
+    {                                                   \
+        result =                                        \
+            isEqualFixedEps(p0.vx, p1.vx, p2) &&        \
+            isEqualFixedEps(p0.vy, p1.vy, p2) &&        \
+            isEqualFixedEps(p0.vz, p1.vz, p2) &&        \
+            isEqualFixedEps(p0.vw, p1.vw, p2);          \
+    }
+/** \endcond */
+/// @{
+/// are two matrices equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Mat4f, Mat4f, float, MATH_MAT4_IS_EQUAL_FIXED_EPS())
+/// @}
+
+// bool = isEqualFixedEps(Mat4f, Mat4f);
+/// @{
+/// are two matrices equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Mat4f, Mat4f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+// //----------------------------------------------------------------------
+// // unary operations
+// //----------------------------------------------------------------------
+
+//  float = det(Mat4f);
+/** \cond */
+#define MATH_MAT4_DET_L0(FLOAT, VEC3, MAT3)     \
+    struct                                      \
+    {                                           \
+        FLOAT one;                              \
+        VEC3 vx;                                \
+        VEC3 vy;                                \
+        VEC3 vz;                                \
+        VEC3 vw;                                \
+        MAT3 m;                                 \
+        FLOAT x1;                               \
+        FLOAT x2;                               \
+        FLOAT x3;                               \
+        FLOAT x4;                               \
+    }
+#define MATH_MAT4_DET(VEC3, MAT3)                       \
+    {                                                   \
+        l0.one = 1.;                                    \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.z); \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.z); \
+        l0.vz = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.z); \
+        if (p0.vx.w == 0) l0.x1 = 0;                    \
+        else {                                          \
+            l0.m = MAT3##_ctor(l0.vy, l0.vz, l0.vw);    \
+            l0.x1 = -l0.one * p0.vx.w * det(l0.m);      \
+        }                                               \
+        if (p0.vy.w == 0) l0.x2 = 0;                    \
+        else {                                          \
+            l0.m = MAT3##_ctor(l0.vx, l0.vz, l0.vw);    \
+            l0.x2 = p0.vy.w * det(l0.m);                \
+        }                                               \
+        if (p0.vz.w == 0) l0.x3 = 0;                    \
+        else {                                          \
+            l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vw);    \
+            l0.x3 = -l0.one * p0.vz.w * det(l0.m);      \
+        }                                               \
+        if (p0.vw.w == 0) l0.x4 = 0;                    \
+        else {                                          \
+            l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);    \
+            l0.x4 = p0.vw.w * det(l0.m);                \
+        }                                               \
+        result = l0.x1 + l0.x2 + l0.x3 + l0.x4;         \
+    }
+/** \endcond */
+/// @{
+/// compute the determinant of a Mat4
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(det, float, Mat4f,
+                                  MATH_MAT4_DET_L0(float, Vec3f, Mat3f),
+                                  MATH_MAT4_DET(Vec3f, Mat3f))
+/// @}
+
+//  Mat4f = transpose(Mat4f);
+/** \cond */
+#define MATH_MAT4_TRANSPOSE(VEC4)                                       \
+    {                                                                   \
+        result.vx = VEC4##_ctor(p0.vx.x, p0.vy.x, p0.vz.x, p0.vw.x);    \
+        result.vy = VEC4##_ctor(p0.vx.y, p0.vy.y, p0.vz.y, p0.vw.y);    \
+        result.vz = VEC4##_ctor(p0.vx.z, p0.vy.z, p0.vz.z, p0.vw.z);    \
+        result.vw = VEC4##_ctor(p0.vx.w, p0.vy.w, p0.vz.w, p0.vw.w);    \
+    }
+/** \endcond */
+/// @{
+/// Compute the transpose of a Mat4
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(transpose, Mat4f, Mat4f, MATH_MAT4_TRANSPOSE(Vec4f))
+/// @}
+
+// Mat4f = adjoint(Mat4f);
+/** \cond */
+#define MATH_MAT4_ADJOINT_L0(FLOAT, VEC3, MAT3) \
+    struct                                      \
+    {                                           \
+        FLOAT one;                              \
+        FLOAT m00;                              \
+        FLOAT m01;                              \
+        FLOAT m02;                              \
+        FLOAT m03;                              \
+        FLOAT m10;                              \
+        FLOAT m11;                              \
+        FLOAT m12;                              \
+        FLOAT m13;                              \
+        FLOAT m20;                              \
+        FLOAT m21;                              \
+        FLOAT m22;                              \
+        FLOAT m23;                              \
+        FLOAT m30;                              \
+        FLOAT m31;                              \
+        FLOAT m32;                              \
+        FLOAT m33;                              \
+        VEC3 vx;                                \
+        VEC3 vy;                                \
+        VEC3 vz;                                \
+        MAT3 m;                                 \
+    }
+#define MATH_MAT4_ADJOINT(VEC3, VEC4, MAT3)                             \
+    {                                                                   \
+        l0.one = 1.;                                                    \
+        /* vy, vz, vw */                                                \
+        /* .y, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vy.y, p0.vy.z, p0.vy.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.y, p0.vz.z, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.y, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m00 = det(l0.m);                                             \
+        /* .x, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vy.x, p0.vy.z, p0.vy.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.z, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m01 = -l0.one * det(l0.m);                                   \
+        /* .x, .y, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m02 = det(l0.m);                                             \
+        /* .x, .y, .z */                                                \
+        l0.vx = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.z);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.z);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.z);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m03 = -l0.one * det(l0.m);                                   \
+        /* vx, vz, vw */                                                \
+        /* .y, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.y, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.y, p0.vz.z, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.y, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m10 = -l0.one * det(l0.m);                                   \
+        /* .x, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.z, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m11 = det(l0.m);                                             \
+        /* .x, .y, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m12 = -l0.one * det(l0.m);                                   \
+        /* .x, .y, .z */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.z);                 \
+        l0.vy = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.z);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.z);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m13 = det(l0.m);                                             \
+        /* vx, vy, vw */                                                \
+        /* .y, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.y, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.y, p0.vy.z, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.y, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m20 = det(l0.m);                                             \
+        /* .x, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.z, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.z, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m21 = -l0.one * det(l0.m);                                   \
+        /* .x, .y, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m22 = det(l0.m);                                             \
+        /* .x, .y, .z */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.z);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.z);                 \
+        l0.vz = VEC3##_ctor(p0.vw.x, p0.vw.y, p0.vw.z);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m23 = -l0.one * det(l0.m);                                   \
+        /* vx, vy, vz */                                                \
+        /* .y, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.y, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.y, p0.vy.z, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vz.y, p0.vz.z, p0.vz.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m30 = -l0.one * det(l0.m);                                   \
+        /* .x, .z, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.z, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.z, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vz.x, p0.vz.z, p0.vz.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m31 = det(l0.m);                                             \
+        /* .x, .y, .w */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.w);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.w);                 \
+        l0.vz = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.w);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m32 = -l0.one * det(l0.m);                                   \
+        /* .x, .y, .z */                                                \
+        l0.vx = VEC3##_ctor(p0.vx.x, p0.vx.y, p0.vx.z);                 \
+        l0.vy = VEC3##_ctor(p0.vy.x, p0.vy.y, p0.vy.z);                 \
+        l0.vz = VEC3##_ctor(p0.vz.x, p0.vz.y, p0.vz.z);                 \
+        l0.m = MAT3##_ctor(l0.vx, l0.vy, l0.vz);                        \
+        l0.m33 = det(l0.m);                                             \
+        result.vx = VEC4##_ctor(l0.m00, l0.m10, l0.m20, l0.m30);        \
+        result.vy = VEC4##_ctor(l0.m01, l0.m11, l0.m21, l0.m31);        \
+        result.vz = VEC4##_ctor(l0.m02, l0.m12, l0.m22, l0.m32);        \
+        result.vw = VEC4##_ctor(l0.m03, l0.m13, l0.m23, l0.m33);        \
+    }
+/** \endcond */
+/// @{
+/// compute the adjoint (transpose of the cofactor matrix) of a Mat4
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(adjoint, Mat4f, Mat4f,
+                                  MATH_MAT4_ADJOINT_L0(float, Vec3f, Mat3f),
+                                  MATH_MAT4_ADJOINT(Vec3f, Vec4f, Mat3f))
+/// @}
+
+// Mat4f = inverse(Mat4f);
+// Mat4f = rcp(Mat4f);
+/** \cond */
+#define MATH_MAT4_INVERSE()                     \
+    {                                           \
+        result = rcp(det(p0)) * adjoint(p0);    \
+    }
+/** \endcond */
+/// @{
+/// compute the inverse of a Mat4
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(inverse, Mat4f, Mat4f, MATH_MAT4_INVERSE())
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(rcp, Mat4f, Mat4f, { result = inverse(p0); })
+/// @}
+
+//----------------------------------------------------------------------
+// Transformations
+//----------------------------------------------------------------------
+
+// setToIdentity(Mat4f);
+/** \cond */
+#define MATH_MAT4_SET_TO_IDENTITY()                             \
+    {                                                           \
+        p0.vx.x = 1.; p0.vx.y = 0.; p0.vx.z = 0.; p0.vx.w = 0.; \
+        p0.vy.x = 0.; p0.vy.y = 1.; p0.vy.z = 0.; p0.vy.w = 0.; \
+        p0.vz.x = 0.; p0.vz.y = 0.; p0.vz.z = 1.; p0.vz.w = 0.; \
+        p0.vw.x = 0.; p0.vw.y = 0.; p0.vw.z = 0.; p0.vw.w = 1.; \
+    }
+/** \endcond */
+/// @{
+/// create an identity transform
+MATH_DEFINE_SET_VARIFORM(setToIdentity, Mat4f, MATH_MAT4_SET_TO_IDENTITY())
+
+// Mat4f = Mat4f_identity()
+// note that this is not a variform!  we can only define the
+// uniform return value case and rely on the compiler to convert to
+// varying when the lhs of the assignment is varying.
+/** \cond */
+#define MATH_MAT4_IDENTITY(MTYPE)               \
+    uniform MTYPE res;                          \
+    setToIdentity(res);                         \
+    return res;
+/** \endcond */
+inline uniform Mat4f Mat4f_identity() { MATH_MAT4_IDENTITY(Mat4f) }
+
+// setToScale(Mat4f, Vec3f)
+/** \cond */
+#define MATH_MAT4_SET_TO_SCALE()                                        \
+    {                                                                   \
+        p0.vx.x = p1.x; p0.vx.y = 0.;   p0.vx.z = 0.;   p0.vx.w = 0.;   \
+        p0.vy.x = 0.;   p0.vy.y = p1.y; p0.vy.z = 0.;   p0.vy.w = 0.;   \
+        p0.vz.x = 0.;   p0.vz.y = 0.;   p0.vz.z = p1.z; p0.vz.w = 0.;   \
+        p0.vw.x = 0.;   p0.vw.y = 0.;   p0.vw.z = 0.;   p0.vw.w = 1.;   \
+    }
+/** \endcond */
+/// @{
+/// xyz scale transform specified by a Vec3 param
+MATH_DEFINE_UNARY_SET_VARIFORM(setToScale, Mat4f, Vec3f, MATH_MAT4_SET_TO_SCALE())
+
+// Mat4f = Mat4f_scale(Vec3f)
+MATH_DEFINE_UNARY_VARIFORM(Mat4f_scale, Mat4f, Vec3f, { setToScale(result, p0); })
+/// @}
+
+//   setToRotation(Mat4f, Vec3f, float)
+/** \cond */
+#define MATH_MAT4_SET_TO_ROTATION_L0_F()                \
+    struct { Vec3f v; float s; float c; float t; }
+#define MATH_MAT4_SET_TO_ROTATION_L0_D()                \
+    struct { Vec3d v; double s; double c; double t; }
+#define MATH_MAT4_SET_TO_ROTATION()                             \
+    {                                                           \
+        l0.v = normalize(p1);                                   \
+        l0.s = sin(p2);                                         \
+        l0.c = cos(p2);                                         \
+        l0.t = 1. - l0.c;                                       \
+        p0.vx.x = l0.v.x * l0.v.x * l0.t + l0.c;                \
+        p0.vx.y = l0.v.x * l0.v.y * l0.t + l0.v.z * l0.s;       \
+        p0.vx.z = l0.v.x * l0.v.z * l0.t - l0.v.y * l0.s;       \
+        p0.vx.w = 0.;                                           \
+        p0.vy.x = l0.v.y * l0.v.x * l0.t - l0.v.z * l0.s;       \
+        p0.vy.y = l0.v.y * l0.v.y * l0.t + l0.c;                \
+        p0.vy.z = l0.v.y * l0.v.z * l0.t + l0.v.x * l0.s;       \
+        p0.vy.w = 0.;                                           \
+        p0.vz.x = l0.v.z * l0.v.x * l0.t + l0.v.y * l0.s;       \
+        p0.vz.y = l0.v.z * l0.v.y * l0.t - l0.v.x * l0.s;       \
+        p0.vz.z = l0.v.z * l0.v.z * l0.t + l0.c;                \
+        p0.vz.w = 0.;                                           \
+        p0.vw.x = 0.;                                           \
+        p0.vw.y = 0.;                                           \
+        p0.vw.z = 0.;                                           \
+        p0.vw.w = 1.;                                           \
+    }
+/** \endcond */
+/// @{
+/// rotation transform specified by an xyz axis of
+/// rotation in a Vec3 param and a ccw radian angle specified by a scalar
+/// parameter
+MATH_DEFINE_BINARY_SET_VARIFORM_WITH_L(setToRotation, Mat4f, Vec3f, float,
+                                       MATH_MAT4_SET_TO_ROTATION_L0_F(),
+                                       MATH_MAT4_SET_TO_ROTATION());
+
+// Mat4f = Mat4f_rotate(Vec3f, float)
+MATH_DEFINE_BINARY_VARIFORM(Mat4f_rotate, Mat4f, Vec3f, float,
+                            { setToRotation(result, p0, p1); })
+/// @}
+
+// setToTranslation(Vec3f)
+// setToTranslation(Vec3d)
+/** \cond */
+#define MATH_MAT4_SET_TO_TRANSLATION()                                  \
+    {                                                                   \
+        p0.vx.x = 1.;   p0.vx.y = 0.;   p0.vx.z = 0.;   p0.vx.w = 0.;   \
+        p0.vy.x = 0.;   p0.vy.y = 1.;   p0.vy.z = 0.;   p0.vy.w = 0.;   \
+        p0.vz.x = 0.;   p0.vz.y = 0.;   p0.vz.z = 1.;   p0.vz.w = 0.;   \
+        p0.vw.x = p1.x; p0.vw.y = p1.y; p0.vw.z = p1.z; p0.vw.w = 1.;   \
+    }
+/** \endcond */
+/// @{
+/// create an xyz translation Mat4
+MATH_DEFINE_UNARY_SET_VARIFORM(setToTranslation, Mat4f, Vec3f,
+                               MATH_MAT4_SET_TO_TRANSLATION())
+
+// Mat4f = Mat4f_translate(Vec3f)
+MATH_DEFINE_UNARY_VARIFORM(Mat4f_translate, Mat4f, Vec3f,
+                           { setToTranslation(result, p0); })
+/// @}
+
+// Vec4f = transform(Mat4f, Vec4f)
+/// @{
+/// transform a Vec4 (p1) by a Mat4 (p0).  use this if p1 represents a position or
+/// non-normal vector.
+MATH_DEFINE_BINARY_VARIFORM(transform, Vec4f, Mat4f, Vec4f,
+                            { result = p1 * p0; })
+MATH_DEFINE_BINARY_VARIFORM(transform, Vec4Dual3f, Mat4f, Vec4Dual3f,
+                            { result = p1 * p0; })
+/// @}
+
+// Vec3f = transformPoint(Mat4f, Vec3f)
+/// @{
+/// transform a Vec3f (p1) by a Mat4 (p0) as a Vec3 point
+#define MATH_MAT4_TRANSFORM_POINT_L0()      \
+    struct                                  \
+    {                                       \
+        Vec4f p;                            \
+        Vec4f tp;                           \
+    }
+#define MATH_MAT4_TRANSFORM_POINT()                          \
+    {                                                        \
+        l0.p   = Vec4f_ctor(p1.x, p1.y, p1.z, 1.f);          \
+        l0.tp  = transform(p0, l0.p);                        \
+        result = Vec3f_ctor(l0.tp.x, l0.tp.y, l0.tp.z);      \
+    }
+
+#define MATH_MAT4_TRANSFORM_POINT_L0_D()    \
+    struct                                  \
+    {                                       \
+        Vec4Dual3f p;                       \
+        Vec4Dual3f tp;                      \
+    }
+#define MATH_MAT4_TRANSFORM_POINT_D()                                   \
+    {                                                                   \
+        l0.p   = Vec4Dual3f_ctor(p1.x, p1.y, p1.z, Dual3f_ctor(1.f));   \
+        l0.tp  = transform(p0, l0.p);                                   \
+        result = Vec3Dual3f_ctor(l0.tp.x, l0.tp.y, l0.tp.z);            \
+    }
+
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformPoint, Vec3f, Mat4f, Vec3f,
+                                   MATH_MAT4_TRANSFORM_POINT_L0(),
+                                   MATH_MAT4_TRANSFORM_POINT())
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformPoint, Vec3Dual3f, Mat4f, Vec3Dual3f,
+                                   MATH_MAT4_TRANSFORM_POINT_L0_D(),
+                                   MATH_MAT4_TRANSFORM_POINT_D())
+/// @}
+                                   
+
+
+// Vec3f = Vec3 * Mat4f;
+/** \cond */
+#define MATH_VEC3_MULT_MAT4()                                   \
+    {                                                           \
+        result = (p0.x * asAVec3f(p1.vx)) + (p0.y * asAVec3f(p1.vy)) + (p0.z * asAVec3f(p1.vz));    \
+    }
+/** \endcond */
+// Vec3f = transform3x3(Vec3f, Mat4f)
+/// @{
+/// transform a Vec3 (p1) by a Mat4 (p0) using only the 3x3 portion of the input
+/// matrix.
+MATH_DEFINE_BINARY_VARIFORM(transform3x3, Vec3f, Vec3f, Mat4f,
+                            { MATH_VEC3_MULT_MAT4(); })
+MATH_DEFINE_BINARY_VARIFORM(transform3x3, Vec3Dual3f, Vec3Dual3f, Mat4f,
+                            { MATH_VEC3_MULT_MAT4(); })
+/// @}
+
+// Vec3f = Mat4f * Vec3f;
+/** \cond */
+#define MATH_MAT4_MULT_VEC3()                   \
+    {                                           \
+        result.x = dot(asAVec3f(p0.vx), p1);    \
+        result.y = dot(asAVec3f(p0.vy), p1);    \
+        result.z = dot(asAVec3f(p0.vz), p1);    \
+    }
+/** \endcond */
+
+// Vec4f = transformVector(Mat4f, Vec4f)
+/// @{
+/// transform a Vec4 (p1) by a Mat4 (p0).  translation is ignored.
+MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3f, Mat4f, Vec3f,
+                            { result = transform3x3(p1, p0); })
+MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Mat4f, Vec3Dual3f,
+                            { result = transform3x3(p1, p0); })
+/// @}
+
+
+// Vec4f = transformNormal(Mat4f, Vec4f)
+/// @{
+/// transform a Vec4 (p1) as a normal by a Mat4 (p0).  use this if Vec4 represents
+/// a normal.  we assume that Mat4 is already an inverse of the Mat4 used to
+/// transform non normals.  so all we do is multiply by the transpose.
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec4f, Mat4f, Vec4f,
+                            { result = p0 * p1; })
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec4Dual3f, Mat4f, Vec4Dual3f,
+                            { result = p0 * p1; })
+/// @}
+
+// Vec3f = transformNormal(Mat4f, Vec3f)
+/// @{
+/// transform a Vec3 (p1) as a normal by a Mat4 (p0).  use this if Vec3 represents
+/// a normal.  we assume that Mat4 is already an inverse of the Mat4 used to
+/// transform non normals.  so all we do is multiply by the transpose.
+
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Mat4f, Vec3f,
+                            { MATH_MAT4_MULT_VEC3(); })
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Mat4f, Vec3Dual3f,
+                            { MATH_MAT4_MULT_VEC3(); })
+/// @}
+
+// Vec3f = transformH(Mat4f, Vec4f)
+/// transform a Vec4 (p1) via matrix (p0) post-multiplication, i.e. vec4 * Mat4 and then
+/// do a homogeneous divide, producting a Vec3.
+#define MATH_MAT4_TRANSFORMH_L0(FLOAT, VEC4)  struct { FLOAT wrcp; VEC4 v; }
+#define MATH_MAT4_TRANSFORMH()                  \
+    l0.v = p1 * p0;                             \
+    result.x = l0.v.x;                          \
+    result.y = l0.v.y;                          \
+    result.z = l0.v.z;                          \
+    if (l0.v.w != 0.f) {                        \
+        l0.wrcp = rcp(l0.v.w);                  \
+        result.x = result.x * l0.wrcp;          \
+        result.y = result.y * l0.wrcp;          \
+        result.z = result.z * l0.wrcp;          \
+    } else {                                    \
+        result = Vec3f_ctor(0.f, 0.f, 0.f);     \
+    }
+
+#define MATH_MAT4_TRANSFORMH_D()                \
+    l0.v = p1 * p0;                             \
+    result.x = l0.v.x;                          \
+    result.y = l0.v.y;                          \
+    result.z = l0.v.z;                          \
+    if (!isZero(l0.v.w, 0.f)) {                 \
+        l0.wrcp = rcp(l0.v.w);                  \
+        result.x = result.x * l0.wrcp;          \
+        result.y = result.y * l0.wrcp;          \
+        result.z = result.z * l0.wrcp;          \
+    } else {                                    \
+        result = Vec3Dual3f_ctor(Dual3f_ctor(0.f)); \
+    }
+
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformH, Vec3f, Mat4f, Vec4f,
+                                   MATH_MAT4_TRANSFORMH_L0(float, Vec4f),
+                                   MATH_MAT4_TRANSFORMH())
+
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformH, Vec3Dual3f, Mat4f, Vec4Dual3f,
+                                   MATH_MAT4_TRANSFORMH_L0(Dual3f, Vec4Dual3f),
+                                   MATH_MAT4_TRANSFORMH_D())
+

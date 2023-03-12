@@ -1,0 +1,532 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Variform.isph
+/// @brief
+/// internal to math library and should not be directly used outside of it
+#pragma once
+
+// A "variform" is a term that refers to
+// the set of functions required to implement one "conceptual" function
+// across all possible varying and uniform parameter combinations.  A
+// classic example is the dot product of two vector types.  In total,
+// we need four functions:
+//    uniform float
+//    dot(const uniform vec2f &v1, const uinform vec2f &v2)
+//    {
+//         return v1.x * v2.x + v1.y * v2.y;
+//    }
+//    varying float
+//    dot(const varying vec2f &v1, const varying vec2f &v2)
+//    {
+//         return v1.x * v2.x + v1.y * v2.y;
+//    }
+//    varying float
+//    dot(const uniform vec2f &v1, const varying vec2f &v2)
+//    {
+//         return v1.x * v2.x + v1.y * v2.y;
+//    }
+//    varying float
+//    dot(const varying vec2f &v1, const uniform vec2f &v2)
+//    {
+//         return v1.x * v2.x + v1.y * v2.y;
+//    }
+// In this example, "dot" is a "variform function", or just "variform" for
+// short.  The key observation is that minus the varying/uniform keywords,
+// the code in all variforms is identical.
+//
+// Conceptually, there are many different types of variforms.  A very useful
+// one is the "Simple Inline Variform", which is defined below.  When working
+// with inline variforms, all parameters should be passed by value, which
+// reduces the needed permutations to the "all-uniform" and "all-varying"
+// cases.
+
+// ---------------------------------------------------------------------
+// private macros,
+// you'll want to skip down to "public macros" if
+// you are just interested in using variforms
+// ---------------------------------------------------------------------
+
+// 1 parameter variforms, valid combos are
+//    varying = f(varying);
+//    uniform = f(uniform);
+#define MATH_VARIFORM_OPEN_V(FNAME, RTYPE, PTYPE0)  \
+    inline varying RTYPE                            \
+    FNAME(const varying PTYPE0 p0)                  \
+    {                                               \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_U(FNAME, RTYPE, PTYPE0)  \
+    inline uniform RTYPE                            \
+    FNAME(const uniform PTYPE0 p0)                  \
+    {                                               \
+        uniform RTYPE result;
+// 2 parameter variforms, valid combos are
+//   varying = f(varying, varying);
+//   uniform = f(uniform, uniform);
+#define MATH_VARIFORM_OPEN_VV(FNAME, RTYPE, PTYPE0, PTYPE1)             \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE0 p0, const varying PTYPE1 p1)             \
+    {                                                                   \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_UU(FNAME, RTYPE, PTYPE0, PTYPE1)             \
+    inline uniform RTYPE                                                \
+    FNAME(const uniform PTYPE0 p0, const uniform PTYPE1 p1)             \
+    {                                                                   \
+        uniform RTYPE result;
+// 3 parameter variforms, valid combos are
+//    varying = f(varying, varying, varying)
+//    uniform = f(uniform, uniform, uniform)
+#define MATH_VARIFORM_OPEN_VVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2)    \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE0 p0, const varying PTYPE1 p1, const varying PTYPE2 p2) \
+    {                                                                   \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_UUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2)    \
+    inline uniform RTYPE                                                \
+    FNAME(const uniform PTYPE0 p0, const uniform PTYPE1 p1, const uniform PTYPE2 p2) \
+    {                                                                   \
+        uniform RTYPE result;
+// 4 parameter variforms, valid combos are
+//    varying = f(varying, varying, varying, varying)
+//    uniform = f(uniform, uniform, uniform, uniform)
+#define MATH_VARIFORM_OPEN_VVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3) \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE0 p0, const varying PTYPE1 p1, const varying PTYPE2 p2, const varying PTYPE3 p3) \
+    {                                                                   \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_UUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3) \
+    inline uniform RTYPE                                                \
+    FNAME(const uniform PTYPE0 p0, const uniform PTYPE1 p1, const uniform PTYPE2 p2, const uniform PTYPE3 p3) \
+    {                                                                   \
+        uniform RTYPE result;
+// 5 parameter variforms, valid combos are
+//    varying = f(varying, varying, varying, varying, varying)
+//    uniform = f(uniform, uniform, uniform, uniform, uniform)
+#define MATH_VARIFORM_OPEN_VVVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4) \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE0 p0, const varying PTYPE1 p1, const varying PTYPE2 p2, const varying PTYPE3 p3, const varying PTYPE4 p4) \
+    {                                                                   \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_UUUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4) \
+    inline uniform RTYPE                                                \
+    FNAME(const uniform PTYPE0 p0, const uniform PTYPE1 p1, const uniform PTYPE2 p2, const uniform PTYPE3 p3, const uniform PTYPE4 p4) \
+    {                                                                   \
+        uniform RTYPE result;
+// 6 parameter variforms, valid combos are
+//    varying = f(varying, varying, varying, varying, varying, varying)
+//    uniform = f(uniform, uniform, uniform, uniform, uniform, uniform)
+#define MATH_VARIFORM_OPEN_VVVVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5) \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE0 p0, const varying PTYPE1 p1, const varying PTYPE2 p2, const varying PTYPE3 p3, const varying PTYPE4 p4, const varying PTYPE5 p5) \
+    {                                                                   \
+        varying RTYPE result;
+#define MATH_VARIFORM_OPEN_UUUUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5) \
+    inline uniform RTYPE                                                \
+    FNAME(const uniform PTYPE0 p0, const uniform PTYPE1 p1, const uniform PTYPE2 p2, const uniform PTYPE3 p3, const uniform PTYPE4 p4, const uniform PTYPE5 p5) \
+    {                                                                   \
+        uniform RTYPE result;
+// close the function
+#define MATH_VARIFORM_CLOSE()                   \
+        return result;                          \
+    }
+
+//----------------------------------------------------------------------
+// unary
+//----------------------------------------------------------------------
+#define MATH_UNARY_VARIFORM(FNAME, RTYPE, PTYPE0, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_V(FNAME, RTYPE, PTYPE0)             \
+        varying LOCAL_VAR_TYPE l0;                         \
+        CODE;                                              \
+    MATH_VARIFORM_CLOSE()                                  \
+    MATH_VARIFORM_OPEN_U(FNAME, RTYPE, PTYPE0)             \
+        uniform LOCAL_VAR_TYPE l0;                         \
+        CODE;                                              \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_UNARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, CODE)    \
+    MATH_UNARY_VARIFORM(FNAME, RTYPE, PTYPE0, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// binary
+//----------------------------------------------------------------------
+#define MATH_BINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_VV(FNAME, RTYPE, PTYPE0, PTYPE1)             \
+        varying LOCAL_VAR_TYPE l0;                                  \
+        CODE;                                                       \
+    MATH_VARIFORM_CLOSE()                                           \
+    MATH_VARIFORM_OPEN_UU(FNAME, RTYPE, PTYPE0, PTYPE1)             \
+        uniform LOCAL_VAR_TYPE l0;                                  \
+        CODE;                                                       \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_BINARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, CODE)   \
+    MATH_BINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// ternary
+//----------------------------------------------------------------------
+#define MATH_TERNARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_VVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2)        \
+        varying LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    MATH_VARIFORM_CLOSE()                                               \
+    MATH_VARIFORM_OPEN_UUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2)        \
+        uniform LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_TERNARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, CODE) \
+    MATH_TERNARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// quaternion
+//----------------------------------------------------------------------
+#define MATH_QUATERNION_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_VVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3) \
+        varying LOCAL_VAR_TYPE l0;                                        \
+        CODE;                                                             \
+    MATH_VARIFORM_CLOSE()                                                 \
+    MATH_VARIFORM_OPEN_UUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3) \
+        uniform LOCAL_VAR_TYPE l0;                                        \
+        CODE;                                                             \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_QUATERNION_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, CODE) \
+    MATH_QUATERNION_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// quinary
+//----------------------------------------------------------------------
+#define MATH_QUINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_VVVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4) \
+        varying LOCAL_VAR_TYPE l0;                                                 \
+        CODE;                                                                      \
+    MATH_VARIFORM_CLOSE()                                                          \
+    MATH_VARIFORM_OPEN_UUUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4) \
+        uniform LOCAL_VAR_TYPE l0;                                                 \
+        CODE;                                                                      \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_QUINARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, CODE) \
+    MATH_QUINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// senary
+//----------------------------------------------------------------------
+#define MATH_SENARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, LOCAL_VAR_TYPE, CODE) \
+    MATH_VARIFORM_OPEN_VVVVVV(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5) \
+        varying LOCAL_VAR_TYPE l0;                                                          \
+        CODE;                                                                               \
+    MATH_VARIFORM_CLOSE()                                                                   \
+    MATH_VARIFORM_OPEN_UUUUUU(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5) \
+        uniform LOCAL_VAR_TYPE l0;                                                          \
+        CODE;                                                                               \
+    MATH_VARIFORM_CLOSE()
+
+#define MATH_SENARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, CODE) \
+    MATH_SENARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, struct {}, CODE)
+
+//----------------------------------------------------------------------
+// unary array
+//----------------------------------------------------------------------
+#define MATH_UNARY_ARRAY_VARIFORM(FNAME, RTYPE, PTYPE0, CODE)          \
+    inline varying RTYPE                                               \
+    FNAME(const varying PTYPE0 p0[])                                   \
+    {                                                                  \
+        varying RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }                                                                  \
+    inline uniform RTYPE                                               \
+    FNAME(const uniform PTYPE0 p0[])                                   \
+    {                                                                  \
+        uniform RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }
+
+#define MATH_P9_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE)             \
+    inline varying RTYPE                                               \
+    FNAME(const varying PTYPE p0, const varying PTYPE p1, const varying PTYPE p2, \
+          const varying PTYPE p3, const varying PTYPE p4, const varying PTYPE p5, \
+          const varying PTYPE p6, const varying PTYPE p7, const varying PTYPE p8) \
+    {                                                                  \
+        varying RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }                                                                  \
+    inline uniform RTYPE                                               \
+    FNAME(const uniform PTYPE p0, const uniform PTYPE p1, const uniform PTYPE p2, \
+          const uniform PTYPE p3, const uniform PTYPE p4, const uniform PTYPE p5, \
+          const uniform PTYPE p6, const uniform PTYPE p7, const uniform PTYPE p8) \
+    {                                                                  \
+        uniform RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }
+
+#define MATH_P12_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE)            \
+    inline varying RTYPE                                                \
+    FNAME(const varying PTYPE p0, const varying PTYPE p1, const varying PTYPE p2, \
+          const varying PTYPE p3, const varying PTYPE p4, const varying PTYPE p5, \
+          const varying PTYPE p6, const varying PTYPE p7, const varying PTYPE p8, \
+          const varying PTYPE p9, const varying PTYPE p10, const varying PTYPE p11) \
+    {                                                                  \
+        varying RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }                                                                  \
+    inline uniform RTYPE                                               \
+    FNAME(const uniform PTYPE p0, const uniform PTYPE p1, const uniform PTYPE p2, \
+          const uniform PTYPE p3, const uniform PTYPE p4, const uniform PTYPE p5, \
+          const uniform PTYPE p6, const uniform PTYPE p7, const uniform PTYPE p8, \
+          const uniform PTYPE p9, const uniform PTYPE p10, const uniform PTYPE p11) \
+    {                                                                  \
+        uniform RTYPE result;                                          \
+        CODE;                                                          \
+        return result;                                                 \
+    }
+
+// varying <-
+// uniform <-
+#define MATH_SET_VARIFORM(FNAME, PTYPE0, LOCAL_VAR_TYPE, CODE)  \
+    inline void                                                 \
+    FNAME(varying PTYPE0 &p0)                                   \
+    {                                                           \
+        varying LOCAL_VAR_TYPE l0;                              \
+        CODE;                                                   \
+    }                                                           \
+    inline void                                                 \
+    FNAME(uniform PTYPE0 &p0)                                   \
+    {                                                           \
+        uniform LOCAL_VAR_TYPE l0;                              \
+        CODE;                                                   \
+    }
+#define MATH_SET_VARIFORM_NO_L(FNAME, PTYPE0, CODE)     \
+    MATH_SET_VARIFORM(FNAME, PTYPE0, struct {}, CODE)
+
+// varying <- varying
+// uniform <- uniform
+#define MATH_UNARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE) \
+    inline void                                                         \
+    FNAME(varying PTYPE0 &p0, const varying PTYPE1 p1)                  \
+    {                                                                   \
+        varying LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    }                                                                   \
+    inline void                                                         \
+    FNAME(uniform PTYPE0 &p0, const uniform PTYPE1 p1)                  \
+    {                                                                   \
+        uniform LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    }
+#define MATH_UNARY_SET_VARIFORM_NO_L(FNAME, PTYPE0, PTYPE1, CODE)       \
+    MATH_UNARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, struct {}, CODE)
+
+// varying <- varying, varying
+// uniform <- uniform, uniform
+#define MATH_BINARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE) \
+    inline void                                                         \
+    FNAME(varying PTYPE0 &p0, const varying PTYPE1 p1, const varying PTYPE2 p2) \
+    {                                                                   \
+        varying LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    }                                                                   \
+    inline void                                                         \
+    FNAME(uniform PTYPE0 &p0, const uniform PTYPE1 p1, const uniform PTYPE2 p2) \
+    {                                                                   \
+        uniform LOCAL_VAR_TYPE l0;                                      \
+        CODE;                                                           \
+    }
+#define MATH_BINARY_SET_VARIFORM_NO_L(FNAME, PTYPE0, PTYPE1, PTYPE2, CODE) \
+    MATH_BINARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, PTYPE2, struct {}, CODE)
+
+// ---------------------------------------------------------------------
+// public macros
+// ---------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// Simple Inline Variform
+// ----------------------------------------------------------------------
+// To use this set of macros, your variform must meet the following
+// requirements:
+//   1: Any combination of uniform and varying parameters is legal and
+//      results in a varying result except in the case where all parameters
+//      are uniform.
+//   2: Your function body code is short.
+//   3: Your function is intended to be an inline function.
+//   4: The return type can be efficiently returned by value.
+//   5: No more than 4 parameters.
+//   6: Parameters cannot be pointer, array, or reference types
+//
+//   inline uniform|varying RTYPE
+//   func(const uniform|varying PTYPE0 p0, ...,
+//        const uniform|varying PTYPE3 p3)
+//   {
+//       uniform|varying RTYPE result;
+//       user code
+//       return result;
+//   }
+//
+// In user code, each paramter is named p0, p1, p2, ..
+// The return value is named "result"
+
+// define a unary variform
+// example:
+// MATH_DEFINE_UNARY_VARIFORM(length, float, Vec2f,
+// {
+//         result = sqrt(p0.x * p0.x + p0.y * p0.y);
+// })
+//
+#define MATH_DEFINE_UNARY_VARIFORM(FNAME, RTYPE, PTYPE0, CODE)          \
+    MATH_UNARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, CODE)
+#define MATH_DEFINE_UNARY_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, LOCAL_VAR_TYPE, CODE) \
+    MATH_UNARY_VARIFORM(FNAME, RTYPE, PTYPE0, LOCAL_VAR_TYPE, CODE)
+
+// define a binary variform
+// example:
+// MATH_DEFINE_BINARY_VARIFORM(operator+, Vec2f, Vec2f, Vec2f,
+// {
+//    result.x = p0.x + p1.x;
+//    result.y = p0.y + p1.y;
+//  })
+//
+#define MATH_DEFINE_BINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, CODE) \
+    MATH_BINARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, CODE)
+#define MATH_DEFINE_BINARY_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE) \
+    MATH_BINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE)
+
+// define a ternary variform
+//
+// example:
+// MATH_DEFINE_TERNARY_VARIFORM(Col3f_ctor, Col3f, float, float, float,
+// {
+//    result.r = p0;
+//    result.g = p1;
+//    result.b = p2;
+// })
+//
+#define MATH_DEFINE_TERNARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, CODE) \
+    MATH_TERNARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, CODE)
+#define MATH_DEFINE_TERNARY_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE) \
+    MATH_TERNARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE)
+
+// define a quaternion variform
+// example:
+// MATH_DEFINE_QUATERNION_VARIFORM(Col4f_ctor, Col4f, float, float, float, float,
+// {
+//    result.r = p0;
+//    result.g = p1;
+//    result.b = p2;
+//    result.a = p3;
+// })
+//
+#define MATH_DEFINE_QUATERNION_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, CODE) \
+    MATH_QUATERNION_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, CODE)
+#define MATH_DEFINE_QUATERNION_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, LOCAL_VAR_TYPE, CODE) \
+    MATH_QUATERNION_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, LOCAL_VAR_TYPE, CODE)
+
+// define a quinary variform
+// example:
+// TODO: add an example
+#define MATH_DEFINE_QUINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, CODE) \
+    MATH_QUINARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, CODE)
+#define MATH_DEFINE_QUINARY_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, LOCAL_VAR_TYPE, CODE) \
+    MATH_QUINARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, LOCAL_VAR_TYPE, CODE)
+
+// define a senary variform
+// example:
+// TODO: add an example
+#define MATH_DEFINE_SENARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, CODE) \
+    MATH_SENARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, CODE)
+#define MATH_DEFINE_SENARY_VARIFORM_WITH_L(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, LOCAL_VAR_TYPE, CODE) \
+    MATH_SENARY_VARIFORM(FNAME, RTYPE, PTYPE0, PTYPE1, PTYPE2, PTYPE3, PTYPE4, PTYPE5, LOCAL_VAR_TYPE, CODE)
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// Inline Array Parameter Variform
+// ----------------------------------------------------------------------
+//
+// An inline array paremeter variform is similar to the simple inline
+// variform with the exception that its parameters are arrays.
+//
+// inline uniform|varying RTYPE
+// func(const uniform|varying PTYPE0 p0[])
+// {
+//     uniform|varying RTYPE result;
+//     user code;
+//     return result;
+// }
+
+// @brief define a unary array parameter variform
+// example:
+// MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2f_ctor, Vec2f, float,
+// {
+//     result.x = p0[0];
+//     result.y = p0[1];
+// }
+#define MATH_DEFINE_UNARY_ARRAY_VARIFORM(FNAME, RTYPE, PTYPE0, CODE) \
+    MATH_UNARY_ARRAY_VARIFORM(FNAME, RTYPE, PTYPE0, CODE)
+
+// ----------------------------------------------------------------------
+// Inline Uniform or Varying Variform
+//   When overloading functions, one can often get away with just
+//   defining the "all varying" and "all uniform" parameter case and allowing
+//   the ispc compiler to automatically promote the passed uniform
+//   parameters to varying.  This does not work for parameters passed
+//   by reference (such as operator overloads),
+//   but can save a considerable number of function definitions when this
+//   automatic promotion is not undesirable.
+//  This is the strategy employed by ispc standard library.
+// ----------------------------------------------------------------------
+
+// @brief define a unary univar variform
+#define MATH_DEFINE_UNARY_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE) \
+    MATH_UNARY_VARIFORM_NO_L(FNAME, RTYPE, PTYPE, CODE)
+
+// @brief define a 9 parameter univar variform of equal parameter types
+#define MATH_DEFINE_P9_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE) \
+    MATH_P9_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE)
+
+// @brief define a 12 parameter univar variform of equal parameter types
+#define MATH_DEFINE_P12_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE) \
+    MATH_P12_UNIVAR_VARIFORM(FNAME, RTYPE, PTYPE, CODE)
+
+// ---------------------------------------------------------------------
+// Simple Set Variform
+// ---------------------------------------------------------------------
+// To use this set of macros, your variform must be of the form
+//
+// inline void
+// func(      uniform|varying PTYPE0 &p0,
+//      const uniform|varying PTYPE1 p1,...
+//      const uniform|varying PTYPE2 p2)
+// {
+//    uniform|varying <LOCAL_VAR_TYPE> l0;
+//    USER_CODE
+// }
+//
+
+// define a set variform that takes only the target parameter
+// examples:
+//     MATH_DEFINE_SET_VARIFORM(setToOne, int, { p0 = 1; })
+#define MATH_DEFINE_SET_VARIFORM(FNAME, PTYPE0, CODE)   \
+    MATH_SET_VARIFORM_NO_L(FNAME, PTYPE0, CODE)
+#define MATH_DEFINE_SET_VARIFORM_WITH_L(FNAME, PTYPE0, LOCAL_VAR_TYPE, CODE) \
+    MATH_SET_VARIFORM(FNAME, PTYPE0, LOCAL_VAR_TYPE, CODE)
+
+// define a unary set variform
+// example:
+//     MATH_DEFINE_UNARY_SET_VARIFORM(setToValue, int, int, { p0 = p1; })
+#define MATH_DEFINE_UNARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, CODE)     \
+    MATH_UNARY_SET_VARIFORM_NO_L(FNAME, PTYPE0, PTYPE1, CODE)
+#define MATH_DEFINE_UNARY_SET_VARIFORM_WITH_L(FNAME, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE) \
+    MATH_UNARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, LOCAL_VAR_TYPE, CODE)
+
+// define a binary set variform (e.g. set(target, v1, v2))
+// example:
+//     MATH_DEFINE_BINARY_SET_VARIFORM(setToSum(int, int, int, { p0 = p1 + p2; }))
+#define MATH_DEFINE_BINARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, PTYPE2, CODE) \
+    MATH_BINARY_SET_VARIFORM_NO_L(FNAME, PTYPE0, PTYPE1, PTYPE2, CODE)
+#define MATH_DEFINE_BINARY_SET_VARIFORM_WITH_L(FNAME, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE) \
+    MATH_BINARY_SET_VARIFORM(FNAME, PTYPE0, PTYPE1, PTYPE2, LOCAL_VAR_TYPE, CODE)
+

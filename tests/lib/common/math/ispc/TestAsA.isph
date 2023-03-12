@@ -1,0 +1,326 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathAsA.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/asA.isph>
+#include <scene_rdl2/common/math/ispc/Col3.isph>
+#include <scene_rdl2/common/math/ispc/Col4.isph>
+#include <scene_rdl2/common/math/ispc/Math.isph>
+#include <scene_rdl2/common/math/ispc/Vec2.isph>
+#include <scene_rdl2/common/math/ispc/Vec3.isph>
+#include <scene_rdl2/common/math/ispc/Vec4.isph>
+
+#define VAR varying
+#define UNI uniform
+
+inline uniform int
+testAsAVec2()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // V3 -> V2
+    {
+        varying Vec3f v3f = Vec3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        varying Vec2f &v2f = asAVec2f(v3f);
+        varying Vec2f r2f = Vec2f_ctor((varying float) pi + 1, (varying float) pi + 2);
+        if (any(!isEqual(v2f, r2f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec3f v3f = Vec3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        uniform Vec2f &v2f = asAVec2f(v3f);
+        uniform Vec2f r2f = Vec2f_ctor((uniform float) 1, (uniform float) 2);
+        if (any(!isEqual(v2f, r2f))) {
+            ++error;
+        }
+    }
+
+    // V4 -> V2
+    {
+        varying Vec4f v4f = Vec4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) (pi + 4));
+        varying Vec2f &v2f = asAVec2f(v4f);
+        varying Vec2f r2f = Vec2f_ctor((varying float) pi + 1, (varying float) pi + 2);
+        if (any(!isEqual(v2f, r2f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec4f v4f = Vec4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Vec2f &v2f = asAVec2f(v4f);
+        uniform Vec2f r2f = Vec2f_ctor((uniform float) 1, (uniform float) 2);
+        if (any(!isEqual(v2f, r2f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsAVec3()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // V4 -> V3
+    {
+        varying Vec4f v4f = Vec4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) (pi + 4));
+        varying Vec3f &v3f = asAVec3f(v4f);
+        varying Vec3f r3f = Vec3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(v3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec4f v4f = Vec4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Vec3f &v3f = asAVec3f(v4f);
+        uniform Vec3f r3f = Vec3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(v3f, r3f))) {
+            ++error;
+        }
+    }
+
+    // Col3 -> V3
+    {
+        varying Col3f c3f = Col3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        varying Vec3f &v3f = asAVec3f(c3f);
+        varying Vec3f r3f = Vec3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(v3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Col3f c3f = Col3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        uniform Vec3f &v3f = asAVec3f(c3f);
+        uniform Vec3f r3f = Vec3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(v3f, r3f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsAVec4()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // C4 -> V4
+    {
+        varying Col4f c4f = Col4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) (pi + 4));
+        varying Vec4f &v4f = asAVec4f(c4f);
+        varying Vec4f r4f = Vec4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) pi + 4);
+        if (any(!isEqual(v4f, r4f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Col4f c4f = Col4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Vec4f &v4f = asAVec4f(c4f);
+        uniform Vec4f r4f = Vec4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        if (any(!isEqual(v4f, r4f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsACol3()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // V3 -> Col3
+    {
+        varying Vec3f v3f = Vec3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        varying Col3f &c3f = asACol3f(v3f);
+        varying Col3f r3f = Col3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec3f v3f = Vec3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        uniform Col3f &c3f = asACol3f(v3f);
+        uniform Col3f r3f = Col3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    // Col4 -> Col3
+    {
+        varying Col4f c4f = Col4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) pi + 4);
+        varying Col3f &c3f = asACol3f(c4f);
+        varying Col3f r3f = Col3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Col4f c4f = Col4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Col3f &c3f = asACol3f(c4f);
+        uniform Col3f r3f = Col3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsAColor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // V3 -> Color
+    {
+        varying Vec3f v3f = Vec3f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        varying Color &c3f = asAColor(v3f);
+        varying Color r3f = Color_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec3f v3f = Vec3f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        uniform Color &c3f = asAColor(v3f);
+        uniform Color r3f = Color_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    // Col4 -> Color
+    {
+        varying Col4f c4f = Col4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) pi + 4);
+        varying Color &c3f = asAColor(c4f);
+        varying Color r3f = Color_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Col4f c4f = Col4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Color &c3f = asAColor(c4f);
+        uniform Color r3f = Color_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3);
+        if (any(!isEqual(c3f, r3f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsACol4()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // V4 -> Col4
+    {
+        varying Vec4f v4f = Vec4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) pi + 4);
+        varying Col4f &c4f = asACol4f(v4f);
+        varying Col4f r4f = Col4f_ctor((varying float) pi + 1, (varying float) pi + 2, (varying float) pi + 3, (varying float) pi + 4);
+        if (any(!isEqual(c4f, r4f))) {
+            ++error;
+        }
+    }
+
+    {
+        uniform Vec4f v4f = Vec4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        uniform Col4f &c4f = asACol4f(v4f);
+        uniform Col4f r4f = Col4f_ctor((uniform float) 1, (uniform float) 2, (uniform float) 3, (uniform float) 4);
+        if (any(!isEqual(c4f, r4f))) {
+            ++error;
+        }
+    }
+
+    return error;
+}
+
+inline uniform int
+testAsArray()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // Vec2f
+    {
+        const varying Vec2f vv2f = Vec2f_ctor(pi + 1, pi + 2);
+        if (any(!isEqual((asArray(vv2f))[0], vv2f.x))) ++error;
+        if (any(!isEqual((asArray(vv2f))[1], vv2f.y))) ++error;
+        const uniform Vec2f uv2f = Vec2f_ctor(1, 2);
+        if (any(!isEqual((asArray(uv2f))[0], uv2f.x))) ++error;
+        if (any(!isEqual((asArray(uv2f))[1], uv2f.y))) ++error;
+    }
+    // Vec3f
+    {
+        const varying Vec3f vv3f = Vec3f_ctor(pi + 1, pi + 2, pi + 3);
+        if (any(!isEqual((asArray(vv3f))[0], vv3f.x))) ++error;
+        if (any(!isEqual((asArray(vv3f))[1], vv3f.y))) ++error;
+        if (any(!isEqual((asArray(vv3f))[2], vv3f.z))) ++error;
+        const uniform Vec3f uv3f = Vec3f_ctor(1, 2, 3);
+        if (any(!isEqual((asArray(uv3f))[0], uv3f.x))) ++error;
+        if (any(!isEqual((asArray(uv3f))[1], uv3f.y))) ++error;
+        if (any(!isEqual((asArray(uv3f))[2], uv3f.z))) ++error;
+    }
+    // Vec4f
+    {
+        const varying Vec4f vv4f = Vec4f_ctor(pi + 1, pi + 2, pi + 3, pi + 4);
+        if (any(!isEqual((asArray(vv4f))[0], vv4f.x))) ++error;
+        if (any(!isEqual((asArray(vv4f))[1], vv4f.y))) ++error;
+        if (any(!isEqual((asArray(vv4f))[2], vv4f.z))) ++error;
+        const uniform Vec4f uv4f = Vec4f_ctor(1, 2, 3, 4);
+        if (any(!isEqual((asArray(uv4f))[0], uv4f.x))) ++error;
+        if (any(!isEqual((asArray(uv4f))[1], uv4f.y))) ++error;
+        if (any(!isEqual((asArray(uv4f))[2], uv4f.z))) ++error;
+    }
+    // Col3f
+    {
+        const varying Col3f vc3f = Col3f_ctor(pi + 1, pi + 2, pi + 3);
+        if (any(!isEqual((asArray(vc3f))[0], vc3f.r))) ++error;
+        if (any(!isEqual((asArray(vc3f))[1], vc3f.g))) ++error;
+        if (any(!isEqual((asArray(vc3f))[2], vc3f.b))) ++error;
+        const uniform Col3f uc3f = Col3f_ctor(1, 2, 3);
+        if (any(!isEqual((asArray(uc3f))[0], uc3f.r))) ++error;
+        if (any(!isEqual((asArray(uc3f))[1], uc3f.g))) ++error;
+        if (any(!isEqual((asArray(uc3f))[2], uc3f.b))) ++error;
+    }
+    // Col4f
+    {
+        const varying Col4f vc4f = Col4f_ctor(pi + 1, pi + 2, pi + 3, pi + 4);
+        if (any(!isEqual((asArray(vc4f))[0], vc4f.r))) ++error;
+        if (any(!isEqual((asArray(vc4f))[1], vc4f.g))) ++error;
+        if (any(!isEqual((asArray(vc4f))[2], vc4f.b))) ++error;
+        if (any(!isEqual((asArray(vc4f))[3], vc4f.a))) ++error;
+        const uniform Col4f uc4f = Col4f_ctor(1, 2, 3, 4);
+        if (any(!isEqual((asArray(uc4f))[0], uc4f.r))) ++error;
+        if (any(!isEqual((asArray(uc4f))[1], uc4f.g))) ++error;
+        if (any(!isEqual((asArray(uc4f))[2], uc4f.b))) ++error;
+        if (any(!isEqual((asArray(uc4f))[3], uc4f.a))) ++error;
+    }
+
+    return error;
+}
+

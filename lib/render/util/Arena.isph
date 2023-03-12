@@ -1,0 +1,107 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+//
+//
+#pragma once
+
+// Include this before any other includes!
+#include <scene_rdl2/common/platform/Platform.isph>
+
+struct Arena;
+
+extern "C" uniform uint8_t *uniform CPP_Arena_alloc(
+    Arena uniform *uniform arena,
+    uniform uint32_t size,
+    uniform uint32_t alignment);
+
+extern "C" void CPP_Arena_setPtr(
+    Arena uniform *uniform arena,
+    uniform uint8_t *uniform ptr);
+
+extern "C" uniform bool CPP_Arena_isValidPtr(
+    const uniform Arena *uniform arena,
+    const void *uniform ptr);
+
+//-----------------------------------------------------------------------------
+
+// ISPC structure compatible with the C++ memory arena defined in Arena.h.
+struct Arena
+{
+    uniform uint8_t *uniform    mBlockPool; // util::Ref<ArenaBlockPool>
+    uniform uint8_t *uniform    mBase;      // uint8_t *, start of memory            
+    uniform uint8_t *uniform    mEnd;       // uint8_t *, one past the end of memory 
+    uniform uint8_t *uniform    mPtr;       // uint8_t *, current location           
+};
+
+//-----------------------------------------------------------------------------
+
+inline uniform uint8_t *uniform
+Arena_alloc(uniform Arena *uniform this, 
+            uniform uint32_t size, 
+            uniform uint32_t alignment = SIMD_MEMORY_ALIGNMENT)
+{
+    MNRY_ASSERT(this->mPtr);
+    MNRY_ASSERT(this->mPtr >= this->mBase);
+
+    uniform uint32_t ptr = this->mPtr - this->mBase;
+
+    size = max(size, 4u);
+
+    // Return addresses are on SIMD_MEMORY_ALIGNMENT byte boundaries since we
+    // assume code is built with --opt=force-aligned-memory.
+    alignment = max(alignment, SIMD_MEMORY_ALIGNMENT);
+    uniform uint32_t alignMinusOne = alignment - 1u;
+    ptr = (ptr + alignMinusOne) & ~alignMinusOne;
+
+    uniform uint8_t *uniform ret = this->mBase + ptr;
+
+    // Did alloc succeed?
+    if (ret + size <= this->mEnd) {
+
+        this->mPtr = ret + size;
+
+#ifdef DEBUG
+        // Debug only - clear out memory.
+        memset((void *uniform)ret, 0xac, size);
+#endif
+        return ret;
+
+    } else {
+        // Alloc failed, call out to C++ arena to allocate a new memory block.
+        return CPP_Arena_alloc(this, size, alignment);
+    }
+}
+
+inline uniform uint8_t *uniform
+Arena_allocArray(uniform Arena *uniform this,
+                 uniform uint32_t numElems,
+                 uniform uint32_t size,
+                 uniform uint32_t alignment = SIMD_MEMORY_ALIGNMENT)
+{
+    return Arena_alloc(this, size * numElems, alignment);
+}
+
+inline uniform uint8_t *uniform
+Arena_getPtr(uniform Arena *uniform this)
+{
+    return this->mPtr;
+}
+
+inline void
+Arena_setPtr(uniform Arena *uniform this, uniform uint8_t *uniform ptr)
+{
+    MNRY_ASSERT(this->mBlockPool);
+
+    if (ptr >= this->mBase && ptr <= this->mEnd) {
+        this->mPtr = ptr;
+        return;
+    }
+
+    // Call into C++ version to do any real work.
+    CPP_Arena_setPtr(this, ptr);
+}
+
+//-----------------------------------------------------------------------------
+
+

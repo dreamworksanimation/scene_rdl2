@@ -1,0 +1,879 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestQuaternion.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Mat3.isph>
+#include <scene_rdl2/common/math/ispc/Quaternion.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Quaternion3x_ctor(x)
+// Quaternion3x_ctor(x, x, x, x)
+// Quaternion3x_ctor(Vec3x)
+//----------------------------------------------------------------------
+#define QUATERNION_CTOR1_TEST(VURES, VUP0, P0)                                 \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VURES Quaternion3f q = Quaternion3f_ctor(f0);                    \
+        if (any(q.r != f0) || any(q.i != 0.) ||                                \
+            any(q.j != 0.) || any(q.k != 0.)) {                                \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+#define QUATERNION_CTOR4_TEST(VURES, VUP0, VUP1, VUP2, VUP3, P0, P1, P2, P3)   \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VUP1 float f1 = P1;                                              \
+        const VUP2 float f2 = P2;                                              \
+        const VUP3 float f3 = P3;                                              \
+        const VURES Quaternion3f q = Quaternion3f_ctor(f0, f1, f2, f3);        \
+        if (any(q.r != f0) || any(q.i != f1) ||                                \
+            any(q.j != f2) || any(q.k != f3)) {                                \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+#define QUATERNION_CTORV_TEST(VURES, VUP0, VUP1, VUP2, P0, P1, P2)             \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VUP1 float f1 = P1;                                              \
+        const VUP2 float f2 = P2;                                              \
+        const VURES Quaternion3f q = Quaternion3f_ctor(Vec3f_ctor(f0, f1, f2));\
+        if (any(q.r != 0.) || any(q.i != f0) ||                                \
+            any(q.j != f1) || any(q.k != f2)) {                                \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+#define QUATERNION_CTORAR_TEST(VURES, VUP0, VUP1, VUP2, VUP3, P0, P1, P2, P3)  \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VUP1 float f1 = P1;                                              \
+        const VUP2 float f2 = P2;                                              \
+        const VUP3 float f3 = P3;                                              \
+        const VURES Vec3f a = Vec3f_ctor(f0, f1, f2);                          \
+        const VURES Vec3f na = normalize(a);                                   \
+        const VURES Quaternion3f q = Quaternion3f_ctor(a, f3);                 \
+        if (any(q.r != cos(0.5*f3)) ||                                         \
+            any(!isEqual(asVec3(q), sin(0.5*f3) * na))) {                      \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_CTOR1_TEST(VAR, VAR, (pi));
+    QUATERNION_CTOR1_TEST(UNI, UNI, (1));
+
+    QUATERNION_CTOR4_TEST(VAR, VAR, VAR, VAR, VAR, (pi), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, VAR, VAR, UNI, (pi), (pi+1), (pi+2), (3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, VAR, UNI, VAR, (pi), (pi+1), (2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, VAR, UNI, UNI, (pi), (pi+1), (2), (3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, UNI, VAR, VAR, (pi), (1), (pi+2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, UNI, VAR, UNI, (pi), (1), (pi+2), (3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, UNI, UNI, VAR, (pi), (1), (2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, VAR, UNI, UNI, UNI, (pi), (1), (2), (3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, VAR, VAR, VAR, (0), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, VAR, VAR, UNI, (0), (pi+1), (pi+2), (3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, VAR, UNI, VAR, (0), (pi+1), (2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, VAR, UNI, UNI, (0), (pi+1), (2), (3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, UNI, VAR, VAR, (0), (1), (pi+2), (pi+3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, UNI, VAR, UNI, (0), (1), (pi+2), (3));
+    QUATERNION_CTOR4_TEST(VAR, UNI, UNI, UNI, VAR, (0), (1), (2), (pi+3));
+    QUATERNION_CTOR4_TEST(UNI, UNI, UNI, UNI, UNI, (0), (1), (2), (3));
+
+    QUATERNION_CTORV_TEST(VAR, VAR, VAR, VAR, (pi), (pi + 1), (pi + 2));
+    QUATERNION_CTORV_TEST(VAR, VAR, VAR, UNI, (pi), (pi + 1), (2));
+    QUATERNION_CTORV_TEST(VAR, VAR, UNI, VAR, (pi), (1), (pi + 2));
+    QUATERNION_CTORV_TEST(VAR, VAR, UNI, UNI, (pi), (1), (2));
+    QUATERNION_CTORV_TEST(VAR, UNI, VAR, VAR, (0), (pi + 1), (pi + 2));
+    QUATERNION_CTORV_TEST(VAR, UNI, VAR, UNI, (0), (pi + 1), (2));
+    QUATERNION_CTORV_TEST(VAR, UNI, UNI, VAR, (0), (1), (pi + 2));
+    QUATERNION_CTORV_TEST(UNI, UNI, UNI, UNI, (0), (1), (2));
+
+    QUATERNION_CTORAR_TEST(VAR, VAR, VAR, VAR, VAR, (pi), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, VAR, VAR, UNI, (pi), (pi+1), (pi+2), (3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, VAR, UNI, VAR, (pi), (pi+1), (2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, VAR, UNI, UNI, (pi), (pi+1), (2), (3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, UNI, VAR, VAR, (pi), (1), (pi+2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, UNI, VAR, UNI, (pi), (1), (pi+2), (3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, UNI, UNI, VAR, (pi), (1), (2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, VAR, UNI, UNI, UNI, (pi), (1), (2), (3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, VAR, VAR, VAR, (0), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, VAR, VAR, UNI, (0), (pi+1), (pi+2), (3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, VAR, UNI, VAR, (0), (pi+1), (2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, VAR, UNI, UNI, (0), (pi+1), (2), (3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, UNI, VAR, VAR, (0), (1), (pi+2), (pi+3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, UNI, VAR, UNI, (0), (1), (pi+2), (3));
+    QUATERNION_CTORAR_TEST(VAR, UNI, UNI, UNI, VAR, (0), (1), (2), (pi+3));
+    QUATERNION_CTORAR_TEST(UNI, UNI, UNI, UNI, UNI, (0), (1), (2), (3));
+
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// v
+//----------------------------------------------------------------------
+#define QUATERNION_V_TEST(VURES, VUP0, VUP1, VUP2, VUP3, P0, P1, P2, P3)       \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VUP1 float f1 = P1;                                              \
+        const VUP2 float f2 = P2;                                              \
+        const VUP3 float f3 = P3;                                              \
+        const VURES Vec3f v = asVec3(Quaternion3f_ctor(f0, f1, f2, f3));       \
+        if (any(v.x != f1) || any(v.y != f2) || any(v.z != f3)) {              \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testGetV()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_V_TEST(VAR, VAR, VAR, VAR, VAR, (pi), (pi+1), (pi+2), (pi+3));
+    QUATERNION_V_TEST(VAR, VAR, VAR, VAR, UNI, (pi), (pi+1), (pi+2), (3));
+    QUATERNION_V_TEST(VAR, VAR, VAR, UNI, VAR, (pi), (pi+1), (2), (pi+3));
+    QUATERNION_V_TEST(VAR, VAR, VAR, UNI, UNI, (pi), (pi+1), (2), (3));
+    QUATERNION_V_TEST(VAR, VAR, UNI, VAR, VAR, (pi), (1), (pi+2), (pi+3));
+    QUATERNION_V_TEST(VAR, VAR, UNI, VAR, UNI, (pi), (1), (pi+2), (3));
+    QUATERNION_V_TEST(VAR, VAR, UNI, UNI, VAR, (pi), (1), (2), (pi+3));
+    QUATERNION_V_TEST(VAR, VAR, UNI, UNI, UNI, (pi), (1), (2), (3));
+    QUATERNION_V_TEST(VAR, UNI, VAR, VAR, VAR, (0), (pi+1), (pi+2), (pi+3));
+    QUATERNION_V_TEST(VAR, UNI, VAR, VAR, UNI, (0), (pi+1), (pi+2), (3));
+    QUATERNION_V_TEST(VAR, UNI, VAR, UNI, VAR, (0), (pi+1), (2), (pi+3));
+    QUATERNION_V_TEST(VAR, UNI, VAR, UNI, UNI, (0), (pi+1), (2), (3));
+    QUATERNION_V_TEST(VAR, UNI, UNI, VAR, VAR, (0), (1), (pi+2), (pi+3));
+    QUATERNION_V_TEST(VAR, UNI, UNI, VAR, UNI, (0), (1), (pi+2), (3));
+    QUATERNION_V_TEST(VAR, UNI, UNI, UNI, VAR, (0), (1), (2), (pi+3));
+    QUATERNION_V_TEST(UNI, UNI, UNI, UNI, UNI, (0), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// conjugate
+//----------------------------------------------------------------------
+#define QUATERNION_CONJUGATE_TEST(VURES, VUP0, VUP1, VUP2, VUP3, P0, P1, P2, P3) \
+    {                                                                          \
+        const VUP0 float f0 = P0;                                              \
+        const VUP1 float f1 = P1;                                              \
+        const VUP2 float f2 = P2;                                              \
+        const VUP3 float f3 = P3;                                              \
+        const VURES Quaternion3f q0 = Quaternion3f_ctor(f0, f1, f2, f3);       \
+        const VURES Quaternion3f q = conjugate(q0);                            \
+        if (any(q.r !=  q0.r) || any(q.i != -q0.i) ||                          \
+            any(q.j != -q0.j) || any(q.k != -q0.k)) {                          \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testConjugate()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, VAR, VAR, VAR, (pi), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, VAR, VAR, UNI, (pi), (pi+1), (pi+2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, VAR, UNI, VAR, (pi), (pi+1), (2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, VAR, UNI, UNI, (pi), (pi+1), (2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, UNI, VAR, VAR, (pi), (1), (pi+2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, UNI, VAR, UNI, (pi), (1), (pi+2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, UNI, UNI, VAR, (pi), (1), (2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, VAR, UNI, UNI, UNI, (pi), (1), (2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, VAR, VAR, VAR, (0), (pi+1), (pi+2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, VAR, VAR, UNI, (0), (pi+1), (pi+2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, VAR, UNI, VAR, (0), (pi+1), (2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, VAR, UNI, UNI, (0), (pi+1), (2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, UNI, VAR, VAR, (0), (1), (pi+2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, UNI, VAR, UNI, (0), (1), (pi+2), (3));
+    QUATERNION_CONJUGATE_TEST(VAR, UNI, UNI, UNI, VAR, (0), (1), (2), (pi+3));
+    QUATERNION_CONJUGATE_TEST(UNI, UNI, UNI, UNI, UNI, (0), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isNormalized(Quaternion) : is Quaternion a unit Quaternion
+//----------------------------------------------------------------------
+#define QUATERNION_IS_NORMALIZED_TEST(VUP0, P0R, P0I, P0J, P0K, R0)            \
+    {                                                                          \
+        const VUP0 Quaternion3f q0 = Quaternion3f_ctor(                        \
+            (VUP0 float) (P0R), (VUP0 float) (P0I),                            \
+            (VUP0 float) (P0J), (VUP0 float) (P0K));                           \
+        if (any(isNormalized(q0) != R0)) {                                     \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testIsNormalized()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex;
+
+    QUATERNION_IS_NORMALIZED_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), false);
+    QUATERNION_IS_NORMALIZED_TEST(VAR, (sqrt(.25)), (sqrt(.25)), (sqrt(.25)), sqrt(.25), true);
+    QUATERNION_IS_NORMALIZED_TEST(UNI, (0), (1), (0), (0), true);
+    QUATERNION_IS_NORMALIZED_TEST(UNI, (1), (1), (0), (1), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion = normalize(Quaternion) : normalize a Quaternion
+//----------------------------------------------------------------------
+#define QUATERNION_NORMALIZE_TEST(VUP0, P0R, P0I, P0J, P0K)                    \
+    {                                                                          \
+        const VUP0 Quaternion3f q0 = Quaternion3f_ctor(                        \
+            (VUP0 float) (P0R), (VUP0 float) (P0I),                            \
+            (VUP0 float) (P0J), (VUP0 float) (P0K));                           \
+        const VUP0 Quaternion3f nq0 = normalize(q0);                           \
+        if (any(isNormalized(nq0) == false)) {                                 \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testNormalize()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_NORMALIZE_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_NORMALIZE_TEST(UNI, (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion = rcp(Quaternion) : inverse of a Quaternion
+//----------------------------------------------------------------------
+#define QUATERNION_RCP_TEST(VUP0, P0R, P0I, P0J, P0K)                          \
+    {                                                                          \
+        const VUP0 Quaternion3f q0 = Quaternion3f_ctor(                        \
+            (VUP0 float) (P0R), (VUP0 float) (P0I),                            \
+            (VUP0 float) (P0J), (VUP0 float) (P0K));                           \
+        const VUP0 Quaternion3f q1 = rcp(q0);                                  \
+        const VUP0 Quaternion3f p = q0 * q1;                                   \
+        if (any(!isEqual(p.r*p.r + p.i*p.i + p.j*p.j + p.k*p.k, 1))) {         \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testRcp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_RCP_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_RCP_TEST(UNI, (1), (2), (3), (4));
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion OP Quaternion (+, -)
+//----------------------------------------------------------------------
+#define QUATERNION_PM_TEST(VUQ, VU0, VU1,                                      \
+                           V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K, OP)         \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 Quaternion3f q1 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = q1 OP q0;                                   \
+        if (any(q.r != (V1R OP V0R)) ||                                        \
+            any(q.i != (V1I OP V0I)) ||                                        \
+            any(q.j != (V1J OP V0J)) ||                                        \
+            any(q.k != (V1K OP V0K))) {                                        \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+//----------------------------------------------------------------------
+// Quaternion OP S (+, -)
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_PM_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, OP)   \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 float f0 = (VU1 float) (V1);                                 \
+        const VUQ Quaternion3f q = q0 OP f0;                                   \
+        if (any(q.r != q0.r OP f0) ||                                          \
+            any(q.i != q0.i) ||                                                \
+            any(q.j != q0.j) ||                                                \
+            any(q.k != q0.k)) {                                                \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+//----------------------------------------------------------------------
+// S OP Quaternion (+, -)
+//----------------------------------------------------------------------
+#define QUATERNION_S_PRE_PM_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K, OP)    \
+    {                                                                          \
+        const VU0 float f0 = (VU0 float) (V0);                                 \
+        const VU1 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = f0 OP q0;                                   \
+        if (any(q.r != f0 OP q0.r) ||                                          \
+            any(q.i != q0.i) ||                                                \
+            any(q.j != q0.j) ||                                                \
+            any(q.k != q0.k)) {                                                \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+//----------------------------------------------------------------------
+// Quaternion3f + f
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_PLUS_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1) \
+    QUATERNION_S_POST_PM_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, +)
+
+inline uniform int
+testScalarPostPlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_POST_PLUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1));
+    QUATERNION_S_POST_PLUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1));
+    QUATERNION_S_POST_PLUS_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1));
+    QUATERNION_S_POST_PLUS_TEST(VAR, UNI, UNI, (0), (1), (2), (3), (1));
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// f + Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_S_PRE_PLUS_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K) \
+    QUATERNION_S_PRE_PM_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K, +)
+
+inline uniform int
+testScalarPrePlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_PRE_PLUS_TEST(VAR, VAR, VAR, (pi + 1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_PLUS_TEST(VAR, UNI, VAR, (1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_PLUS_TEST(VAR, VAR, UNI, (pi + 1), (1), (2), (3), (4));
+    QUATERNION_S_PRE_PLUS_TEST(UNI, UNI, UNI, (1), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f + Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_PLUS_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K) \
+    QUATERNION_PM_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K, +)
+
+inline uniform int
+testPlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_PLUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_PLUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1), (2), (3), (4));
+    QUATERNION_PLUS_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_PLUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f - f
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_MINUS_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1) \
+    QUATERNION_S_POST_PM_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, -)
+
+inline uniform int
+testScalarPostMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_POST_MINUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1));
+    QUATERNION_S_POST_MINUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1));
+    QUATERNION_S_POST_MINUS_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1));
+    QUATERNION_S_POST_MINUS_TEST(VAR, UNI, UNI, (0), (1), (2), (3), (1));
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// f - Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_S_PRE_MINUS_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K) \
+    QUATERNION_S_PRE_PM_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K, -)
+
+inline uniform int
+testScalarPreMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_PRE_MINUS_TEST(VAR, VAR, VAR, (pi + 1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_MINUS_TEST(VAR, UNI, VAR, (1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_MINUS_TEST(VAR, VAR, UNI, (pi + 1), (1), (2), (3), (4));
+    QUATERNION_S_PRE_MINUS_TEST(UNI, UNI, UNI, (1), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f - Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_MINUS_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K) \
+    QUATERNION_PM_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K, -)
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_MINUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_MINUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1), (2), (3), (4));
+    QUATERNION_MINUS_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_MINUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion OP S (*, /)
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_MD_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, OP)   \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 float f0 = (VU1 float) (V1);                                 \
+        const VUQ Quaternion3f q = q0 OP f0;                                   \
+        if (any(!isEqual(q.r, q0.r OP f0)) ||                                  \
+            any(!isEqual(q.i, q0.i OP f0)) ||                                  \
+            any(!isEqual(q.j, q0.j OP f0)) ||                                  \
+            any(!isEqual(q.k, q0.k OP f0))) {                                  \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+//----------------------------------------------------------------------
+// Quaternion3f * f
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_MULT_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1) \
+    QUATERNION_S_POST_MD_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, *)
+
+inline uniform int
+testScalarPostMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_POST_MULT_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1));
+    QUATERNION_S_POST_MULT_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1));
+    QUATERNION_S_POST_MULT_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1));
+    QUATERNION_S_POST_MULT_TEST(VAR, UNI, UNI, (0), (1), (2), (3), (1));
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// f * Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_S_PRE_MULT_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K)      \
+    {                                                                          \
+        const VU0 float f0 = (VU0 float) (V0);                                 \
+        const VU1 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = f0 * q0;                                    \
+        if (any(q.r != f0 * q0.r) ||                                           \
+            any(q.i != f0 * q0.i) ||                                           \
+            any(q.j != f0 * q0.j) ||                                           \
+            any(q.k != f0 * q0.k)) {                                           \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testScalarPreMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_PRE_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_MULT_TEST(VAR, UNI, VAR, (1), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_S_PRE_MULT_TEST(VAR, VAR, UNI, (pi + 1), (1), (2), (3), (4));
+    QUATERNION_S_PRE_MULT_TEST(UNI, UNI, UNI, (1), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion * Quaternion
+//----------------------------------------------------------------------
+#define QUATERNION_MULT_TEST(VUQ, VU0, VU1,                                    \
+                           V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K)             \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 Quaternion3f q1 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = q0 * q1;                                    \
+        if (any(q.r != (q0.r*q1.r - q0.i*q1.i - q0.j*q1.j - q0.k*q1.k)) ||     \
+            any(q.i != (q0.r*q1.i + q0.i*q1.r + q0.j*q1.k - q0.k*q1.j)) ||     \
+            any(q.j != (q0.r*q1.j - q0.i*q1.k + q0.j*q1.r + q0.k*q1.i)) ||     \
+            any(q.k != (q0.r*q1.k + q0.i*q1.j - q0.j*q1.i + q0.k*q1.r))) {     \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_MULT_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_MULT_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1), (2), (3), (4));
+    QUATERNION_MULT_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_MULT_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (1), (2), (3), (4));
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// Vec3 = Quaternion * Vec3
+//----------------------------------------------------------------------
+#define QUATERNION_VEC_POST_MULT_TEST(VUV, VU0, VU1, VU2, P0, P1, P2)          \
+    {                                                                          \
+        const VUV Vec3f v0 = Quaternion3f_ctor(P0, P1) * P2;                   \
+        const VUV Vec3f v1 = transform(Mat3f_rotate(P0, P1), P2);              \
+        if (!any(isEqual(v0, v1))) {                                           \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testVecPostMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, UNI, VAR, (Vec3f_ctor(1, 2, 3)), 4, (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, VAR, UNI, (Vec3f_ctor(1, 2, 3)), (pi + 4), (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, VAR, VAR, (Vec3f_ctor(1, 2, 3)), (pi + 4), (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, VAR, UNI, UNI, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), 4, (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, UNI, VAR, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), 4, (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, VAR, UNI, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), (pi + 4), (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_VEC_POST_MULT_TEST(VAR, UNI, VAR, VAR, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), (pi + 4), (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_VEC_POST_MULT_TEST(UNI, UNI, UNI, UNI, (Vec3f_ctor(1, 2, 3)), 4, (Vec3f_ctor(5, 6, 7)));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3 = transform(Quaternion, Vec3)
+//----------------------------------------------------------------------
+#define QUATERNION_TRANSFORM_TEST(VUV, VU0, VU1, VU2, P0, P1, P2)              \
+    {                                                                          \
+        const VUV Vec3f v0 = transform(Quaternion3f_ctor(P0, P1), P2);         \
+        const VUV Vec3f v1 = transform(Mat3f_rotate(P0, P1), P2);              \
+        if (!any(isEqual(v0, v1))) {                                           \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testTransform()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, UNI, VAR, (Vec3f_ctor(1, 2, 3)), 4, (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, VAR, UNI, (Vec3f_ctor(1, 2, 3)), (pi + 4), (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, VAR, VAR, (Vec3f_ctor(1, 2, 3)), (pi + 4), (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, VAR, UNI, UNI, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), 4, (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, UNI, VAR, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), 4, (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, VAR, UNI, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), (pi + 4), (Vec3f_ctor(5, 6, 7)));
+    QUATERNION_TRANSFORM_TEST(VAR, UNI, VAR, VAR, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), (pi + 4), (Vec3f_ctor(pi + 5, pi + 6, pi + 7)));
+    QUATERNION_TRANSFORM_TEST(UNI, UNI, UNI, UNI, (Vec3f_ctor(1, 2, 3)), 4, (Vec3f_ctor(5, 6, 7)));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f = f / Quaternion3f
+//----------------------------------------------------------------------
+#define QUATERNION_S_PRE_DIV_TEST(VUQ, VU0, VU1, V0, V1R, V1I, V1J, V1K)       \
+    {                                                                          \
+        const VU0 float f0 = (VU0 float) (V0);                                 \
+        const VU1 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = f0 / q0;                                    \
+        const VUQ Quaternion3f c = f0 * rcp(q0);                               \
+        if (any(!isEqual(q, c))) {                                             \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testScalarPreDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_PRE_DIV_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1));
+    QUATERNION_S_PRE_DIV_TEST(VAR, VAR, UNI, (pi), (1), (2), (3), (1));
+    QUATERNION_S_PRE_DIV_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1));
+    QUATERNION_S_PRE_DIV_TEST(VAR, UNI, UNI, (0), (1), (2), (3), (1));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f = Quaternion3f / f
+//----------------------------------------------------------------------
+#define QUATERNION_S_POST_DIV_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1) \
+    QUATERNION_S_POST_MD_TEST(VUQ, VU0, VU1, V0R, V0I, V0J, V0K, V1, /)
+
+inline uniform int
+testScalarPostDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_S_POST_DIV_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1));
+    QUATERNION_S_POST_DIV_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1));
+    QUATERNION_S_POST_DIV_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1));
+    QUATERNION_S_POST_DIV_TEST(VAR, UNI, UNI, (0), (1), (2), (3), (1));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion / Quaternion
+//----------------------------------------------------------------------
+#define QUATERNION_DIV_TEST(VUQ, VU0, VU1,                                     \
+                           V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K)             \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 Quaternion3f q1 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ Quaternion3f q = q0 / q1;                                    \
+        const VUQ Quaternion3f c = q0 * rcp(q1);                               \
+        if (any(!isEqual(q, c))) {                                             \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_DIV_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_DIV_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1), (2), (3), (4));
+    QUATERNION_DIV_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_DIV_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (1), (2), (3), (4));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// float = dot(Quaternion, Quaternion)
+//----------------------------------------------------------------------
+#define QUATERNION_DOT_TEST(VUQ, VU0, VU1,                                     \
+                           V0R, V0I, V0J, V0K, V1R, V1I, V1J, V1K)             \
+    {                                                                          \
+        const VU0 Quaternion3f q0 = Quaternion3f_ctor(                         \
+            (VU0 float) (V0R), (VU0 float) (V0I),                              \
+            (VU0 float) (V0J), (VU0 float) (V0K));                             \
+        const VU1 Quaternion3f q1 = Quaternion3f_ctor(                         \
+            (VU1 float) (V1R), (VU1 float) (V1I),                              \
+            (VU1 float) (V1J), (VU1 float) (V1K));                             \
+        const VUQ float d = dot(q0,q1);                                        \
+        if (any(d != (q0.r*q1.r + q0.i*q1.i + q0.j*q1.j + q0.k*q1.k))) {       \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testDot()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_DOT_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_DOT_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (pi + 3), (1), (2), (3), (4));
+    QUATERNION_DOT_TEST(VAR, UNI, VAR, (0), (1), (2), (3), (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    QUATERNION_DOT_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (1), (2), (3), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqual(Quaternion3x, Quaternion3x)
+// ---------------------------------------------------------------------
+#define QUATERNION_IS_EQUAL_TEST(VUP0, VUP1, P0X, P0Y, P0Z, P0W, P1X, P1Y, P1Z, P1W, R0) \
+    {                                                                   \
+        const VUP0 Quaternion3f v0 = Quaternion3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z), \
+                                         (VUP0 float) (P0W));           \
+        const VUP1 Quaternion3f v1 = Quaternion3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z), \
+                                         (VUP1 float) (P1W));           \
+        if (any(isEqual(v0, v1) != R0)) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 1), (pi + 2), (pi + 3), (pi + 4), true);
+    QUATERNION_IS_EQUAL_TEST(VAR, UNI, (1), (2), (3), (4), (1), (2), (3), (4), true);
+    QUATERNION_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (4), (1), (2), (3), (4), true);
+    QUATERNION_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (4), (1), (2), (3), (4), true);
+
+    QUATERNION_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 4), (pi + 3), (pi + 2), (pi + 1), false);
+    QUATERNION_IS_EQUAL_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (pi + 7), (1), (2), (3), (4), false);
+    QUATERNION_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (4), (pi + 4), (pi + 5), (pi + 6), (7), false);
+    QUATERNION_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (4), (4), (3), (2), (1), false);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqualFixedEps(Quaternion3x, Quaternion3x)
+// ---------------------------------------------------------------------
+#define QUATERNION_IS_EQUAL_FIXED_EPS_TEST(VUP0, VUP1, P0X, P0Y, P0Z, P0W, P1X, P1Y, P1Z, P1W, R0) \
+    {                                                                   \
+        const VUP0 Quaternion3f v0 = Quaternion3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z), \
+                                         (VUP0 float) (P0W));           \
+        const VUP1 Quaternion3f v1 = Quaternion3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z), \
+                                         (VUP1 float) (P1W));           \
+        if (any(isEqualFixedEps(v0, v1) != R0)) {                       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 1), (pi + 2), (pi + 3), (pi + 4), true);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (1), (2), (3), (4), (1), (2), (3), (4), true);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (4), (1), (2), (3), (4), true);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (4), (1), (2), (3), (4), true);
+
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 4), (pi + 3), (pi + 2), (pi + 1), false);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (pi + 7), (1), (2), (3), (4), false);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (4), (pi + 4), (pi + 5), (pi + 6), (7), false);
+    QUATERNION_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (4), (4), (3), (2), (1), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Quaternion3f = slerp(Quaternion3f, Quaternion3f, f)
+//----------------------------------------------------------------------
+#define QUATERNION_SLERP_TEST(VURES, VUP0, VUP1, VUP2, P0R, P0I, P0J, P0K, P1R, P1I, P1J, P1K, P2) \
+    {                                                                          \
+        const VUP0 Quaternion3f q0 = normalize(Quaternion3f_ctor(              \
+            (VUP0 float) (P0R), (VUP0 float) (P0I),                            \
+            (VUP0 float) (P0J), (VUP0 float) (P0K)));                          \
+        const VUP1 Quaternion3f q1 = normalize(Quaternion3f_ctor(              \
+            (VUP1 float) (P1R), (VUP1 float) (P1I),                            \
+            (VUP1 float) (P1J), (VUP1 float) (P1K)));                          \
+        const VUP2 float t = (VUP2 float) (P2);                                \
+        const VURES Quaternion3f res = slerp(q0, q1, t);                       \
+        const VURES float angle = acos(dot(q0, q1));                           \
+        const VURES float sinAngle = sin(angle);                               \
+        const VURES float r0 = sin((1.-t)*angle) / sinAngle;                   \
+        const VURES float r1 = sin((   t)*angle) / sinAngle;                   \
+        const VURES Quaternion3f comp = r0 * q0 + r1 * q1;                     \
+        if (any(!isEqual(res, comp))) {                                        \
+            ++error;                                                           \
+        }                                                                      \
+    }
+
+inline uniform int
+testSlerp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    QUATERNION_SLERP_TEST(VAR, VAR, VAR, VAR,
+                   (pi), (2*pi), (3*pi), (4*pi),
+                   (pi + 1), (2*pi + 1), (3*pi + 1), (4*pi + 1),
+                   (pi / 64.));
+    QUATERNION_SLERP_TEST(VAR, VAR, VAR, UNI,
+                   (pi), (2*pi), (3*pi), (4*pi),
+                   (pi + 1), (2*pi + 1), (3*pi + 1), (4*pi + 1),
+                   (1. / 64.));
+    QUATERNION_SLERP_TEST(VAR, VAR, UNI, VAR,
+                   (pi), (2*pi), (3*pi), (4*pi),
+                   (1), (1), (1), (1),
+                   (pi / 64.));
+    QUATERNION_SLERP_TEST(VAR, VAR, UNI, UNI,
+                   (pi), (2*pi), (3*pi), (4*pi),
+                   (1), (1), (1), (1),
+                   (1. / 64.));
+    QUATERNION_SLERP_TEST(VAR, UNI, VAR, VAR,
+                   (1), (2), (3), (4),
+                   (pi + 1), (2*pi + 1), (3*pi + 1), (4*pi + 1),
+                   (pi / 64.));
+    QUATERNION_SLERP_TEST(VAR, UNI, VAR, UNI,
+                   (1), (2), (3), (4),
+                   (pi + 1), (2*pi + 1), (3*pi + 1), (4*pi + 1),
+                   (1. / 64.));
+    QUATERNION_SLERP_TEST(VAR, UNI, UNI, VAR,
+                   (1), (2), (3), (4),
+                   (1), (1), (1), (1),
+                   (pi / 64.));
+    QUATERNION_SLERP_TEST(UNI, UNI, UNI, UNI,
+                   (1), (2), (3), (4),
+                   (1), (1), (1), (1),
+                   (1. / 64.));
+    return error;
+}
+
+

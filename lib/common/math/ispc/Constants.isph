@@ -1,0 +1,77 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Constants.isph
+/// @brief
+/// numerical constants used within the math library
+#pragma once
+
+// Include this before any other includes!
+#include <scene_rdl2/common/platform/Platform.isph>
+
+/// @{
+/// standard float tolerances
+
+// This epsilon is nearly an order of magnitude larger than FLT_EPSILON ===
+// std::numeric_limits<float>::epsilon() (0x1p-23)
+static const uniform float sEpsilon = 1e-6;
+static const uniform float sEpsilonSqr = sEpsilon * sEpsilon;
+static const uniform float sOneMinusEpsilon = 1.0 - sEpsilon;
+static const uniform float sOneOverEpsilon = 1.0 / sEpsilon;
+/// @}
+
+/// @{
+/// pi based constant
+static const uniform float sPi = PI;
+static const uniform float sPiSqr = sPi * sPi;
+static const uniform float sTwoPiSqr = 2.0 * sPi * sPi;
+static const uniform float sPiCube = sPi * sPi * sPi;
+static const uniform float sTwoPi = 2.0 * sPi;
+static const uniform float sFourPi = 4.0 * sPi;
+static const uniform float sOneOverPi = 1.0 / sPi;
+static const uniform float sOneOverTwoPi = 1.0 / (2.0 * sPi);
+static const uniform float sOneOverPiSqr = 1.0 / (sPi * sPi);
+static const uniform float sHalfPi = sPi / 2.0;
+static const uniform float sOneOverFourPi = 1.0 / (4.0 * sPi);
+static const uniform float sSqrtTwo = 1.4142135;
+static const uniform float sSqrtTwoPi = 2.5066282;
+/// @}
+
+/// maximum float
+static const uniform float sMaxValue = 0x1.fffffep+127f;
+
+/// float infinity
+/// The bit pattern is the first one that can't be represented as a finite float, so it compiles as inf
+static const uniform float sInf = 0x1.0ep+128f;
+  
+// maximum and minimum int.
+static const uniform int8_t  sMaxInt8  = 0x7F;
+static const uniform int16_t sMaxInt16 = 0x7FFF;
+static const uniform int32_t sMaxInt32 = 0x7FFFFFFFL;
+static const uniform int64_t sMaxInt64 = 0x7FFFFFFFFFFFFFFFLL;
+
+static const uniform uint8_t  sMaxUInt8  = 0xFF;
+static const uniform uint16_t sMaxUInt16 = 0xFFFF;
+static const uniform uint32_t sMaxUInt32 = 0xFFFFFFFFUL;
+static const uniform uint64_t sMaxUInt64 = 0xFFFFFFFFFFFFFFFFULL;
+
+static const uniform int8_t  sMinInt8  = -sMaxInt8 - 1;
+static const uniform int16_t sMinInt16 = -sMaxInt16 - 1;
+static const uniform int32_t sMinInt32 = -sMaxInt32 - 1;
+static const uniform int64_t sMinInt64 = -sMaxInt64 - 1;
+
+/// 1/255
+static const uniform float sOneOver255 = 1.0 / 255.0;
+
+/// @{
+/// tolerance to determine if a vector is normalized
+/// based on the square of its length
+static const uniform float sNormalizedLengthThreshold = 1e-3;
+static const uniform float sNormalizedLengthSqrMin  =
+    (1.0 - sNormalizedLengthThreshold) *
+    (1.0 - sNormalizedLengthThreshold);
+static const uniform float sNormalizedLengthSqrMax =
+    (1.0 + sNormalizedLengthThreshold) *
+    (1.0 + sNormalizedLengthThreshold);
+/// @}
+

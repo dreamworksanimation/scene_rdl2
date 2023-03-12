@@ -1,0 +1,13 @@
+Import('env')
+# ------------------------------------------
+name       = 'rdl2_print'
+sources    = env.DWAGlob('*.cc')
+components = [
+    'render_util',
+    'scene_rdl2'
+]
+# ------------------------------------------
+env.DWAForceWarningAsError()
+env.DWAUseComponents(components)
+prog = env.DWAProgram(name, sources)
+env.DWAInstallBin(prog)

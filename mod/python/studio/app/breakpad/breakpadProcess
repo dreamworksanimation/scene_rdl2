@@ -1,0 +1,84 @@
+#!/usr/local/bin/python
+# Copyright 2023 DreamWorks Animation LLC
+# SPDX-License-Identifier: Apache-2.0
+
+import sys
+import os
+import socket
+import smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+from datetime import datetime
+
+
+# Generating Breakpad stack traces:
+# The script takes a minidump file and the /symbols directory, and runs 
+# Breakpad's minidump_stackwalk command on it to produce a stack trace, 
+# which is redirected and stored in stacktracePath (in studio/common/log). 
+# The stack trace is stored in the logs, and then emailed out with some
+# information about the crash.
+
+
+# USAGE: python breakpadProcess .dmp /symbols Application StackTracePath
+# sys.argv[0] = breakpadProcess
+# sys.argv[1] = minidump file path
+# sys.argv[2] = data/symbols directory
+# sys.argv[3] = Application that was running
+# sys.argv[4] = StackTracePath where the stack trace will be stored in /studio/common
+minidump = str(sys.argv[1]) # the .dmp file
+symbols = str(sys.argv[2])  # path to the appropriate data/symbols directory
+application = str(sys.argv[3]) # the folio they are running
+stacktracePath = str(sys.argv[4]) # where we will store the stack trace in /studio/common/log
+
+username = os.environ.get('USERNAME')
+if not username:
+    username = "unknown-user"
+
+
+# run a stackwalk on the minidump file and the data/symbols directory, placing the output into stacktracePath
+command = "(/rel/third_party/breakpad/1112/src/processor/minidump_stackwalk " + minidump + " " + symbols + " >> " + stacktracePath + ") >& /dev/null"
+
+# write the date to the stack trace file, and then generate the stack trace
+os.system("date >> " + stacktracePath)
+os.system(command)
+
+emailBody = ("Application: %s"
+             "\nWorking directory: %s"
+             "\nUser: %s"
+             "\nHostname: %s"
+             "\nDate and time: %s"
+             "\nUser's feedback: %s") % \
+             (application,
+              os.getcwd(),
+              username,
+              socket.gethostname(),
+              datetime.now().ctime(),
+              '')
+
+emailFrom = username
+emailTo = "arras-crash-report@dreamworks.com"
+
+msg = MIMEMultipart() 
+msg['Subject'] = 'ARRAS crash report'
+msg['From'] = emailFrom
+msg['To'] = emailTo
+
+body = MIMEMultipart('alternative')
+body.attach(MIMEText(emailBody)) 
+msg.attach(body) 
+
+filename = stacktracePath
+f = file(filename)
+attachment = MIMEText(f.read())
+attachment.add_header('Content-Disposition', 'attachment', filename=filename)           
+msg.attach(attachment)
+
+# Connect to the mailer and sent the message.
+server = smtplib.SMTP('localhost')
+server.sendmail(emailFrom, emailTo, msg.as_string())
+server.quit()
+
+print 'Stacktrace sent to breakpad mailing list (' + emailTo + '). Stored at: ' + stacktracePath
+
+
+

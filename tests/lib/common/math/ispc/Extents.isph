@@ -1,0 +1,22 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+#pragma once
+
+struct Extents
+{
+    float    mFloatMax;
+    unsigned int8  mUInt8Max;
+    unsigned int16 mUInt16Max;
+    unsigned int32 mUInt32Max;
+    unsigned int64 mUInt64Max;
+    int8   mInt8Max;
+    int16  mInt16Max;
+    int32  mInt32Max;
+    int64  mInt64Max;
+    int8   mInt8Min;
+    int16  mInt16Min;
+    int32  mInt32Min;
+    int64  mInt64Min;
+};
+

@@ -1,0 +1,275 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+#pragma once
+
+#include "PixelBuffer.hh"
+
+#include <scene_rdl2/common/math/ispc/Vec2.isph>
+#include <scene_rdl2/common/math/ispc/Vec3.isph>
+#include <scene_rdl2/common/math/ispc/Vec4.isph>
+
+// Useful pixel types.
+struct ByteColor
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
+struct ByteColor4
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+};
+
+enum Format
+{
+    RGB888,
+    RGBA8888,
+    FLOAT,
+    FLOAT2,
+    FLOAT3,
+    FLOAT4,
+
+    // Extend as needed...
+
+    NUM_FORMATS,
+    UNINITIALIZED
+};
+
+struct PixelBuffer
+{
+    PIXELBUFFER_MEMBERS;
+};
+
+typedef PixelBuffer PixelBufferU8;
+
+struct VariablePixelBuffer
+{
+    VARIABLE_PIXELBUFFER_MEMBERS;
+};
+
+static uniform unsigned int
+pixelSize(uniform Format format)
+{
+    switch (format)
+    {
+        case RGB888:
+            return sizeof(uint8_t) * 3;
+            break;
+        case RGBA8888:
+            return sizeof(uint8_t) * 4;
+            break;
+        case FLOAT:
+            return sizeof(float);
+            break;
+        case FLOAT2:
+            return sizeof(float) * 2;
+            break;
+        case FLOAT3:
+            return sizeof(float) * 3;
+            break;
+        case FLOAT4:
+            return sizeof(float) * 4;
+            break;
+        default:
+            MNRY_ASSERT(0);
+            break;
+    }
+}
+
+static void
+VariablePixelBuffer_init(uniform VariablePixelBuffer * uniform buffer,
+                         uniform Format format, 
+                         uniform unsigned int width, 
+                         uniform unsigned int height)
+{
+    buffer->mFormat = format;
+    buffer->mBuffer.mWidth = width;
+    buffer->mBuffer.mHeight = height;
+    buffer->mBuffer.mBytesAllocated = pixelSize(format) * width * height;
+    buffer->mBuffer.mRawData = uniform new uniform uint8_t[buffer->mBuffer.mBytesAllocated];
+}
+
+static uniform uint8_t * uniform
+VariablePixelBuffer_getData(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return buffer->mBuffer.mRawData;
+}
+
+static uniform Format
+VariablePixelBuffer_getFormat(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return buffer->mFormat;
+}
+
+static uniform unsigned int 
+VariablePixelBuffer_getWidth(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return buffer->mBuffer.mWidth;
+}
+
+static uniform unsigned int
+VariablePixelBuffer_getHeight(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return buffer->mBuffer.mHeight;
+}
+
+static uniform unsigned int
+VariablePixelBuffer_getArea(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return buffer->mBuffer.mWidth * buffer->mBuffer.mHeight;
+}
+
+static uniform unsigned int
+VariablePixelBuffer_getSizeOfPixel(const uniform VariablePixelBuffer * uniform buffer)
+{
+    return pixelSize(buffer->mFormat);
+}
+
+static void
+VariablePixelBuffer_setRgb888Pixel(uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y,
+                                   const varying ByteColor& value)
+{
+    MNRY_ASSERT(buffer->mFormat == RGB888);
+    uniform ByteColor * uniform rgbBuffer = (uniform ByteColor * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    rgbBuffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static void
+VariablePixelBuffer_setRgba8888Pixel(uniform VariablePixelBuffer * uniform buffer,
+                                     varying unsigned int x, varying unsigned int y,
+                                     const varying ByteColor4& value)
+{
+    MNRY_ASSERT(buffer->mFormat == RGBA8888);
+    uniform ByteColor4 * uniform rgbaBuffer = (uniform ByteColor4 * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    rgbaBuffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static void
+VariablePixelBuffer_setFloatPixel(uniform VariablePixelBuffer * uniform buffer,
+                                  varying unsigned int x, varying unsigned int y,
+                                  varying float value)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT);
+    uniform float * uniform floatBuffer = (uniform float * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    floatBuffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static void
+VariablePixelBuffer_setFloat2Pixel(uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y,
+                                   const varying Vec2f& value)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT2);
+    uniform Vec2f * uniform vec2Buffer = (uniform Vec2f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    vec2Buffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static void
+VariablePixelBuffer_setFloat3Pixel(uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y,
+                                   const varying Vec3f& value)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT3);
+    uniform Vec3f * uniform vec3Buffer = (uniform Vec3f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    vec3Buffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static void
+VariablePixelBuffer_setFloat4Pixel(uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y,
+                                   const varying Vec4f& value)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT4);
+    uniform Vec4f * uniform vec4Buffer = (uniform Vec4f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    vec4Buffer[y * buffer->mBuffer.mWidth + x] = value;
+}
+
+static varying ByteColor
+VariablePixelBuffer_getRgb888Pixel(const uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == RGB888);
+    const uniform ByteColor * uniform rgbBuffer = (const uniform ByteColor * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return rgbBuffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static varying ByteColor4
+VariablePixelBuffer_getRgba8888Pixel(const uniform VariablePixelBuffer * uniform buffer,
+                                     varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == RGBA8888);
+    const uniform ByteColor4 * uniform rgbaBuffer = (const uniform ByteColor4 * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return rgbaBuffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static varying float
+VariablePixelBuffer_getFloatPixel(const uniform VariablePixelBuffer * uniform buffer,
+                                  varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT);
+    const uniform float * uniform floatBuffer = (const uniform float * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return floatBuffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static varying Vec2f
+VariablePixelBuffer_getFloat2Pixel(const uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT2);
+    const uniform Vec2f * uniform vec2Buffer = (const uniform Vec2f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return vec2Buffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static varying Vec3f
+VariablePixelBuffer_getFloat3Pixel(const uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT3);
+    const uniform Vec3f * uniform vec3Buffer = (const uniform Vec3f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return vec3Buffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static varying Vec4f
+VariablePixelBuffer_getFloat4Pixel(const uniform VariablePixelBuffer * uniform buffer,
+                                   varying unsigned int x, varying unsigned int y)
+{
+    MNRY_ASSERT(buffer->mFormat == FLOAT4);
+    const uniform Vec4f * uniform vec4Buffer = (const uniform Vec4f * uniform)buffer->mBuffer.mRawData;
+#pragma ignore warning(perf)
+    return vec4Buffer[y * buffer->mBuffer.mWidth + x];
+}
+
+static void
+VariablePixelBuffer_clear(uniform VariablePixelBuffer * uniform buffer)
+{
+    unsigned int size = VariablePixelBuffer_getArea(buffer) * pixelSize(buffer->mFormat);
+    memset(buffer, 0, size);
+}
+
+static void
+VariablePixelBuffer_cleanUp(uniform VariablePixelBuffer * uniform buffer)
+{
+    buffer->mBuffer.mWidth = 0;
+    buffer->mBuffer.mHeight = 0;
+    buffer->mBuffer.mBytesAllocated = 0;
+    delete[] buffer->mBuffer.mRawData;
+    buffer->mBuffer.mRawData = nullptr;
+}
+

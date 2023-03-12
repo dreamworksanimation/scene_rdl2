@@ -1,0 +1,16 @@
+Import('env')
+# ------------------------------------------
+name       = 'rdl2_localize'
+sources    = env.DWAGlob('*.cc')
+components = [
+    'boost_filesystem_mt',
+    'boost_program_options_mt',    
+    'render_util',
+    'render_logging',
+    'scene_rdl2'
+]
+# ------------------------------------------
+env.DWAForceWarningAsError()
+env.DWAUseComponents(components)
+prog = env.DWAProgram(name, sources)
+env.DWAInstallBin(prog)

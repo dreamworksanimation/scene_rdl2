@@ -1,0 +1,29 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file IspcUtil.isph
+#pragma once
+
+
+/// Macro used to force the export of a varying struct to an ISPC stubs header
+#define ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Type)      \
+    export void                                      \
+    Type##_ispcExportStruct(varying Type * uniform)  \
+    {                                                \
+    }
+
+/// Macro used to force the export of a uniform struct to an ISPC stubs header
+#define ISPC_UTIL_EXPORT_UNIFORM_STRUCT_TO_HEADER(Type)     \
+    export void                                             \
+    Type##_ispcExportUniformStruct(uniform Type * uniform)  \
+    {                                                       \
+    }
+
+/// Macro used to force the export of an enum to an ISPC stubs header
+#define ISPC_UTIL_EXPORT_ENUM_TO_HEADER(Type)   \
+    export void                                 \
+    Type##_ispcExportEnum(uniform Type e)       \
+    {                                           \
+    }
+
+

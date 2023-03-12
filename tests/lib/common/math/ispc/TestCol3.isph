@@ -1,0 +1,572 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathCol3.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Col3.isph>
+#include <scene_rdl2/common/math/ispc/Color.isph>
+#include <scene_rdl2/common/math/ispc/Math.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Col3x_ctor(x)
+// Col3x_ctor(x, x, x)
+// Col3x_ctor(x[])
+//----------------------------------------------------------------------
+#define COL3_CTOR1_TEST(VUC, VU0, V0)                                   \
+    {                                                                   \
+        const VU0 float f0 = V0;                                        \
+        const VUC Col3f c = Col3f_ctor(f0);                             \
+        if (any(c.r != f0) || any(c.g != f0) || any(c.b != f0)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 float f0 = V0;                                        \
+        const VUC Color c = Color_ctor(f0);                             \
+        if (any(c.r != f0) || any(c.g != f0) || any(c.b != f0)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define COL3_CTOR3_TEST(VUC, VU0, VU1, VU2, V0, V1, V2)                 \
+    {                                                                   \
+        const VU0 float f0 = V0;                                        \
+        const VU1 float f1 = V1;                                        \
+        const VU2 float f2 = V2;                                        \
+        const VUC Col3f c = Col3f_ctor(f0, f1, f2);                     \
+        if (any(c.r != f0) || any(c.g != f1) || any(c.b != f2)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 float f0 = V0;                                        \
+        const VU1 float f1 = V1;                                        \
+        const VU2 float f2 = V2;                                        \
+        const VUC Color c = Color_ctor(f0, f1, f2);                     \
+        if (any(c.r != f0) || any(c.g != f1) || any(c.b != f2)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define COL3_CTOR_ARRAY_TEST(VUC, VU0, V0, V1, V2)                      \
+    {                                                                   \
+        const VU0 float f0[] = { V0, V1, V2 };                          \
+        const VUC Col3f c = Col3f_ctor(f0);                             \
+        if (any(c.r != f0[0]) || any(c.g != f0[1]) || any(c.b != f0[2])) { \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 float f0[] = { V0, V1, V2 };                          \
+        const VUC Color c = Color_ctor(f0);                             \
+        if (any(c.r != f0[0]) || any(c.g != f0[1]) || any(c.b != f0[2])) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_CTOR1_TEST(VAR, VAR, (pi));
+    COL3_CTOR1_TEST(UNI, UNI, (1));
+
+    COL3_CTOR3_TEST(VAR, VAR, VAR, VAR, (pi), (pi+1), (pi+2));
+    COL3_CTOR3_TEST(VAR, UNI, VAR, VAR, (0), (pi+1), (pi+2));
+    COL3_CTOR3_TEST(VAR, VAR, UNI, VAR, (pi), (1), (pi+2));
+    COL3_CTOR3_TEST(VAR, UNI, UNI, VAR, (0), (1), (pi+2));
+    COL3_CTOR3_TEST(VAR, VAR, VAR, UNI, (pi), (pi+1), (2));
+    COL3_CTOR3_TEST(VAR, UNI, VAR, UNI, (0), (pi+1), (2));
+    COL3_CTOR3_TEST(VAR, VAR, UNI, UNI, (pi), (1), (2));
+    COL3_CTOR3_TEST(UNI, UNI, UNI, UNI, (0), (1), (2));
+
+    COL3_CTOR_ARRAY_TEST(VAR, VAR, (pi), (pi + 1), (pi + 2));
+    COL3_CTOR_ARRAY_TEST(UNI, UNI, (0), (1), (2));
+
+    return error;
+}
+//----------------------------------------------------------------------
+// Col3x_clamp(c)
+//----------------------------------------------------------------------
+#define COL3_CLAMP_TEST(VU0, V0R, V0G, V0B, R0R, R0G, R0B) \
+    {                                                      \
+        const VU0 Col3f c = Col3f_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU0 Col3f r = clamp(c, 0.f, 1.f);                         \
+        if (any(r.r != R0R) || any(r.g != R0G) || any(r.b != R0B)) {    \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                      \
+        const VU0 Color c = Color_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU0 Color r = clamp(c, 0.f, 1.f);                         \
+        if (any(r.r != R0R) || any(r.g != R0G) || any(r.b != R0B)) {    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testClamp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_CLAMP_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), (1), (1), (1));
+    COL3_CLAMP_TEST(VAR, (pi - 10), (pi -11), (pi - 12), (0), (0), (0));
+    COL3_CLAMP_TEST(VAR, (pi + 1), (pi -11), (pi + 3), (1), (0), (1));
+    COL3_CLAMP_TEST(VAR, (pi / 64.f), (pi / 32.f), (pi / 128.f),
+                         (pi / 64.f), (pi / 32.f), (pi / 128.f));
+    COL3_CLAMP_TEST(UNI, (1), (0), (1), (1), (0), (1));
+    COL3_CLAMP_TEST(UNI, (.5), (.5), (.5), (.5), (.5), (.5));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3x = lerp(Col3x, Col3x, x)
+//----------------------------------------------------------------------
+#define COL3_LERP_TEST(VUC, VU0, VU1, VU2, V0R, V0G, V0B, V1R, V1G, V1B, V2, RR, RG, RB) \
+    {                                                                   \
+        const VU0 Col3f c0 = Col3f_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 Col3f c1 = Col3f_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VU2 float f = (VU2 float) (V2);                               \
+        const VUC Col3f cr = lerp(c0, c1, f);                           \
+        if (any(!isEqual(cr.r, (VUC float) (RR))) ||                    \
+            any(!isEqual(cr.g, (VUC float) (RG))) ||                    \
+            any(!isEqual(cr.b, (VUC float) (RB)))) {                    \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 Color c0 = Color_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 Color c1 = Color_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VU2 float f = (VU2 float) (V2);                               \
+        const VUC Color cr = lerp(c0, c1, f);                           \
+        if (any(!isEqual(cr.r, (VUC float) (RR))) ||                    \
+            any(!isEqual(cr.g, (VUC float) (RG))) ||                    \
+            any(!isEqual(cr.b, (VUC float) (RB)))) {                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLerp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    COL3_LERP_TEST(VAR, VAR, VAR, VAR, (pi), (2*pi), (3*pi), (pi + 1), (2*pi + 1), (3*pi + 1), (pi / 64.),
+                        ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (pi + 1)),
+                        ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (2*pi + 1)),
+                        ((1. - (pi / 64.)) * (3*pi) + (pi / 64.) * (3*pi + 1)));
+    COL3_LERP_TEST(VAR, VAR, VAR, UNI, (pi), (2*pi), (3*pi), (pi + 1), (2*pi + 1), (3*pi + 1), (1. / 64.),
+                        ((1. - (1. / 64.)) * (pi) + (1. / 64.) * (pi + 1)),
+                        ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (2*pi + 1)),
+                        ((1. - (1. / 64.)) * (3*pi) + (1. / 64.) * (3*pi + 1)));
+    COL3_LERP_TEST(VAR, VAR, UNI, VAR, (pi), (2*pi), (3*pi), (1), (1), (1), (pi / 64.),
+                        ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (1)),
+                        ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (1)),
+                        ((1. - (pi / 64.)) * (3*pi) + (pi / 64.) * (1)));
+    COL3_LERP_TEST(VAR, VAR, UNI, UNI, (pi), (2*pi), (3*pi), (1), (1), (1), (1. / 64.),
+                        ((1. - (1. / 64.)) * pi + (1. / 64.) * (1)),
+                        ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (1)),
+                        ((1. - (1. / 64.)) * (3*pi) + (1. / 64.) * (1)));
+    COL3_LERP_TEST(VAR, UNI, VAR, VAR, (1), (2), (3), (pi + 1), (2*pi + 1), (3*pi + 1), (pi / 64.),
+                        ((1. - (pi / 64.)) * (1) + (pi / 64.) * (pi + 1)),
+                        ((1. - (pi / 64.)) * (2) + (pi / 64.) * (2*pi + 1)),
+                        ((1. - (pi / 64.)) * (3) + (pi / 64.) * (3*pi + 1)));
+    COL3_LERP_TEST(VAR, UNI, VAR, UNI, (1), (2), (3), (pi + 1), (2*pi + 1), (3*pi + 1), (1. / 64.),
+                        ((1. - (1. / 64.)) * (1) + (1. / 64.) * (pi + 1)),
+                        ((1. - (1. / 64.)) * (2) + (1. / 64.) * (2*pi + 1)),
+                        ((1. - (1. / 64.)) * (3) + (1. / 64.) * (3*pi + 1)));
+    COL3_LERP_TEST(VAR, UNI, UNI, VAR, (1), (2), (3), (1), (1), (1), (pi / 64.),
+                        ((1. - (pi / 64.)) * (1) + (pi / 64.) * (1)),
+                        ((1. - (pi / 64.)) * (2) + (pi / 64.) * (1)),
+                        ((1. - (pi / 64.)) * (3) + (pi / 64.) * (1)));
+    COL3_LERP_TEST(UNI, UNI, UNI, UNI, (1), (2), (3), (1), (1), (1), (1. / 64.),
+                        ((1. - (1. / 64.)) * (1) + (1. / 64.) * (1)),
+                        ((1. - (1. / 64.)) * (2) + (1. / 64.) * (1)),
+                        ((1. - (1. / 64.)) * (3) + (1. / 64.) * (1)));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3x_isBlack(c)
+//----------------------------------------------------------------------
+#define COL3_IS_BLACK_TEST(VUC)                                         \
+    {                                                                   \
+        const VUC Col3f blk = Col3f_ctor(0.f, 0.f, 0.f);                \
+        if (any(isBlack(blk)) == false) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VUC Col3f wht = Col3f_ctor(1.f, 1.f, 1.f);                \
+        if (any(isBlack(wht)) == true) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VUC Color blk = Color_ctor(0.f, 0.f, 0.f);                \
+        if (any(isBlack(blk)) == false) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VUC Color wht = Color_ctor(1.f, 1.f, 1.f);                \
+        if (any(isBlack(wht)) == true) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsBlack()
+{
+    uniform int error = 0;
+
+    COL3_IS_BLACK_TEST(VAR);
+    COL3_IS_BLACK_TEST(UNI);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3x OP Col3x (+, -, *)
+//----------------------------------------------------------------------
+#define COL3_OP_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B, OP)   \
+    {                                                                   \
+        const VU0 Col3f c0 = Col3f_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 Col3f c1 = Col3f_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VUC Col3f c = c1 OP c0;                              \
+        if (any(c.r != (V1R OP V0R)) ||                                 \
+            any(c.g != (V1G OP V0G)) ||                                 \
+            any(c.b != (V1B OP V0B))) {                                 \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 Color c0 = Color_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 Color c1 = Color_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VUC Color c = c1 OP c0;                              \
+        if (any(c.r != (V1R OP V0R)) ||                                 \
+            any(c.g != (V1G OP V0G)) ||                                 \
+            any(c.b != (V1B OP V0B))) {                                 \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+//----------------------------------------------------------------------
+// Col3x - Col3x
+//----------------------------------------------------------------------
+#define COL3_MINUS_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B) \
+    COL3_OP_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B, -)
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // Col3x = Col3x - Col3x
+    // Col3x = Col3x - Col3x
+    COL3_MINUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 1), (pi + 2), (pi + 3));
+    COL3_MINUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (1), (2), (3));
+    COL3_MINUS_TEST(VAR, UNI, VAR, (0), (1), (2), (pi + 1), (pi + 2), (pi + 3));
+    COL3_MINUS_TEST(UNI, UNI, UNI, (0), (1), (2), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3 * Col3
+//----------------------------------------------------------------------
+#define COL3_MULT_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B) \
+    COL3_OP_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B, *)
+
+inline uniform int
+testMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    // Col3f
+    COL3_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi - 1), (pi - 2), (pi - 3));
+    COL3_MULT_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (pi + 3), (-1), (-2), (-3));
+    COL3_MULT_TEST(VAR, UNI, VAR, (1), (2), (3), (pi - 1), (pi - 2), (pi - 3));
+    COL3_MULT_TEST(UNI, UNI, UNI, (1), (2), (3), (-1), (-2), (-3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3 + Col3
+//----------------------------------------------------------------------
+#define COL3_PLUS_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B) \
+    COL3_OP_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1R, V1G, V1B, +)
+
+inline uniform int
+testPlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_PLUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 1), (pi + 2), (pi + 3));
+    COL3_PLUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (1), (2), (3));
+    COL3_PLUS_TEST(VAR, UNI, VAR, (0), (1), (2), (pi + 1), (pi + 2), (pi + 3));
+    COL3_PLUS_TEST(UNI, UNI, UNI, (0), (1), (2), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Col3x * x
+//----------------------------------------------------------------------
+#define COL3_S_POST_MULT_TEST(VUC, VU0, VU1, V0R, V0G, V0B, V1)         \
+    {                                                                   \
+        const VU0 Col3f c0 = Col3f_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 float f0 = (VU1 float) (V1);                          \
+        const VUC Col3f c = c0 * f0;                                    \
+        if (any(c.r != c0.r * f0) ||                                    \
+            any(c.g != c0.g * f0) ||                                    \
+            any(c.b != c0.b * f0)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 Color c0 = Color_ctor((VU0 float) (V0R), (VU0 float) (V0G), (VU0 float) (V0B)); \
+        const VU1 float f0 = (VU1 float) (V1);                          \
+        const VUC Color c = c0 * f0;                                    \
+        if (any(c.r != c0.r * f0) ||                                    \
+            any(c.g != c0.g * f0) ||                                    \
+            any(c.b != c0.b * f0)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testScalarPostMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_S_POST_MULT_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 1));
+    COL3_S_POST_MULT_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (1));
+    COL3_S_POST_MULT_TEST(VAR, UNI, VAR, (0), (1), (2), (pi + 1));
+    COL3_S_POST_MULT_TEST(VAR, UNI, UNI, (0), (1), (2), (1));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// x * Col3x
+//----------------------------------------------------------------------
+#define COL3_S_PRE_MULT_TEST(VUC, VU0, VU1, V0, V1R, V1G, V1B)          \
+    {                                                                   \
+        const VU0 float f0 = (VU0 float) (V0);                          \
+        const VU1 Col3f c0 = Col3f_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VUC Col3f c = f0 * c0;                                    \
+        if (any(c.r != f0 * c0.r) ||                                    \
+            any(c.g != f0 * c0.g) ||                                    \
+            any(c.b != f0 * c0.b)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        const VU0 float f0 = (VU0 float) (V0);                          \
+        const VU1 Color c0 = Color_ctor((VU1 float) (V1R), (VU1 float) (V1G), (VU1 float) (V1B)); \
+        const VUC Color c = f0 * c0;                                    \
+        if (any(c.r != f0 * c0.r) ||                                    \
+            any(c.g != f0 * c0.g) ||                                    \
+            any(c.b != f0 * c0.b)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testScalarPreMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_S_PRE_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 1), (pi + 2), (pi + 3));
+    COL3_S_PRE_MULT_TEST(VAR, UNI, VAR, (1), (pi + 1), (pi + 2), (pi + 3));
+    COL3_S_PRE_MULT_TEST(VAR, VAR, UNI, (pi + 1), (1), (2), (3));
+    COL3_S_PRE_MULT_TEST(UNI, UNI, UNI, (1), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqual(Col3x, Col3x)
+//----------------------------------------------------------------------
+#define COL3_IS_EQUAL_TEST(VUP0, VUP1, P0R, P0G, P0B, P1R, P1G, P1B, R0) \
+    {                                                                   \
+        const VUP0 Col3f v0 = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUP1 Col3f v1 = Col3f_ctor((VUP1 float) (P1R), (VUP1 float) (P1G), (VUP1 float) (P1B)); \
+        if (any(isEqual(v0, v1) != R0)) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), true);
+    COL3_IS_EQUAL_TEST(VAR, UNI, (1), (2), (3), (1), (2), (3), true);
+    COL3_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (1), (2), (3), true);
+    COL3_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (1), (2), (3), true);
+
+    COL3_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 3), (pi + 2), (pi + 1), false);
+    COL3_IS_EQUAL_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (1), (2), (3), false);
+    COL3_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6), false);
+    COL3_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (3), (2), (1), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqualFixedEps(Col3x, Col3x)
+//----------------------------------------------------------------------
+#define COL3_IS_EQUAL_FIXED_EPS_TEST(VUP0, VUP1, P0R, P0G, P0B, P1R, P1G, P1B, R0) \
+    {                                                                   \
+        const VUP0 Col3f v0 = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUP1 Col3f v1 = Col3f_ctor((VUP1 float) (P1R), (VUP1 float) (P1G), (VUP1 float) (P1B)); \
+        if (any(isEqualFixedEps(v0, v1) != R0)) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), true);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (1), (2), (3), (1), (2), (3), true);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (1), (2), (3), true);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (1), (2), (3), true);
+
+    COL3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 3), (pi + 2), (pi + 1), false);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (1), (2), (3), false);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6), false);
+    COL3_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (3), (2), (1), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// max = max(Col3x, Col3x)
+//----------------------------------------------------------------------
+#define COL3_MAX_TEST(VUR, VUP0, VUP1, P0R, P0G, P0B, P1R, P1G, P1B)    \
+    {                                                                   \
+        const VUP0 Col3f c0 = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUP1 Col3f c1 = Col3f_ctor((VUP1 float) (P1R), (VUP1 float) (P1G), (VUP1 float) (P1B)); \
+        const VUR Col3f res = max(c0, c1);                              \
+        if (any(!isEqual(res.r, max(c0.r, c1.r))) ||                    \
+            any(!isEqual(res.g, max(c0.g, c1.g))) ||                    \
+            any(!isEqual(res.b, max(c0.b, c1.b)))) {                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testMax()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_MAX_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (pi + 3), 3, 2, 1);
+    COL3_MAX_TEST(VAR, UNI, VAR, 2, 3, 1, (pi + 1), (pi + 2), (pi + 3));
+    COL3_MAX_TEST(UNI, UNI, UNI, 2, 3, 1, 1, 2, 3);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// col = rcp(Col3x)
+//----------------------------------------------------------------------
+#define COL3_RCP_TEST(VUR, VUP0, P0R, P0G, P0B)                         \
+    {                                                                   \
+        const VUP0 Col3f c = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUR Col3f res = rcp(c);                                   \
+        if (any(!isEqual(res.r * c.r, 1.f)) ||                          \
+            any(!isEqual(res.g * c.g, 1.f)) ||                          \
+            any(!isEqual(res.b * c.b, 1.f))) {                          \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testRcp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_RCP_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3));
+    COL3_RCP_TEST(UNI, UNI, 1, 2, 3);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// f = sqrt(Col3x)
+//----------------------------------------------------------------------
+#define COL3_SQRT_TEST(VUR, VUP0, P0R, P0G, P0B)                        \
+    {                                                                   \
+        const VUP0 Col3f c = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUR Col3f res = sqrt(c);                                  \
+        if (any(res.r < 0.f) || any(res.g < 0.f) || any(res.b < 0.f) || \
+            any(!isEqual(res.r * res.r, c.r)) ||                        \
+            any(!isEqual(res.g * res.g, c.g)) ||                        \
+            any(!isEqual(res.b * res.b, c.b))) {                        \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testSqrt()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_SQRT_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3));
+    COL3_SQRT_TEST(UNI, UNI, 1, 2, 3);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// f = luminance(Col3x)
+//----------------------------------------------------------------------
+#define COL3_LUMINANCE_TEST(VUR, VUP0, P0R, P0G, P0B)                   \
+    {                                                                   \
+        const VUP0 Col3f c = Col3f_ctor((VUP0 float) (P0R), (VUP0 float) (P0G), (VUP0 float) (P0B)); \
+        const VUR float res = luminance(c);                             \
+        if (any(!isEqual(res, 0.299f*c.r + 0.587f*c.g + 0.114f*c.b))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLuminance()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    COL3_LUMINANCE_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3));
+    COL3_LUMINANCE_TEST(UNI, UNI, 1, 2, 3);
+
+    return error;
+}
+
+

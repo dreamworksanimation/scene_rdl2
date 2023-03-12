@@ -1,0 +1,156 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file ReferenceFrame.isph
+/// @brief Defines a local frame of reference in a global coordinate system
+
+#pragma once
+
+#include "Math.isph"
+#include "Variform.isph"
+#include "Vec3.isph"
+
+/**
+ * @struct ReferenceFrame
+ * @brief Right-handed orthonormal basis vectors, expressed in the client's
+ * coordinate system.
+ */
+struct ReferenceFrame
+{
+    Vec3f mX;
+    Vec3f mY;
+    Vec3f mZ;
+};
+
+//----------------------------------------------------------------------------
+// ReferenceFrame_init(frame, N)
+//----------------------------------------------------------------------------
+
+// Building an Orthonormal Basis, Revisited
+// Duff, Tom et. al
+// Pixar
+// https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+inline void ReferenceFrame_init(varying ReferenceFrame& result, varying Vec3f N)
+{
+    MNRY_ASSERT(isNormalized(N));
+    const varying float sign = copysign(1.0f, N.z);
+    const varying float a = -1.0f / (sign + N.z);
+    const varying float b = N.x * N.y * a;
+    result.mX = Vec3f_ctor(1.0f + sign * N.x * N.x * a, sign * b, -sign * N.x);
+    result.mY = Vec3f_ctor(b, sign + N.y * N.y * a, -N.y);
+    result.mZ = N;
+}
+
+inline void ReferenceFrame_init(uniform ReferenceFrame& result, uniform Vec3f N)
+{
+    MNRY_ASSERT(isNormalized(N));
+    // At the time of this writing, ISPC does not have a copysign function.
+    const uniform float sign = copysign(1.0f, N.z);
+    const uniform float a = -1.0f / (sign + N.z);
+    const uniform float b = N.x * N.y * a;
+    result.mX = Vec3f_ctor(1.0f + sign * N.x * N.x * a, sign * b, -sign * N.x);
+    result.mY = Vec3f_ctor(b, sign + N.y * N.y * a, -N.y);
+    result.mZ = N;
+}
+
+//----------------------------------------------------------------------------
+// ReferenceFrame_init(frame, N, T)
+//----------------------------------------------------------------------------
+/** \cond */
+#define MATH_REFERENCE_FRAME_INIT_2()           \
+    {                                           \
+        MNRY_ASSERT(isNormalized(p1));               \
+        MNRY_ASSERT(isNormalized(p2));               \
+        p0.mZ = p1;                             \
+        p0.mY = normalize(cross(p1, p2));       \
+        p0.mX = cross(p0.mY, p0.mZ);            \
+        MNRY_ASSERT(isNormalized(p0.mX));            \
+    }
+/** \endcond */
+/**
+ * @{
+ * Initialize a RefrenceFrame from a normal and tangent vector
+ * @param p0 = frame to initialize
+ * @param p1 = N
+ * @param p2 = T
+ * @note p0 and p1 must both be normalized
+ */
+MATH_DEFINE_BINARY_SET_VARIFORM(ReferenceFrame_init, ReferenceFrame, Vec3f, Vec3f,
+                                MATH_REFERENCE_FRAME_INIT_2())
+/** @} */
+
+//----------------------------------------------------------------------------
+// frame = ReferenceFrame_ctor(N, T);
+//----------------------------------------------------------------------------
+/** \cond */
+#define MATH_REFERENCE_FRAME_CTOR_2()           \
+    {                                           \
+        ReferenceFrame_init(result, p0, p1);    \
+    }
+/** \endcond */
+/**
+ * @{
+ * Construct a ReferenceFrame from a normal and tangent vector
+ * @param p0 = N
+ * @param p1 = T
+ * @note p0 and p1 must both be normalized
+ */
+MATH_DEFINE_BINARY_VARIFORM(ReferenceFrame_ctor, ReferenceFrame, Vec3f, Vec3f,
+                            MATH_REFERENCE_FRAME_CTOR_2())
+/** @} */
+
+//----------------------------------------------------------------------------
+// frame = ReferenceFrame_ctor(N);
+//----------------------------------------------------------------------------
+/** \cond */
+#define MATH_REFERENCE_FRAME_CTOR_1()           \
+    {                                           \
+        ReferenceFrame_init(result, p0);        \
+    }
+/** \endcond */
+/**
+ * @{
+ * Construct a ReferenceFrame from a normal
+ * @param p0 = N
+ * @note p0 must be normalized
+ */
+MATH_DEFINE_UNARY_VARIFORM(ReferenceFrame_ctor, ReferenceFrame, Vec3f,
+                           MATH_REFERENCE_FRAME_CTOR_1())
+/** @} */
+
+//----------------------------------------------------------------------------
+// N = getN(frame);
+//----------------------------------------------------------------------------
+/**
+ * @{
+ * Convention: in all basees, N is mapped onto Z
+ */
+MATH_DEFINE_UNARY_VARIFORM(getN, Vec3f, ReferenceFrame, { result = p0.mZ; })
+/** @} */
+
+//----------------------------------------------------------------------------
+// globalVec = localToGlobal(frame, localVec)
+//----------------------------------------------------------------------------
+/**
+ * @{
+ * localToGlobal direction transform
+ */
+MATH_DEFINE_BINARY_VARIFORM(localToGlobal, Vec3f, ReferenceFrame, Vec3f,
+                            { result = p0.mX * p1.x + p0.mY * p1.y + p0.mZ * p1.z; })
+/** @} */
+
+//----------------------------------------------------------------------------
+// localVec = globalToLocal(frame, globalVec)
+//----------------------------------------------------------------------------
+/**
+ * @{
+ * globalToLocal direction transform
+ */
+MATH_DEFINE_BINARY_VARIFORM(globalToLocal, Vec3f, ReferenceFrame, Vec3f,
+                            { 
+                                result = Vec3f_ctor(dot(p0.mX, p1),
+                                                    dot(p0.mY, p1),
+                                                    dot(p0.mZ, p1));
+                            })
+/** @} */
+

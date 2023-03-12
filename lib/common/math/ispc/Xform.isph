@@ -1,0 +1,432 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Xform.isph
+/// @brief
+/// defines the Xform3 types and methods
+/// @details
+/// An Xform3 is an affine function that contains a linear part (scale,
+/// rotation, shear) stored as a Mat3 and a non-linear translation stored
+/// as a Vec3.
+#pragma once
+
+#include "Variform.isph"
+#include "Mat3.isph"
+#include "Math.isph"
+#include "Quaternion.isph"
+#include "Vec3.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+// Xform3f;
+#define MATH_DECLARE_XFORM(MTYPE, VTYPE, NAME)  \
+    struct NAME                                 \
+    {                                           \
+        MTYPE l;                                \
+        VTYPE p;                                \
+    };
+/// @struct Xform3f
+/// @brief stores a single precision affine transformation (Mat3 + Vec3)
+MATH_DECLARE_XFORM(Mat3f, Vec3f, Xform3f);
+
+//----------------------------------------------------------------------
+// Construction
+//----------------------------------------------------------------------
+
+// Xform3f = Xform3f_ctor(m00, m01, m02,
+//                        m10, m11, m12,
+//                        m20, m21, m22,
+//                         t0,  t1,  t2);
+/** \cond */
+#define MATH_XFORM3_CTOR_12(MTYPE, VTYPE)                               \
+    {                                                                   \
+        result.l = MTYPE##_ctor(p0, p1, p2, p3, p4, p5, p6, p7, p8);    \
+        result.p = VTYPE##_ctor(p9, p10, p11);                          \
+    }
+/** \endcond */
+/// @{
+/// construct an Xform from 12 scalars
+MATH_DEFINE_P12_UNIVAR_VARIFORM(Xform3f_ctor, Xform3f, float,
+                                MATH_XFORM3_CTOR_12(Mat3f, Vec3f))
+/// @}
+
+// Xform3f = Xform3f_ctor(Vec3f, Vec3f, Vec3f, Vec3f)
+/** \cond */
+#define MATH_XFORM3_CTOR_4(MTYPE)               \
+    {                                           \
+        result.l = MTYPE##_ctor(p0, p1, p2);    \
+        result.p = p3;                          \
+    }
+/** \endcond */
+/// @{
+/// construct an Xform from 4 Vec3
+MATH_DEFINE_QUATERNION_VARIFORM(Xform3f_ctor, Xform3f,
+                                Vec3f, Vec3f, Vec3f, Vec3f,
+                                MATH_XFORM3_CTOR_4(Mat3f))
+/// @}
+
+// Xform3f = Xform3f_ctor(Mat3f, Vec3f);
+/** \cond */
+#define MATH_XFORM3_CTOR_2()                    \
+    {                                           \
+        result.l = p0;                          \
+        result.p = p1;                          \
+    }
+/** \endcond */
+/// @{
+/// construct an Xform from a Mat3 and a Vec3
+MATH_DEFINE_BINARY_VARIFORM(Xform3f_ctor, Xform3f, Mat3f, Vec3f, MATH_XFORM3_CTOR_2())
+/// @}
+
+// Xform3f = inverse(Xform3f)
+// Xform3f = rcp(Xform3f)
+/** \cond */
+#define MATH_XFORM3_INVERSE()                   \
+    {                                           \
+        result.l = inverse(p0.l);               \
+        result.p = -1. * p0.p * result.l;       \
+    }
+/** \endcond */
+/// @{
+/// compute the inverse Xform
+MATH_DEFINE_UNARY_VARIFORM(inverse, Xform3f, Xform3f, MATH_XFORM3_INVERSE());
+MATH_DEFINE_UNARY_VARIFORM(rcp, Xform3f, Xform3f, { result = inverse(p0); })
+/// @}
+
+// Vec3f = row0(Xform3f)
+/** \cond */
+#define MATH_XFORM3_ROW0()                      \
+    {                                           \
+        result = p0.l.vx;                       \
+    }
+/** \endcond */
+/// @{
+/// return the first row of linear part of affine space
+MATH_DEFINE_UNARY_VARIFORM(row0, Vec3f, Xform3f, MATH_XFORM3_ROW0());
+/// @}
+
+// Vec3f = row1(Xform3f)
+/** \cond */
+#define MATH_XFORM3_ROW1()                      \
+    {                                           \
+        result = p0.l.vy;                       \
+    }
+/** \endcond */
+/// @{
+/// return the second row of linear part of affine space
+MATH_DEFINE_UNARY_VARIFORM(row1, Vec3f, Xform3f, MATH_XFORM3_ROW1());
+/// @}
+
+// Vec3f = row2(Xform3f)
+/** \cond */
+#define MATH_XFORM3_ROW2()                      \
+    {                                           \
+        result = p0.l.vz;                       \
+    }
+/** \endcond */
+/// @{
+/// return the third row of linear part of affine space
+MATH_DEFINE_UNARY_VARIFORM(row2, Vec3f, Xform3f, MATH_XFORM3_ROW2());
+/// @}
+
+// Vec3f = row3(Xform3f)
+/** \cond */
+#define MATH_XFORM3_ROW3()                      \
+    {                                           \
+        result = p0.p;                          \
+    }
+/** \endcond */
+/// @{
+/// return the fourth row of matrix = affine part of affine space
+MATH_DEFINE_UNARY_VARIFORM(row3, Vec3f, Xform3f, MATH_XFORM3_ROW3());
+/// @}
+
+// setToIdentity(Xform3f);
+/** \cond */
+#define MATH_XFORM3_SET_TO_IDENTITY()           \
+    {                                           \
+        setToIdentity(p0.l);                    \
+        p0.p.x = p0.p.y = p0.p.z = 0.;          \
+    }
+/** \endcond */
+/// @{
+/// create an identity transform
+MATH_DEFINE_SET_VARIFORM(setToIdentity, Xform3f, MATH_XFORM3_SET_TO_IDENTITY())
+
+// Xform3f = Xform3f_identity()
+// note that this is not a variform!  we can only define the
+// uniform return value case and rely on the compiler to convert to
+// varying when the lhs of the assignment is varying.
+/** \cond */
+#define MATH_XFORM3_IDENTITY(XFTYPE)            \
+    uniform XFTYPE res;                         \
+    setToIdentity(res);                         \
+    return res;
+/** \endcond */
+inline uniform Xform3f Xform3f_identity() { MATH_XFORM3_IDENTITY(Xform3f) }
+/// @}
+
+// setToTranslation(Vec3f)
+/** \cond */
+#define MATH_XFORM3_SET_TO_TRANSLATION()        \
+    {                                           \
+        setToIdentity(p0.l);                    \
+        p0.p = p1;                              \
+    }
+/** \endcond */
+/// @{
+/// create an xyz translation Xform3
+MATH_DEFINE_UNARY_SET_VARIFORM(setToTranslation, Xform3f, Vec3f,
+                               MATH_XFORM3_SET_TO_TRANSLATION())
+
+// Xform3f = Xform3f_translate(Vec3f)
+MATH_DEFINE_UNARY_VARIFORM(Xform3f_translate, Xform3f, Vec3f,
+                           { setToTranslation(result, p0); })
+/// @}
+
+// setToRotation(Xform3f, Vec3f, float)
+/** \cond */
+#define MATH_XFORM3_SET_TO_ROTATION()           \
+    {                                           \
+        setToRotation(p0.l, p1, p2);            \
+        p0.p.x = p0.p.y = p0.p.z = 0.;          \
+    }
+/** \endcond */
+/// {
+/// create a rotation transform specified by an xyz axis of
+/// rotation in a Vec3 param and a ccw radian angle specified by a scalar
+/// parameter
+MATH_DEFINE_BINARY_SET_VARIFORM(setToRotation, Xform3f, Vec3f, float,
+                                MATH_XFORM3_SET_TO_ROTATION())
+
+// Xform3f = Xform3f_rotate(Vec3f, float)
+MATH_DEFINE_BINARY_VARIFORM(Xform3f_rotate, Xform3f, Vec3f, float,
+                            { setToRotation(result, p0, p1); })
+/// @}
+
+// setToScale(Xform3f, Vec3f)
+/** \cond */
+#define MATH_XFORM3_SET_TO_SCALE()              \
+    {                                           \
+        setToScale(p0.l, p1);                   \
+        p0.p.x = p0.p.y = p0.p.z = 0.;          \
+    }
+/** \endcond */
+/// @{
+/// create an xyz scale transform specified by a Vec3 param
+MATH_DEFINE_UNARY_SET_VARIFORM(setToScale, Xform3f, Vec3f, MATH_XFORM3_SET_TO_SCALE())
+
+// Xform3f = Xform3f_scale(Vec3f)
+MATH_DEFINE_UNARY_VARIFORM(Xform3f_scale, Xform3f, Vec3f,
+                           { setToScale(result, p0); });
+/// @}
+
+// Xform3f = lookAtPoint(Vec3f eye, Vec3f point, Vec3f up)
+/** \cond */
+#define MATH_XFORM3_LOOK_AT_POINT_L0(VTYPE)     \
+    struct { VTYPE z; VTYPE u; VTYPE v; }
+#define MATH_XFORM3_LOOK_AT_POINT(XFTYPE, MTYPE)                        \
+    {                                                                   \
+        l0.z = normalize(p0 - p1);                                      \
+        l0.u = normalize(cross(p2, l0.z));                              \
+        l0.v = normalize(cross(l0.z, l0.u));                            \
+        result = XFTYPE##_ctor(MTYPE##_ctor(l0.u, l0.v, l0.z), p0);     \
+    }
+/** \endcond */
+/// @{
+/// @param p0 eye location
+/// @param p1 point location
+/// @param p2 up direction
+/// @return Xform3 computed transformation for looking at point from eye
+MATH_DEFINE_TERNARY_VARIFORM_WITH_L(lookAtPoint, Xform3f,
+                                    Vec3f, Vec3f, Vec3f,
+                                    MATH_XFORM3_LOOK_AT_POINT_L0(Vec3f),
+                                    MATH_XFORM3_LOOK_AT_POINT(Xform3f, Mat3f))
+/// @}
+
+// Xform3f = Xform3f + Xform3f
+/** \cond */
+#define MATH_XFORM3_ADD()                       \
+    {                                           \
+        result.l = p0.l + p1.l;                 \
+        result.p = p0.p + p1.p;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise addition of 2 Xform3, p0 + p1
+MATH_DEFINE_BINARY_VARIFORM(operator+, Xform3f, Xform3f, Xform3f, MATH_XFORM3_ADD())
+/// @}
+
+// Xform3f = Xform3f - Xform3f
+/** \cond */
+#define MATH_XFORM3_MINUS()                     \
+    {                                           \
+        result.l = p0.l - p1.l;                 \
+        result.p = p0.p - p1.p;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise subtraction of 2 Xform3, p0 - p1
+MATH_DEFINE_BINARY_VARIFORM(operator-, Xform3f, Xform3f, Xform3f, MATH_XFORM3_MINUS())
+/// @}
+
+// Xform3f = float * Xform3f
+/** \cond */
+#define MATH_S_MUL_XFORM3()                     \
+    {                                           \
+        result.l = p0 * p1.l;                   \
+        result.p = p0 * p1.p;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar multiply: s * Xform3
+MATH_DEFINE_BINARY_VARIFORM(operator*, Xform3f, float, Xform3f, MATH_S_MUL_XFORM3())
+/// @}
+
+// Xform3f = Xform3f * Xform3f
+/** \cond */
+#define MATH_XFORM3_MUL()                       \
+    {                                           \
+        result.l = p0.l * p1.l;                 \
+        result.p = p0.p * p1.l + p1.p;          \
+    }
+/** \endcond */
+/// @{
+/// concatenate 2 Xforms via "*": Xform3 * Xform3
+MATH_DEFINE_BINARY_VARIFORM(operator*, Xform3f, Xform3f, Xform3f, MATH_XFORM3_MUL())
+/// @}
+
+
+// Vec3f = transformPoint(Xform3f, Vec3f)
+/** \cond */
+#define MATH_XFORM3_TRANSFORM_POINT()           \
+    {                                           \
+        result = transform(p0.l, p1) + p0.p;    \
+    }
+/** \endcond */
+/// @{
+/// transform a Vec3 as a point - apply both linear and translation parts
+MATH_DEFINE_BINARY_VARIFORM(transformPoint, Vec3f, Xform3f, Vec3f,
+                            MATH_XFORM3_TRANSFORM_POINT())
+MATH_DEFINE_BINARY_VARIFORM(transformPoint, Vec3Dual3f, Xform3f, Vec3Dual3f,
+                            MATH_XFORM3_TRANSFORM_POINT())
+/// @}
+
+// Vec3f = transformVector(Xform3f, Vec3f)
+/** \cond */
+#define MATH_XFORM3_TRANSFORM_VECTOR()          \
+    {                                           \
+        result = transform(p0.l, p1);           \
+    }
+/** \endcond */
+/// @{
+/// transform a Vec3 as a vector - apply only the linear part, ignore translation
+MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3f, Xform3f, Vec3f,
+                            MATH_XFORM3_TRANSFORM_VECTOR())
+MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Xform3f, Vec3Dual3f,
+                            MATH_XFORM3_TRANSFORM_VECTOR())
+/// @}
+
+/// Transform a Vec3 as a normal: apply only the linear part, ignore
+/// translation and assume the xform matrix has already been inverted and
+/// is intended for use with normals.
+// Vec3f = transformNormal(Xform3f, Vec3f)
+/** \cond */
+#define MATH_XFORM3_TRANSFORM_NORMAL()          \
+    {                                           \
+        result = transformNormal(p0.l, p1);     \
+    }
+/** \endcond */
+/// @{
+/// transform a Vec3 as a normal: apply only the linear part, ignore
+/// translation and assume the xform matrix has already been inverted and
+/// is intended for use with normals.
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Xform3f, Vec3f,
+                            MATH_XFORM3_TRANSFORM_NORMAL())
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Xform3f, Vec3Dual3f,
+                            MATH_XFORM3_TRANSFORM_NORMAL())
+/// @}
+
+// bool = isEqual(Xform3f, Xform3f, float);
+/** \cond */
+#define MATH_XFORM3_ISEQUAL()                   \
+    {                                           \
+        result =                                \
+            isEqual(p0.l, p1.l, p2) &&          \
+            isEqual(p0.p, p1.p, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two xforms (p0, p1) equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Xform3f, Xform3f, float, MATH_XFORM3_ISEQUAL())
+/// @}
+
+// bool = isEqual(Xform3f, Xform3f);
+/// @{
+/// are two xforms equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Xform3f, Xform3f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+// bool = isEqualFixedEps(Xform3f, Xform3f, float);
+/** \cond */
+#define MATH_XFORM3_IS_EQUAL_FIXED_EPS()        \
+    {                                           \
+        result =                                \
+            isEqualFixedEps(p0.l, p1.l, p2) &&  \
+            isEqualFixedEps(p0.p, p1.p, p2);    \
+    }
+/** \endcond */
+/// @{
+/// are two xforms (p0, p1) equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Xform3f, Xform3f, float, MATH_XFORM3_IS_EQUAL_FIXED_EPS())
+/// @}
+
+// bool = isEqualFixedEps(Xform3f, Xform3f);
+/// @{
+/// are two xforms equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Xform3f, Xform3f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+// XformComponent3f;
+/** \cond */
+#define MATH_DECLARE_XFORM_COMPONENT(VTYPE, QTYPE, MTYPE, NAME)  \
+    struct NAME                                                  \
+    {                                                            \
+        VTYPE t;                                                 \
+        QTYPE r;                                                 \
+        MTYPE s;                                                 \
+    };
+/** \endcond */
+/// @struct XformComponent3f
+/// @brief stores a decomposed affine transformation (translate/rotate/scalse)
+MATH_DECLARE_XFORM_COMPONENT(Vec3f, Quaternion3f, Mat3f, XformComponent3f)
+
+//  XformComponent3f = slerp(XformComponent3f, XformComponent3f, float)
+/** \cond */
+#define MATH_XFORM_COMPONENT_SLERP_L0()                          \
+    struct { Vec3f t; Quaternion3f r; Mat3f s; }
+
+#define MATH_XFORM_COMPONENT_SLERP()                             \
+    {                                                            \
+        l0.t = lerp(p0.t, p1.t, p2);                             \
+        l0.r = normalize(slerp(p0.r, p1.r, p2));                 \
+        l0.s = (1. - p2) * p0.s + p2 * p1.s;                     \
+        result = Xform3f_ctor(l0.s * Mat3f_ctor(l0.r), l0.t);    \
+    }
+/** \endcond */
+/// @{
+///
+MATH_DEFINE_TERNARY_VARIFORM_WITH_L(slerp, Xform3f,
+    XformComponent3f, XformComponent3f, float,
+    MATH_XFORM_COMPONENT_SLERP_L0(),
+    MATH_XFORM_COMPONENT_SLERP())
+
+

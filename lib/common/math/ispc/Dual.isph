@@ -1,0 +1,1173 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Dual.isph
+/// @brief Types and functions to support automatic computation of derivatives
+/// @details The autodiff implementation in this file is best described as
+/// "forward accumulation using dual numbers."
+/// References:
+/// - "Automatic Differentiation, C++ templates, and Photogrammetry" by Dan
+/// Piponi 2004.
+/// - Wikipedia: https://en.wikipedia.org/wiki/Automatic_differentiation
+/// - autodiff.org: http://www.autodiff.org
+///
+/// @section autodiff_basics Basics
+/// Functions of up to 3 variables can have their derivatives computed
+/// automatically as their values are computed.  The 10,000 foot overview
+/// is to "seed" the dual number and then compute your function as
+/// normal using dual numbers rather than floats.
+/// Finally, call eval(), dDx(), dDy(),
+/// or dDz() on the resulting Dual to retrieve your results.  For example,
+///
+/// \code
+/// // seed our "x" value
+/// Dual3f x = Dual3f_ctor(xval, 1., 0., 0.);
+///
+/// // compute our function
+/// Dual3f theta = PI * x;
+/// Dual3f f = sin(theta);
+///
+/// // retrieve the result and the derivative
+/// float fx = eval(f);
+/// float dfdx = dDx(f);
+/// \endcode
+///
+///
+/// Higher level "types of dual" are also supported and are defined in the
+/// corresponding headers
+/// - Col3 = f(x, y, z)  Col3Dual3f in Col3.isph
+/// - Vec2 = f(x, y, z) Vec2Dual3f in Vec2.isph
+/// - Vec3 = f(x, y, z) Vec3Dual3f in Vec3.isph
+/// - Vec4 = f(x, y, z) Vec4Dual3f in Vec4.isph
+///
+/// There aren't any matrix or xform of dual types, because the matrices
+/// we encounter aren't typically functions of variables we wish
+/// to differentiate with respect to.  But the matrix and xform
+/// types do have operators defined that work with the vec of dual types.
+/// The transforms just act like constants.
+///
+/// There aren't any "dual of type" types defined.  These could be
+/// used to represent the same sort of functions handled by the "types
+/// of dual" types but with a different memory layout.  These types
+/// may be added in the future if performance testing determines they
+/// have a benefit.
+///
+/// Wrapper functions and types that are convenient for rendering are
+/// defined in autodiff.isph.
+/// 
+/// @section autodiff_ext Extending Autodiff
+/// When working with autodiff, it is important to limit oneself to
+/// just the function and operator overloads provided by the
+/// Dual types.  Any result that is not directly computed from
+/// initial values through just these functions will not produce
+/// the correct derivative result.  When you encounter a computation
+/// that cannot be directly composed by existing, provided functions,
+/// you must create one and manually produce the derivative.  For
+/// example, say you have a function that you can at best, approximate
+/// the derivative for - perhaps the function is just a lookup
+/// into a finite data set, but you still want to use this computation
+/// within a larger autodiff computation.
+///
+/// \code
+/// varying Dual3f
+/// g(const varying Dual3f &u, const uniform float data[])
+/// {
+///     // This function will take the floor of
+///     // u and use that as a lookup into data.  This clearly
+///     // cannot be done as a composition of existing
+///     // Dual3f function overloads.  Therefore, this function
+///     // is responsible for producing the function value
+///     // and its derivative
+///
+///     // This function poses two mathematical challenges for autodiff:
+///     //   1. floor() is not a differentiable function at the interesting
+///     //      points where it changes value.  But we definitely want to
+///     //      capture these changes!
+///     //   2. Looking up discrete values in data is not differentiable at
+///     //      at any point.  But the value changes in data we also
+///     //      wish to capture.
+///
+///     // First, compute the value of g(u).
+///     const varying float a = data[(varying int) floor(eval(u))];
+///
+///     // Now compute the derivative of g w.r.t u: dgdu.
+///     // Unfortunately g(u) is not differentiable, the best we can
+///     // do is compute finite differences.
+///     //
+///     // Note that in many cases, delta
+///     // can be chosen as '1', which is often the case when dealing with screen
+///     // space dx and dy derivatives.
+///     const uniform float delta = 0.0001f;
+///     const varying float d[2];
+///     d[0] = data[(varying int) floor(eval(u) + delta)];
+///     d[1] = data[(varying int) floor(eval(u) - delta)];
+///     varying float dgdu = (d[0] - d[1]) * 5000; // rcp(2*delta)
+///
+///     // We have the value of our function 'a' - an approximation
+///     // to the derivative 'dgdu'.  Now apply the chain rule
+///     // which states dgdx = dgdu * dudx, dgdy = dgdu * dudy,
+///     // and dgdz = dgdu * dudz
+///     return Dual3f_ctor(a, dDx(u) * dgdu, dDy(f) * dgdu, dgdu * dDz(f));
+/// }
+/// \endcode
+///
+/// Now armed with an autodiff implementation of "g()", we can use it
+/// in derivative computing expressions, just like the built-in autodiff types.
+/// \code
+/// Dual3f x = y + g(z, data) * 5;
+/// \endcode
+
+#pragma once
+
+#include "Math.isph"
+#include "Variform.isph"
+
+//----------------------------------------------------------------------
+// Types
+//----------------------------------------------------------------------
+
+#define MATH_DECLARE_DUAL3(TYPE, NAME)          \
+    struct NAME                                 \
+    {                                           \
+        TYPE a;                                 \
+        TYPE b0;                                \
+        TYPE b1;                                \
+        TYPE b2;                                \
+    };
+
+/// @struct Dual3f
+/// @brief single precision dual number of up to 3 variables (i.e. w = f(x, y, z))
+MATH_DECLARE_DUAL3(float, Dual3f);
+
+//----------------------------------------------------------------------
+// Construction
+//----------------------------------------------------------------------
+
+// Dual3f f = Dual3f_ctor(fval);
+/** \cond */
+#define MATH_DUAL3_CTOR_1()                     \
+    {                                           \
+        result.a = p0;                          \
+        result.b0 = 0.;                         \
+        result.b1 = 0.;                         \
+        result.b2 = 0.;                         \
+    }
+/** \endcond */
+/**
+ * @{
+ * Construct a constant dual
+ */
+MATH_DEFINE_UNARY_VARIFORM(Dual3f_ctor, Dual3f, float, MATH_DUAL3_CTOR_1())
+/** @} */
+
+// Dual3f = Dual3f_ctor(fval, seed0, seed1, seed2);
+/** \cond */
+#define MATH_DUAL3_CTOR_4()                     \
+    {                                           \
+        result.a = p0;                          \
+        result.b0 = p1;                         \
+        result.b1 = p2;                         \
+        result.b2 = p3;                         \
+    }
+/** \endcond */
+/**
+ * @{
+ * Construct a seeded Dual3.
+ */
+MATH_DEFINE_QUATERNION_VARIFORM(Dual3f_ctor, Dual3f, float, float, float, float,
+                                MATH_DUAL3_CTOR_4())
+/** @} */
+
+//----------------------------------------------------------------------
+// Comparison
+//----------------------------------------------------------------------
+/** \cond */
+#define MATH_DUAL3_IS_EQUAL()                   \
+    {                                           \
+        result = isEqual(p0.a, p1.a, p2) &&     \
+            isEqual(p0.b0, p1.b0, p2) &&        \
+            isEqual(p0.b1, p1.b1, p2) &&        \
+            isEqual(p0.b2, p1.b2, p2);          \
+    }
+/** \endcond */
+// @{
+/// are two Duals (p1, and p2) equal to within a specified tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Dual3f, Dual3f, float, MATH_DUAL3_IS_EQUAL())
+/// @}
+/// @{
+/// are two Duals equal to within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Dual3f, Dual3f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+/** \cond */
+#define MATH_DUAL3_IS_EQUAL_FIXED_EPS()                 \
+    {                                                   \
+        result = isEqualFixedEps(p0.a, p1.a, p2) &&     \
+            isEqualFixedEps(p0.b0, p1.b0, p2) &&        \
+            isEqualFixedEps(p0.b1, p1.b1, p2) &&        \
+            isEqualFixedEps(p0.b2, p1.b2, p2);          \
+    }
+/** \endcond */
+// @{
+/// are two Duals (p1, and p2) equal to within a specified tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Dual3f, Dual3f, float,
+                             MATH_DUAL3_IS_EQUAL_FIXED_EPS())
+/// @}
+/// @{
+/// are two Duals equal to within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Dual3f, Dual3f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+/** \cond */
+#define MATH_DUAL3_IS_ZERO()                    \
+    {                                           \
+        result = isZero(p0.a, p1) &&            \
+            isZero(p0.b0, p1) &&                \
+            isZero(p0.b1, p1) &&                \
+            isZero(p0.b2, p1);                  \
+    }
+/** \endcond */
+// @{
+/// is a Dual (p0) equal to zero within a specified tolerance (p1)?
+MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Dual3f, float, MATH_DUAL3_IS_ZERO())
+/// @}
+/// @{
+/// is a Dual (p0) equal to zero within the default (sEpsilon) tolerance?
+MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Dual3f,
+                           { result = isZero(p0, sEpsilon); })
+/// @}
+
+/** \cond */
+#define MATH_DUAL3_IS_ONE()                     \
+    {                                           \
+        result = isOne(p0.a, p1) &&             \
+            isZero(p0.b0, p1) &&                \
+            isZero(p0.b1, p1) &&                \
+            isZero(p0.b2, p1);                  \
+    }
+/** \endcond */
+// @{
+/// is a Dual (p0) equal to one within a specified tolerance (p1)?
+MATH_DEFINE_BINARY_VARIFORM(isOne, bool, Dual3f, float, MATH_DUAL3_IS_ONE())
+/// @}
+/// @{
+/// is a Dual (p0) equal to one within the default (sEpsilon) tolerance?
+MATH_DEFINE_UNARY_VARIFORM(isOne, bool, Dual3f,
+                           { result = isOne(p0, sEpsilon); })
+/// @}
+
+//----------------------------------------------------------------------
+// Evaluation
+//----------------------------------------------------------------------
+
+// float a = eval(Dual3f f)
+/** \cond */
+#define MATH_DUAL_EVAL()                        \
+    {                                           \
+        result = p0.a;                          \
+    }
+/** \endcond */
+/** @{
+ * Get the value of the dual's represented function.
+ */
+MATH_DEFINE_UNARY_VARIFORM(eval, float, Dual3f, MATH_DUAL_EVAL())
+/** @} */
+
+// float dfdx = dDx(Dual3f f);
+/** \cond */
+#define MATH_DUAL_DDX()                         \
+    {                                           \
+        result = p0.b0;                         \
+    }
+/** \endcond */
+/** @{
+ * Get the first partial derivative of the dual's represented function
+ */
+MATH_DEFINE_UNARY_VARIFORM(dDx, float, Dual3f, MATH_DUAL_DDX())
+/** @} */
+
+// float dfdy = dDy(Dual3f f);
+/** \cond */
+#define MATH_DUAL_DDY()                         \
+    {                                           \
+        result = p0.b1;                         \
+    }
+/** \endcond */
+/** @{
+ * Get the 2nd partial derivative of the dual's represented function
+ */
+MATH_DEFINE_UNARY_VARIFORM(dDy, float, Dual3f, MATH_DUAL_DDY())
+/** @} */
+
+// float dfdz = dDz(Dual3f f);
+/** \cond */
+#define MATH_DUAL_DDZ()                         \
+    {                                           \
+        result = p0.b2;                         \
+    }
+/** \endcond */
+/** @{
+ * Get the 3rd partial derivative of the dual's represented function
+ */
+MATH_DEFINE_UNARY_VARIFORM(dDz, float, Dual3f, MATH_DUAL_DDZ())
+/** @} */
+
+//----------------------------------------------------------------------
+// Dual Algebra
+//----------------------------------------------------------------------
+
+// p0 + p1
+// simple component-wise addition
+/** \cond */
+#define MATH_DUAL3_PLUS_DUAL3()                 \
+    {                                           \
+        result.a = p0.a + p1.a;                 \
+        result.b0 = p0.b0 + p1.b0;              \
+        result.b1 = p0.b1 + p1.b1;              \
+        result.b2 = p0.b2 + p1.b2;              \
+    }
+#define MATH_NUMBER_PLUS_DUAL3()                \
+    {                                           \
+        result.a = p0 + p1.a;                   \
+        result.b0 = p1.b0;                      \
+        result.b1 = p1.b1;                      \
+        result.b2 = p1.b2;                      \
+    }
+#define MATH_DUAL3_PLUS_NUMBER()                \
+    {                                           \
+        result.a = p0.a + p1;                   \
+        result.b0 = p0.b0;                      \
+        result.b1 = p0.b1;                      \
+        result.b2 = p0.b2;                      \
+    }
+/** \endcond */
+/**
+ * @ {
+ * Add dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM(operator+, Dual3f, Dual3f, Dual3f, MATH_DUAL3_PLUS_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Dual3f, float, Dual3f, MATH_NUMBER_PLUS_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Dual3f, Dual3f, float, MATH_DUAL3_PLUS_NUMBER())
+/** @} */
+
+// p0 - p1
+// simple component-wise subtraction
+/** \cond */
+#define MATH_DUAL3_MINUS_DUAL3()                \
+    {                                           \
+        result.a = p0.a - p1.a;                 \
+        result.b0 = p0.b0 - p1.b0;              \
+        result.b1 = p0.b1 - p1.b1;              \
+        result.b2 = p0.b2 - p1.b2;              \
+    }
+#define MATH_NUMBER_MINUS_DUAL3()               \
+    {                                           \
+        result.a = p0 - p1.a;                   \
+        result.b0 = -p1.b0;                     \
+        result.b1 = -p1.b1;                     \
+        result.b2 = -p1.b2;                     \
+    }
+#define MATH_DUAL3_MINUS_NUMBER()               \
+    {                                           \
+        result.a = p0.a - p1;                   \
+        result.b0 = p0.b0;                      \
+        result.b1 = p0.b1;                      \
+        result.b2 = p0.b2;                      \
+    }
+/** \endcond */
+/**
+ * @ {
+ * Subtract dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM(operator-, Dual3f, Dual3f, Dual3f, MATH_DUAL3_MINUS_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Dual3f, float, Dual3f, MATH_NUMBER_MINUS_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Dual3f, Dual3f, float, MATH_DUAL3_MINUS_NUMBER())
+/** @} */
+
+// p0 * p1
+//
+// Distribute the multiplication and note that di * dj = 0 for all i,j
+//   (p0.a + p0.b0 * d0 + p0.b1 * d1 + p0.b2 * d2) *
+//   (p1.a + p1.b0 * d0 + p1.b1 * d1 + p1.b2 * d2) =
+//     p0.a * p1.a +
+//     (p0.a * p1.b0 + p1.a * p0.b0) * d0 +
+//     (p0.a * p1.b1 + p1.a * p0.b1) * d1 +
+//     (p0.a * p1.b2 + p1.a * p0.b2) * d2
+/** \cond */
+#define MATH_DUAL3_TIMES_DUAL3()                        \
+    {                                                   \
+        result.a = p0.a * p1.a;                         \
+        result.b0 = p0.a * p1.b0 + p1.a * p0.b0;        \
+        result.b1 = p0.a * p1.b1 + p1.a * p0.b1;        \
+        result.b2 = p0.a * p1.b2 + p1.a * p0.b2;        \
+    }
+#define MATH_NUMBER_TIMES_DUAL3()               \
+    {                                           \
+        result.a = p0 * p1.a;                   \
+        result.b0 = p0 * p1.b0;                 \
+        result.b1 = p0 * p1.b1;                 \
+        result.b2 = p0 * p1.b2;                 \
+    }
+#define MATH_DUAL3_TIMES_NUMBER()               \
+    {                                           \
+        result.a = p0.a * p1;                   \
+        result.b0 = p0.b0 * p1;                 \
+        result.b1 = p0.b1 * p1;                 \
+        result.b2 = p0.b2 * p1;                 \
+    }
+/** \endcond */
+/**
+ * @{
+ * Multiply dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM(operator*, Dual3f, Dual3f, Dual3f, MATH_DUAL3_TIMES_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Dual3f, float, Dual3f, MATH_NUMBER_TIMES_DUAL3())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Dual3f, Dual3f, float, MATH_DUAL3_TIMES_NUMBER())
+/** @} */
+
+// p0 / p1
+// p0.a + p0.b0 * d0 + p0.b1 * d1 + p0.b2 * d2
+// --------------------------------------------
+// p1.a + p1.b0 * d0 + p1.b1 * d1 + p1.b2 * d2
+//
+// there are 2 ways to look at this. we can apply a
+// generalization of the binomial theorem and solve for
+// the coefficients.
+//
+// i.e.
+//
+// p0.a + p0.b0 * d0 + p0.b1 * d1 + p0.b2 * d2
+// ------------------------------------------- *
+//                    p1.a
+//
+//                               1.
+// -------------------------------------------------------------
+// 1 + (p1.b0/p1.a) * d0 + (p1.b1/p1.a) * d1 + (p1.b2/p1.a) * d2
+//
+// Then  let x = (p1.b0/p1.a) * d0 + (p1.b1/p1.a) * d1 + (p1.b2/p1.a) * d2
+// and apply the binomial theoreom to 1 / 1 + x = 1 - x + x^2 - x^3 ....
+// and note that all terms past the initial '1 - x' contain a product
+// of di * dj which by definition is zero.
+// 
+// but i think it is more intuitive to view division simply as
+// an analytic binary function, g(u, v), which obeys the rule that:
+//  g(p0, p1) =
+//    g(p0.a, p1.a) +
+//    (dgp0(p0.a, p1.a) * p0.b0 + dgp1(p0.a, p1.a) * p1.b0) * d0
+//    (dgp0(p0.a, p1.a) * p0.b1 + dgp1(p0.a, p1.a) * p1.b1) * d1
+//    (dgp0(p0.a, p1.a) * p0.b2 + dgp1(p0.a, p1.a) * p1.b2) * d2
+// where:
+//    g(p0, p1) = p0 / p1;
+//    dgp0(p0, p1) = 1. / p1.a (parial derivative of g w.r.t p0)
+//    dgp1(p0, p1) = -p0.a / p1.a^2 (partial derivative of g w.r.t p1)
+//
+// it is a fun exercise to prove that the two methods produce the
+// same result ;->
+/** \cond */
+#define MATH_DUAL_DIV_DUAL_L0(FTYPE)                                    \
+    struct { FTYPE one; FTYPE zero; FTYPE invp1a; FTYPE dgp0; FTYPE dgp1; }
+#define MATH_DUAL_DIV_DUAL_COMPUTE()            \
+    l0.zero = 0.;                               \
+    l0.one = 1.;                                \
+    assert(!isEqual(p1.a, l0.zero));            \
+    l0.invp1a = l0.one / p1.a;                  \
+    l0.dgp0 = l0.invp1a;                        \
+    l0.dgp1 = -p0.a * l0.invp1a * l0.invp1a
+#define MATH_DUAL3_DIV_DUAL3(DTYPE)                                     \
+    {                                                                   \
+        MATH_DUAL_DIV_DUAL_COMPUTE();                                   \
+        result = DTYPE##_ctor(p0.a * l0.invp1a,                         \
+                              l0.dgp0 * p0.b0 + l0.dgp1 * p1.b0,        \
+                              l0.dgp0 * p0.b1 + l0.dgp1 * p1.b1,        \
+                              l0.dgp0 * p0.b2 + l0.dgp1 * p1.b2);       \
+    }
+#define MATH_NUMBER_DIV_DUAL_L0(FTYPE)                          \
+    struct { FTYPE one; FTYPE zero; FTYPE invp1a; FTYPE dgp1; }
+#define MATH_NUMBER_DIV_DUAL_COMPUTE()          \
+    l0.zero = 0.;                               \
+    l0.one = 1.;                                \
+    assert(!isEqual(p1.a, l0.zero));            \
+    l0.invp1a = l0.one / p1.a;                  \
+    l0.dgp1 = -p0 * l0.invp1a * l0.invp1a
+#define MATH_NUMBER_DIV_DUAL3(DTYPE)            \
+    {                                           \
+        MATH_NUMBER_DIV_DUAL_COMPUTE();         \
+        result = DTYPE##_ctor(p0 * l0.invp1a,   \
+                              l0.dgp1 * p1.b0,  \
+                              l0.dgp1 * p1.b1,  \
+                              l0.dgp1 * p1.b2); \
+    }
+#define MATH_DUAL_DIV_NUMBER_L0(FTYPE)                          \
+    struct { FTYPE one; FTYPE zero; FTYPE invp1; FTYPE dgp0; }
+#define MATH_DUAL_DIV_NUMBER_COMPUTE()          \
+    l0.zero = 0.;                               \
+    l0.one = 1.;                                \
+    assert(!isEqual(p1, l0.zero));              \
+    l0.invp1 = l0.one / p1;                     \
+    l0.dgp0 = l0.invp1;
+#define MATH_DUAL3_DIV_NUMBER(DTYPE)            \
+    {                                           \
+        MATH_DUAL_DIV_NUMBER_COMPUTE();         \
+        result = DTYPE##_ctor(p0.a * l0.invp1,  \
+                              l0.dgp0 * p0.b0,  \
+                              l0.dgp0 * p0.b1,  \
+                              l0.dgp0 * p0.b2); \
+    }
+/** \endcond */
+/**
+ * @{
+ * Divide dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(operator/, Dual3f, Dual3f, Dual3f,
+                                   MATH_DUAL_DIV_DUAL_L0(float),
+                                   MATH_DUAL3_DIV_DUAL3(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(operator/, Dual3f, Dual3f, float,
+                                   MATH_DUAL_DIV_NUMBER_L0(float),
+                                   MATH_DUAL3_DIV_NUMBER(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(operator/, Dual3f, float, Dual3f,
+                                   MATH_NUMBER_DIV_DUAL_L0(float),
+                                   MATH_NUMBER_DIV_DUAL3(Dual3f))
+/** @} */
+
+//----------------------------------------------------------------------
+// transcendental functions of dual numbers
+//
+// the following theorems are provided without proof, but are probably correct!
+//
+// unary: g(p0)
+//    g(p0) =
+//       g(p0.a) +
+//       dgu(p0.a) * p0.b0 * d0 +
+//       dgu(p0.a) * p0.b1 * d1 +
+//       dgu(p0.a) * p0.b2 * d2
+//
+// binary: g(p0, p1)
+//    g(p0, p1) =
+//       g(p0.a, p1.a) +
+//       (dgu(p0.a, p1.a) * p0.b0 + dgv(p0.a, p1.a) * p1.b0) * d0
+//       (dgu(p0.a, p1.a) * p0.b1 + dgv(p0.a, p1.a) * p1.b1) * d1
+//       (dgu(p0.a, p1.a) * p0.b2 + dgv(p0.a, p1.a) * p1.b2) * d2
+//
+// where dgp0 = partial derivative of g w.r.t. p0
+//       dgp1 = partial derivative of g w.r.t. p1
+//----------------------------------------------------------------------
+
+// abs(p0)
+/** \cond */
+#define MATH_DUAL3_ABS()                        \
+    {                                           \
+        if (p0.a < 0) {                         \
+            result.a = -p0.a;                   \
+            result.b0 = -p0.b0;                 \
+            result.b1 = -p0.b1;                 \
+            result.b2 = -p0.b2;                 \
+        } else {                                \
+            result = p0;                        \
+        }                                       \
+    }
+/** \endcond */
+/**
+ * @{
+ * Return the absolute value of p0.  The derivative is -1 if p0.a
+ * is negative, 1 otherwise.  Technically the derivative does not exist
+ * at p0.a = 0, but that is a technicality we will ignore.
+ */
+MATH_DEFINE_UNARY_VARIFORM(abs, Dual3f, Dual3f, MATH_DUAL3_ABS())
+/** @} */
+
+// floor(p0)
+/** \cond */
+#define MATH_DUAL3_FLOOR()              \
+    {                                   \
+        result.a = floor(p0.a);         \
+        result.b0 = 0.0f;               \
+        result.b1 = 0.0f;               \
+        result.b2 = 0.0f;               \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the floor of a dual number. The derivatives are zero.
+ */
+MATH_DEFINE_UNARY_VARIFORM(floor, Dual3f, Dual3f, MATH_DUAL3_FLOOR())
+/** @} */
+
+// ceil(p0)
+/** \cond */
+#define MATH_DUAL3_CEIL()               \
+    {                                   \
+        result.a = ceil(p0.a);          \
+        result.b0 = 0.0f;               \
+        result.b1 = 0.0f;               \
+        result.b2 = 0.0f;               \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the ceiling of a dual number. The derivatives are zero.
+ */
+MATH_DEFINE_UNARY_VARIFORM(ceil, Dual3f, Dual3f, MATH_DUAL3_CEIL())
+/** @} */
+
+// trunc(p0)
+/** \cond */
+#define MATH_DUAL3_TRUNC()                                      \
+    {                                                           \
+        result = (eval(p0) > 0) ? floor(p0) : ceil(p0);         \
+    }
+/** \endcond */
+/**
+ * @{
+ * Truncate a dual number (round towards zero).
+ */
+MATH_DEFINE_UNARY_VARIFORM(trunc, Dual3f, Dual3f, MATH_DUAL3_TRUNC())
+/** @} */
+
+// fmod(p0, p1)
+/** \cond */
+#define MATH_DUAL3_FMOD()                               \
+    {                                                   \
+        MNRY_ASSERT(!isEqual(p1.a, 0.0f));               \
+        result = p0 - trunc(p0 / p1) * p1;              \
+    }
+/** \endcond */
+/**
+ * @{
+ * Return the floating point modulo value of p0, with p0 numerator and
+ * p1 denominator. Technically the derivative is undefined at (p0 % p1) == 0, but that
+ * is a technicality we will ignore, as abs() ignores it.
+ */
+MATH_DEFINE_BINARY_VARIFORM(fmod, Dual3f, Dual3f, Dual3f, MATH_DUAL3_FMOD())
+MATH_DEFINE_BINARY_VARIFORM(fmod, Dual3f, Dual3f, float, { result = fmod(p0, Dual3f_ctor(p1)); } )
+/** @} */
+
+// acos(p0)
+/** \cond */
+#define MATH_DUAL_ACOS_L0(FTYPE) struct { FTYPE one; FTYPE dacosp0; }
+#define MATH_DUAL_ACOS_COMPUTE()                        \
+    l0.one = 1.;                                        \
+    assert(abs(p0.a) < l0.one);                         \
+    l0.dacosp0 = isEqual(p0.a * p0.a, l0.one)?          \
+        -sMaxValue : -rsqrt(l0.one - p0.a * p0.a);
+#define MATH_DUAL3_ACOS(DTYPE)                          \
+    {                                                   \
+        MATH_DUAL_ACOS_COMPUTE();                       \
+        result = DTYPE##_ctor(acos(p0.a),               \
+                              l0.dacosp0 * p0.b0,       \
+                              l0.dacosp0 * p0.b1,       \
+                              l0.dacosp0 * p0.b2);      \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the arc cosine of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(acos, Dual3f, Dual3f, MATH_DUAL_ACOS_L0(float),
+                                  MATH_DUAL3_ACOS(Dual3f))
+/** @} */
+
+// asin(p0)
+/** \cond */
+#define MATH_DUAL_ASIN_L0(FTYPE) struct { FTYPE one; FTYPE dasinp0; }
+#define MATH_DUAL_ASIN_COMPUTE()                        \
+    l0.one = 1.;                                        \
+    assert(abs(p0.a) < l0.one);                         \
+    l0.dasinp0 = isEqual(p0.a * p0.a, l0.one)?          \
+        sMaxValue : rsqrt(l0.one - p0.a * p0.a);
+#define MATH_DUAL3_ASIN(DTYPE)                          \
+    {                                                   \
+        MATH_DUAL_ASIN_COMPUTE();                       \
+        result = DTYPE##_ctor(asin(p0.a),               \
+                              l0.dasinp0 * p0.b0,       \
+                              l0.dasinp0 * p0.b1,       \
+                              l0.dasinp0 * p0.b2);      \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the arc sine of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(asin, Dual3f, Dual3f, MATH_DUAL_ASIN_L0(float),
+                                  MATH_DUAL3_ASIN(Dual3f))
+/** @} */
+
+// atan(p0)
+/** \cond */
+#define MATH_DUAL_ATAN_L0(FTYPE) struct { FTYPE datanp0; }
+#define MATH_DUAL_ATAN_COMPUTE() l0.datanp0 = rcp(1. + p0.a * p0.a);
+
+#define MATH_DUAL3_ATAN(DTYPE)                          \
+    {                                                   \
+        MATH_DUAL_ATAN_COMPUTE();                       \
+        result = DTYPE##_ctor(atan(p0.a),               \
+                              l0.datanp0 * p0.b0,       \
+                              l0.datanp0 * p0.b1,       \
+                              l0.datanp0 * p0.b2);      \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the arc tangent of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(atan, Dual3f, Dual3f, MATH_DUAL_ATAN_L0(float),
+                                  MATH_DUAL3_ATAN(Dual3f))
+/** @} */
+
+// atan2(p0, p1)
+/** \cond */
+#define MATH_DUAL_ATAN2_L0(FTYPE) struct { FTYPE datan2p0; FTYPE datan2p1; }
+#define MATH_DUAL_ATAN2_COMPUTE()                               \
+    l0.datan2p0 = p1.a * rcp(p0.a * p0.a + p1.a * p1.a);        \
+    l0.datan2p1 = -p0.a * rcp(p0.a * p0.a + p1.a * p1.a);
+#define MATH_DUAL3_ATAN2(DTYPE)                                         \
+    {                                                                   \
+        MATH_DUAL_ATAN2_COMPUTE();                                      \
+        result = DTYPE##_ctor(atan2(p0.a, p1.a),                        \
+                              l0.datan2p0 * p0.b0 + l0.datan2p1 * p1.b0, \
+                              l0.datan2p0 * p0.b1 + l0.datan2p1 * p1.b1, \
+                              l0.datan2p0 * p0.b2 + l0.datan2p1 * p1.b2); \
+    }
+/** \endcond */
+/**
+ * @{
+ * see https://en.wikipedia.org/wiki/Atan2#Derivative for an
+ * explanation of this function and its derivatives
+ */
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(atan2, Dual3f, Dual3f, Dual3f,
+                                   MATH_DUAL_ATAN2_L0(float),
+                                   MATH_DUAL3_ATAN2(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(atan2, Dual3f, Dual3f, float,
+                            { result = atan2(p0, Dual3f_ctor(p1)); })
+MATH_DEFINE_BINARY_VARIFORM(atan2, Dual3f, float, Dual3f,
+                            { result = atan2(Dual3f_ctor(p0), p1); })
+/** @} */
+
+// clamp(p0, p1, p2)
+/** \cond */
+#define MATH_DUAL_CLAMP()                       \
+    {                                           \
+        if (p0.a < p1.a) {                      \
+            result = p1;                        \
+        } else if (p0.a > p2.a) {               \
+            result = p2;                        \
+        } else {                                \
+            result = p0;                        \
+        }                                       \
+    }
+/** \endcond */
+/**
+ * @{
+ * Clamp the value of p0 to the range [p1,p2].  Derivatives are
+ * 1 if p0 is in [p1,p2], and 0 if outside.  Technically, the derivaties
+ * do not exist at p1 and p2, but hopefully this standard covers the common
+ * use cases.
+ */
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Dual3f, Dual3f, Dual3f, Dual3f, MATH_DUAL_CLAMP())
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Dual3f, Dual3f, float, Dual3f,
+                             { result = clamp(p0, Dual3f_ctor(p1), p2); })
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Dual3f, Dual3f, Dual3f, float,
+                             { result = clamp(p0, p1, Dual3f_ctor(p2)); })
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Dual3f, Dual3f, float, float,
+                             { result = clamp(p0, Dual3f_ctor(p1), Dual3f_ctor(p2)); })
+/** @} */
+
+// saturate(p0)
+/**
+ * @{
+ * Clamp the value of p0 to the range [0,1].  Derivatives are
+ * 1 if p0 is in [0,1], and 0 if outside.  Technically, the derivaties
+ * do not exist at 0 and 1, but hopefully this standard covers the common
+ * use cases.
+ */
+MATH_DEFINE_UNARY_VARIFORM(saturate, Dual3f, Dual3f,
+                           { result = clamp(p0, Dual3f_ctor(0.0f), Dual3f_ctor(1.0f)); })
+/** @} */
+
+// cos(p0)
+/** \cond */
+#define MATH_DUAL_COS_L0(FTYPE) struct { FTYPE dcosp0; FTYPE cosp0; }
+#define MATH_DUAL_COS_COMPUTE_F()               \
+    sincos(p0.a, &l0.dcosp0, &l0.cosp0);        \
+    l0.dcosp0 = -l0.dcosp0;
+#define MATH_DUAL3_COS_RESULT(DTYPE)            \
+    result = DTYPE##_ctor(l0.cosp0,             \
+                          l0.dcosp0 * p0.b0,    \
+                          l0.dcosp0 * p0.b1,    \
+                          l0.dcosp0 * p0.b2);
+#define MATH_DUAL3_COS_F(DTYPE)                 \
+    {                                           \
+        MATH_DUAL_COS_COMPUTE_F();              \
+        MATH_DUAL3_COS_RESULT(DTYPE);           \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the cosine of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(cos, Dual3f, Dual3f, MATH_DUAL_COS_L0(float),
+                                  MATH_DUAL3_COS_F(Dual3f))
+/** @} */
+
+// exp(p0)
+/** \cond */
+#define MATH_DUAL_EXP_L0(FTYPE) struct { FTYPE expp0; }
+#define MATH_DUAL_EXP_COMPUTE() l0.expp0 = exp(p0.a);
+#define MATH_DUAL3_EXP(DTYPE)                           \
+    {                                                   \
+        MATH_DUAL_EXP_COMPUTE();                        \
+        result = DTYPE##_ctor(l0.expp0,                 \
+                              l0.expp0 * p0.b0,         \
+                              l0.expp0 * p0.b1,         \
+                              l0.expp0 * p0.b2);        \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the value of e (the base of the natural logarithm) raised to
+ * a dual number power.
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(exp, Dual3f, Dual3f, MATH_DUAL_EXP_L0(float),
+                                  MATH_DUAL3_EXP(Dual3f))
+/** @} */
+
+// log(p0)
+/** \cond */
+#define MATH_DUAL_LOG_L0(FTYPE) struct { FTYPE dlogp0; }
+#define MATH_DUAL_LOG_COMPUTE()                 \
+    assert(p0.a > 0.);                          \
+    l0.dlogp0 = rcp(p0.a);
+#define MATH_DUAL3_LOG(DTYPE)                           \
+    {                                                   \
+        MATH_DUAL_LOG_COMPUTE();                        \
+        result = DTYPE##_ctor(log(p0.a),                \
+                              l0.dlogp0 * p0.b0,        \
+                              l0.dlogp0 * p0.b1,        \
+                              l0.dlogp0 * p0.b2);       \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the natural logarithm of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(log, Dual3f, Dual3f, MATH_DUAL_LOG_L0(float),
+                                  MATH_DUAL3_LOG(Dual3f))
+
+/** @} */
+
+/**
+ * @ {
+ * min of dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM(min, Dual3f, Dual3f, Dual3f,
+                            { result = (p0.a < p1.a) ? p0 : p1; })
+/** @} */
+
+/**
+ * @ {
+ * max of dual numbers
+ */
+MATH_DEFINE_BINARY_VARIFORM(max, Dual3f, Dual3f, Dual3f,
+                            { result = (p0.a < p1.a) ? p1 : p0; })
+/** @} */
+
+// pow(p0, p1)
+// conceptually:
+//   powp0p1 = pow(p0.a, p1.a);
+//   dpowp0 = p1.a * pow(p0.a, p1.a - 1.) // y * x^(y - 1)
+// we can reuse the pow(p0.a, p1.a) and replace pow(p0.a, p1a - 1.)
+// with powp0p1 * rcp(p0.a) // (x^y / x) == x^(y - 1)
+// this replaces a call to pow() with a multiply and an rcp() which
+// in my testing is roughly 1.7x faster.
+/** \cond */
+#define MATH_DUAL_POW_L0(FTYPE) struct { FTYPE powp0p1; FTYPE dpowp0; FTYPE dpowp1; }
+#define MATH_DUAL_POW_COMPUTE()                 \
+    assert(p0.a > 0.);                          \
+    l0.powp0p1 = pow(p0.a, p1.a);               \
+    l0.dpowp0 = p1.a * l0.powp0p1 * rcp(p0.a);  \
+    l0.dpowp1 = log(p0.a) * l0.powp0p1;
+#define MATH_DUAL3_POW(DTYPE)                                               \
+    {                                                                       \
+        if (p0.a == 0.) {                                                   \
+            result = DTYPE##_ctor(0.0f);                                    \
+        } else {                                                            \
+            MATH_DUAL_POW_COMPUTE();                                        \
+            result = DTYPE##_ctor(l0.powp0p1,                               \
+                                  l0.dpowp0 * p0.b0 + l0.dpowp1 * p1.b0,    \
+                                  l0.dpowp0 * p0.b1 + l0.dpowp1 * p1.b1,    \
+                                  l0.dpowp0 * p0.b2 + l0.dpowp1 * p1.b2);   \
+        }                                                                   \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute p0^p1 for dual numbers.  p0 must be postive.
+ */
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(pow, Dual3f, Dual3f, Dual3f,
+                                   MATH_DUAL_POW_L0(float),
+                                   MATH_DUAL3_POW(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(pow, Dual3f, Dual3f, float,
+                            { result = pow(p0, Dual3f_ctor(p1)); })
+MATH_DEFINE_BINARY_VARIFORM(pow, Dual3f, float, Dual3f,
+                            { result = pow(Dual3f_ctor(p0), p1); })
+/** @} */
+
+// rcp(p0)
+/** \cond */
+#define MATH_DUAL_RCP_L0(FTYPE) struct { FTYPE rcpp0; FTYPE drcpp0; }
+#define MATH_DUAL_RCP_COMPUTE()                 \
+    assert(p0.a > 0. || p0.a < 0.);             \
+    l0.rcpp0 = rcp(p0.a);                       \
+    l0.drcpp0 = -l0.rcpp0 * l0.rcpp0;
+#define MATH_DUAL3_RCP(DTYPE)                           \
+    {                                                   \
+        MATH_DUAL_RCP_COMPUTE();                        \
+        result = DTYPE##_ctor(l0.rcpp0,                 \
+                              l0.drcpp0 * p0.b0,        \
+                              l0.drcpp0 * p0.b1,        \
+                              l0.drcpp0 * p0.b2);       \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the reciprocal of a dual number (1 / p0)
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(rcp, Dual3f, Dual3f, MATH_DUAL_RCP_L0(float),
+                                  MATH_DUAL3_RCP(Dual3f))
+/** @} */
+
+// rsqrt(p0)
+/** \cond */
+#define MATH_DUAL_RSQRT_L0(FTYPE) struct { FTYPE rsqrtp0; FTYPE drsqrtp0; }
+#define MATH_DUAL_RSQRT_COMPUTE()               \
+    assert(p0.a > 0);                           \
+    l0.rsqrtp0 = rsqrt(p0.a);                   \
+    l0.drsqrtp0 = -.5 * l0.rsqrtp0 * rcp(p0.a);
+#define MATH_DUAL3_RSQRT(DTYPE)                         \
+    {                                                   \
+        MATH_DUAL_RSQRT_COMPUTE();                      \
+        result = DTYPE##_ctor(l0.rsqrtp0,               \
+                              l0.drsqrtp0 * p0.b0,      \
+                              l0.drsqrtp0 * p0.b1,      \
+                              l0.drsqrtp0 * p0.b2);     \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the reciprocal square root of a dual number (1 / sqrt(p0))
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(rsqrt, Dual3f, Dual3f, MATH_DUAL_RSQRT_L0(float),
+                                  MATH_DUAL3_RSQRT(Dual3f))
+/** @} */
+
+// sin(p0)
+// BEWARE: if implemting a double version.  The double version
+// of sincos() will compile with ispc (1.8.2), but produce the
+// wrong answers.
+/** \cond */
+#define MATH_DUAL_SIN_L0(FTYPE) struct { FTYPE dsinp0; FTYPE sinp0; }
+#define MATH_DUAL_SIN_COMPUTE_F()               \
+    sincos(p0.a, &l0.sinp0, &l0.dsinp0);
+#define MATH_DUAL3_SIN_RESULT(DTYPE)            \
+    result = DTYPE##_ctor(l0.sinp0,             \
+                          l0.dsinp0 * p0.b0,    \
+                          l0.dsinp0 * p0.b1,    \
+                          l0.dsinp0 * p0.b2);
+#define MATH_DUAL3_SIN_F(DTYPE)                 \
+    {                                           \
+        MATH_DUAL_SIN_COMPUTE_F();              \
+        MATH_DUAL3_SIN_RESULT(DTYPE);           \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the sine of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(sin, Dual3f, Dual3f, MATH_DUAL_SIN_L0(float),
+                                  MATH_DUAL3_SIN_F(Dual3f))
+/** @} */
+
+// sincos(p0, &p1, &p2)
+// - unfortunately, we don't have any handy variform macros that take a single
+// input parameter and two output reference parameters.  so this one we
+// implement the common permutations by-hand (all varying, all uniform)
+/** \cond */
+#define MATH_DUAL3_SINCOS()                     \
+    sincos(theta.a, &sine.a, &cosine.a);        \
+    sine.b0 = cosine.a * theta.b0;              \
+    sine.b1 = cosine.a * theta.b1;              \
+    sine.b2 = cosine.a * theta.b2;              \
+    cosine.b0 = -sine.a * theta.b0;             \
+    cosine.b1 = -sine.a * theta.b1;             \
+    cosine.b2 = -sine.a * theta.b2;
+/** \endcond */
+/**
+ * @{
+ * Compute the sine and cosine of a dual number using
+ * a single function.
+ */
+inline void
+sincos(const varying Dual3f theta, varying Dual3f &sine, varying Dual3f &cosine)
+{
+    MATH_DUAL3_SINCOS();
+}
+inline void
+sincos(const uniform Dual3f theta, uniform Dual3f &sine, uniform Dual3f &cosine)
+{
+    MATH_DUAL3_SINCOS();
+}
+/** @} */
+
+
+// sqrt(p0)
+/** \cond */
+#define MATH_DUAL_SQRT_L0(FTYPE) struct { FTYPE zero; FTYPE sqrtp0; FTYPE dsqrtp0; }
+#define MATH_DUAL_SQRT_COMPUTE()                \
+    assert(p0.a >= 0.);                         \
+    l0.zero = 0.;                               \
+    l0.sqrtp0 = sqrt(p0.a);                     \
+    l0.dsqrtp0 = isEqual(l0.sqrtp0, l0.zero)?   \
+        sMaxValue : .5 * rcp(l0.sqrtp0);
+#define MATH_DUAL3_SQRT(DTYPE)                          \
+    {                                                   \
+        MATH_DUAL_SQRT_COMPUTE();                       \
+        result = DTYPE##_ctor(l0.sqrtp0,                \
+                              l0.dsqrtp0 * p0.b0,       \
+                              l0.dsqrtp0 * p0.b1,       \
+                              l0.dsqrtp0 * p0.b2);      \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the sqrt of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(sqrt, Dual3f, Dual3f, MATH_DUAL_SQRT_L0(float),
+                                  MATH_DUAL3_SQRT(Dual3f))
+/** @} */
+
+// tan(p0)
+// BEWARE: if implemting a double version.  The double version
+// of sincos() will compile with ispc (1.8.2), but produce the
+// wrong answers.
+/** \cond */
+#define MATH_DUAL_TAN_L0(FTYPE)                                         \
+    struct { FTYPE zero; FTYPE sinp0; FTYPE cosp0; FTYPE rcpCosp0; FTYPE tanp0; FTYPE dtanp0; }
+#define MATH_DUAL_TAN_COMPUTE_F()               \
+    l0.zero = 0.;                               \
+    sincos(p0.a, &l0.sinp0, &l0.cosp0);         \
+    if (isEqual(l0.cosp0, l0.zero)) {           \
+        l0.tanp0 = (l0.sinp0 < 0.)?             \
+            -sMaxValue : sMaxValue;             \
+        l0.dtanp0 = sMaxValue;                  \
+    } else {                                    \
+        l0.rcpCosp0 = rcp(l0.cosp0);            \
+        l0.tanp0 = l0.sinp0 * l0.rcpCosp0;      \
+        l0.dtanp0 = l0.rcpCosp0 * l0.rcpCosp0;  \
+    }
+#define MATH_DUAL3_TAN_RESULT(DTYPE)            \
+    result = DTYPE##_ctor(l0.tanp0,             \
+                          l0.dtanp0 * p0.b0,    \
+                          l0.dtanp0 * p0.b1,    \
+                          l0.dtanp0 * p0.b2);
+#define MATH_DUAL3_TAN_F(DTYPE)                 \
+    {                                           \
+        MATH_DUAL_TAN_COMPUTE_F();              \
+        MATH_DUAL3_TAN_RESULT(DTYPE);           \
+    }
+/** \endcond */
+/**
+ * @{
+ * Compute the tan of a dual number
+ */
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(tan, Dual3f, Dual3f, MATH_DUAL_TAN_L0(float),
+                                  MATH_DUAL3_TAN_F(Dual3f))
+/** @} */
+                                  
+// bias(p0, p1)
+/** \cond */
+#define MATH_DUAL_BIAS_COMPUTE(p0, p1)                  \
+    const uniform float sFactor = 1.0f / log(0.5f);     \
+    result = pow(p0, log(p1) * sFactor)         
+#define MATH_DUAL_BIAS_COMPUTE_DUAL_NUM(DTYPE)          \
+    {                                                   \
+        if (p1 == 0.5f || p0.a <= 0.0f || p0.a >= 1.0f) \
+            result = DTYPE##_ctor(p0.a);                \
+        else if (p1 <= 0.0f)                            \
+            result = DTYPE##_ctor(0.0f);                \
+        else {                                          \
+            MATH_DUAL_BIAS_COMPUTE(p0, p1);             \
+        }                                               \
+    }
+#define MATH_DUAL_BIAS_COMPUTE_NUM_DUAL(DTYPE)          \
+    {                                                   \
+        if (p1.a == 0.5f || p0 <= 0.0f || p0 >= 1.0f)   \
+            result = DTYPE##_ctor(p0);                  \
+        else if (p1.a <= 0.0f)                          \
+            result = DTYPE##_ctor(0.0f);                \
+        else {                                          \
+            MATH_DUAL_BIAS_COMPUTE(p0, p1);             \
+        }                                               \
+    }
+#define MATH_DUAL_BIAS_COMPUTE_DUAL_DUAL(DTYPE)                 \
+    {                                                           \
+        if (p1.a == 0.5f || p0.a <= 0.0f || p0.a >= 1.0f)       \
+            result = p0;                                        \
+        else if (p1.a <= 0.0f)                                  \
+            result = DTYPE##_ctor(0.0f);                        \
+        else {                                                  \
+            MATH_DUAL_BIAS_COMPUTE(p0, p1);                     \
+        }                                                       \
+    }
+/** \endcond */
+/**
+ * @{
+ * The class PDI lib/shading version of bias, using dual numbers.
+ */
+MATH_DEFINE_BINARY_VARIFORM(bias, Dual3f, Dual3f, float, MATH_DUAL_BIAS_COMPUTE_DUAL_NUM(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(bias, Dual3f, float, Dual3f, MATH_DUAL_BIAS_COMPUTE_NUM_DUAL(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(bias, Dual3f, Dual3f, Dual3f, MATH_DUAL_BIAS_COMPUTE_DUAL_DUAL(Dual3f))
+/** @} */
+
+// gain(p0, p1)
+/** \cond */
+#define MATH_DUAL_GAIN_COMPUTE(p0, p1)                  \
+    bias(2.0f * p0, 1.0f - p1) * 0.5f :                 \
+    1.0f - bias(2.0f - 2.0f * p0, 1.0f - p1) * 0.5f
+#define MATH_DUAL_GAIN_COMPUTE_DUAL_NUM(DTYPE)  \
+    {                                           \
+        if (p1 == 0.5f) {                       \
+            result = p0;                        \
+        } else {                                \
+            result = p0.a < 0.5f ?              \
+                MATH_DUAL_GAIN_COMPUTE(p0, p1); \
+        }                                       \
+    }
+#define MATH_DUAL_GAIN_COMPUTE_NUM_DUAL(DTYPE)  \
+    {                                           \
+        if (p1.a == 0.5f) {                     \
+            result = DTYPE##_ctor(p0);          \
+        } else {                                \
+            result = p0 < 0.5f ?                \
+                MATH_DUAL_GAIN_COMPUTE(p0, p1); \
+        }                                       \
+    }
+#define MATH_DUAL_GAIN_COMPUTE_DUAL_DUAL()      \
+    {                                           \
+        if (p1.a == 0.5f) {                     \
+            result = p0;                        \
+        } else {                                \
+            result = p0.a < 0.5f ?              \
+                MATH_DUAL_GAIN_COMPUTE(p0, p1); \
+        }                                       \
+    }
+/** \endcond */
+/**
+ * @{
+ * The classic PDI lib/shding version of gain
+ */
+MATH_DEFINE_BINARY_VARIFORM(gain, Dual3f, Dual3f, float, MATH_DUAL_GAIN_COMPUTE_DUAL_NUM(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(gain, Dual3f, float, Dual3f, MATH_DUAL_GAIN_COMPUTE_NUM_DUAL(Dual3f))
+MATH_DEFINE_BINARY_VARIFORM(gain, Dual3f, Dual3f, Dual3f, MATH_DUAL_GAIN_COMPUTE_DUAL_DUAL())
+/** @} */
+

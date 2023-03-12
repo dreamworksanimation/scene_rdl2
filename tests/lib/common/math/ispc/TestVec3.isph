@@ -1,0 +1,687 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathVec3.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Vec3.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Vec3x_ctor(x)
+// Vec3x_ctor(x, x, x)
+// Vec3x_ctor(x[])
+//----------------------------------------------------------------------
+#define VEC3_CTOR1_TEST(VURES, VUP0, P0)                                \
+    {                                                                   \
+        const VUP0 float f0 = P0;                                       \
+        const VURES Vec3f v = Vec3f_ctor(f0);                           \
+        if (any(v.x != f0) || any(v.y != f0) || any(v.z != f0)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define VEC3_CTOR3_TEST(VURES, VUP0, VUP1, VUP2, P0, P1, P2)            \
+    {                                                                   \
+        const VUP0 float f0 = P0;                                       \
+        const VUP1 float f1 = P1;                                       \
+        const VUP2 float f2 = P2;                                       \
+        const VURES Vec3f v = Vec3f_ctor(f0, f1, f2);                   \
+        if (any(v.x != f0) || any(v.y != f1) || any(v.z != f2)) {       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define VEC3_CTOR_ARRAY_TEST(VURES, VUP, P0, P1, P2)                    \
+    {                                                                   \
+        const VUP float f0[] = { P0, P1, P2 };                          \
+        const VURES Vec3f v = Vec3f_ctor(f0);                           \
+        if (any(v.x != f0[0]) || any(v.y != f0[1]) || any(v.z != f0[2])) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_CTOR1_TEST(VAR, VAR, (pi));
+    VEC3_CTOR1_TEST(UNI, UNI, (1));
+
+    VEC3_CTOR3_TEST(VAR, VAR, VAR, VAR, (pi), (pi + 1), (pi + 2));
+    VEC3_CTOR3_TEST(VAR, VAR, VAR, UNI, (pi), (pi + 1), (2));
+    VEC3_CTOR3_TEST(VAR, VAR, UNI, VAR, (pi), (1), (pi + 2));
+    VEC3_CTOR3_TEST(VAR, VAR, UNI, UNI, (pi), (1), (2));
+    VEC3_CTOR3_TEST(VAR, UNI, VAR, VAR, (0), (pi + 1), (pi + 2));
+    VEC3_CTOR3_TEST(VAR, UNI, VAR, UNI, (0), (pi + 1), (2));
+    VEC3_CTOR3_TEST(VAR, UNI, UNI, VAR, (0), (1), (pi + 2));
+    VEC3_CTOR3_TEST(UNI, UNI, UNI, UNI, (0), (1), (2));
+
+    VEC3_CTOR_ARRAY_TEST(VAR, VAR, (pi), (pi + 1), (pi + 2));
+    VEC3_CTOR_ARRAY_TEST(UNI, UNI, (0), (1), (2));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3x OP Vec3x (+, -, *, /)
+//----------------------------------------------------------------------
+#define VEC3_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, OP) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        const VURES Vec3f v = v0 OP v1;                                 \
+        if (any(v.x != ((VUP0 float) (P0X) OP (VUP1 float) (P1X))) ||   \
+            any(v.y != ((VUP0 float) (P0Y) OP (VUP1 float) (P1Y))) ||   \
+            any(v.z != ((VUP0 float) (P0Z) OP (VUP1 float) (P1Z))) ) {  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+//----------------------------------------------------------------------
+// Vec3x = Vec3x + Vec3x
+//----------------------------------------------------------------------
+#define VEC3_PLUS_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z) \
+    VEC3_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, +)
+
+inline uniform int
+testPlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_PLUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5));
+    VEC3_PLUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (3), (4), (5));
+    VEC3_PLUS_TEST(VAR, UNI, VAR, (0), (1), (2), (pi + 3), (pi + 4), (pi + 5));
+    VEC3_PLUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (4), (5));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3x = Vec3x - Vec3x
+//----------------------------------------------------------------------
+#define VEC3_MINUS_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z) \
+    VEC3_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, -)
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_MINUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5));
+    VEC3_MINUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (pi + 2), (3), (4), (5));
+    VEC3_MINUS_TEST(VAR, UNI, VAR, (0), (1), (2), (pi + 3), (pi + 4), (pi + 5));
+    VEC3_MINUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3), (4), (5));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3x = Scalar OP Vec3x (*, /)
+//----------------------------------------------------------------------
+#define VEC3_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, P1Z, OP) \
+    {                                                                   \
+        const VUP0 float f0 = (P0);                                     \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        const VURES Vec3f v = f0 OP v1;                                 \
+        if (any(v.x != ((VUP0 float) (P0) OP (VUP1 float) (P1X))) ||    \
+            any(v.y != ((VUP0 float) (P0) OP (VUP1 float) (P1Y))) ||    \
+            any(v.z != ((VUP0 float) (P0) OP (VUP1 float) (P1Z))) ) {   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+// ----------------------------------------------------------------------
+// Vec3x = x * Vec3x
+// ---------------------------------------------------------------------
+#define VEC3_SCALAR_PRE_MULT_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, P1Z) \
+    VEC3_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, P1Z, *)
+
+
+inline uniform int
+testScalarPreMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_SCALAR_PRE_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    VEC3_SCALAR_PRE_MULT_TEST(VAR, VAR, UNI, (pi + 1), (2), (3), (4));
+    VEC3_SCALAR_PRE_MULT_TEST(VAR, UNI, VAR, (1), (pi + 2), (pi + 3), (pi + 4));
+    VEC3_SCALAR_PRE_MULT_TEST(UNI, UNI, UNI, (1), (2), (3), (4));
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3x = Vec3x OP Scalar (*, /)
+//----------------------------------------------------------------------
+#define VEC3_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1, OP) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 float f1 = (P1);                                     \
+        const VURES Vec3f v = v0 OP f1;                                 \
+        if (any(v.x != ((VUP0 float) (P0X) OP (VUP1 float) (P1))) ||    \
+            any(v.y != ((VUP0 float) (P0Y) OP (VUP1 float) (P1))) ||    \
+            any(v.z != ((VUP0 float) (P0Z) OP (VUP1 float) (P1))) ) {   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+// ---------------------------------------------------------------------
+// Vec3x = Vec3x * x
+// ---------------------------------------------------------------------
+#define VEC3_SCALAR_POST_MULT_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1) \
+    VEC3_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1, *)
+
+inline uniform int
+testScalarPostMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_SCALAR_POST_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    VEC3_SCALAR_POST_MULT_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (pi + 3), (4));
+    VEC3_SCALAR_POST_MULT_TEST(VAR, UNI, VAR, (1), (2), (3), (pi + 4));
+    VEC3_SCALAR_POST_MULT_TEST(UNI, UNI, UNI, (1), (2), (3), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = Vec3x * Vec3x
+// ---------------------------------------------------------------------
+#define VEC3_MULT_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z) \
+    VEC3_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, *)
+
+inline uniform int
+testMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6));
+    VEC3_MULT_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (pi + 3), (4), (5), (6));
+    VEC3_MULT_TEST(VAR, UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6));
+    VEC3_MULT_TEST(UNI, UNI, UNI, (1), (2), (3), (4), (5), (6));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = x / Vec3x
+// ---------------------------------------------------------------------
+#define VEC3_SCALAR_PRE_DIV_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, P1Z)  \
+    VEC3_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, P1Z, /)
+
+inline uniform int
+testScalarPreDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_SCALAR_PRE_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 2), (pi * 4), (pi * 8));
+    VEC3_SCALAR_PRE_DIV_TEST(VAR, VAR, UNI, (pi * 256), (2), (4), (8));
+    VEC3_SCALAR_PRE_DIV_TEST(VAR, UNI, VAR, (256), (pi * 2), (pi * 4), (pi * 8));
+    VEC3_SCALAR_PRE_DIV_TEST(UNI, UNI, UNI, (256), (2), (4), (8));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = Vec3x / x
+// ---------------------------------------------------------------------
+#define VEC3_SCALAR_POST_DIV_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1) \
+    VEC3_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1, /)
+
+inline uniform int
+testScalarPostDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_SCALAR_POST_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 128), (pi * 64), (pi * 2));
+    VEC3_SCALAR_POST_DIV_TEST(VAR, VAR, UNI, (pi * 256), (pi * 128), (pi * 64), (2));
+    VEC3_SCALAR_POST_DIV_TEST(VAR, UNI, VAR, (256), (128), (64), (pi * 2));
+    VEC3_SCALAR_POST_DIV_TEST(UNI, UNI, UNI, (256), (128), (64), (2));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = Vec3x / Vec3x
+// ---------------------------------------------------------------------
+#define VEC3_DIV_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z)  \
+    VEC3_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, /)
+
+inline uniform int
+testDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 128), (pi * 64), (pi * 2), (pi * 4), (pi * 8));
+    VEC3_DIV_TEST(VAR, VAR, UNI, (pi * 256), (pi * 128), (pi * 64), (2), (4), (8));
+    VEC3_DIV_TEST(VAR, UNI, VAR, (256), (128), (64), (pi * 2), (pi * 4), (pi * 8));
+    VEC3_DIV_TEST(UNI, UNI, UNI, (256), (128), (64), (2), (4), (8));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqual(Vec3x, Vec3x)
+// ---------------------------------------------------------------------
+#define VEC3_IS_EQUAL_TEST(VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, R0) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        if (any(isEqual(v0, v1) != R0)) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), true);
+    VEC3_IS_EQUAL_TEST(VAR, UNI, (1), (2), (3), (1), (2), (3), true);
+    VEC3_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (1), (2), (3), true);
+    VEC3_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (1), (2), (3), true);
+
+    VEC3_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 3), (pi + 2), (pi + 1), false);
+    VEC3_IS_EQUAL_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (1), (2), (3), false);
+    VEC3_IS_EQUAL_TEST(UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6), false);
+    VEC3_IS_EQUAL_TEST(UNI, UNI, (1), (2), (3), (3), (2), (1), false);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqualFixedEps(Vec3x, Vec3x)
+// ---------------------------------------------------------------------
+#define VEC3_IS_EQUAL_FIXED_EPS_TEST(VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, R0) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        if (any(isEqualFixedEps(v0, v1) != R0)) {                       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3), true);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (1), (2), (3), (1), (2), (3), true);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (1), (2), (3), true);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (1), (2), (3), true);
+
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 3), (pi + 2), (pi + 1), false);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (pi + 4), (pi + 5), (pi + 6), (1), (2), (3), false);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6), false);
+    VEC3_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (3), (3), (2), (1), false);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isZero(Vec3x)
+// ---------------------------------------------------------------------
+#define VEC3_IS_ZERO_TEST(VUP0, P0X, P0Y, P0Z, R0)                      \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        if (any(isZero(v0) != R0)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsZero()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_IS_ZERO_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), false);
+    VEC3_IS_ZERO_TEST(VAR, ((pi + 1) * 0.0f), ((pi + 2) * 0.0f), (pi - pi), true);
+    VEC3_IS_ZERO_TEST(UNI, (0.1), (-0.1), (0.3), false);
+    VEC3_IS_ZERO_TEST(UNI, (0.0000001), (-0.0000001), (0.0000002), true);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = dot(Vec3x, Vec3x) dot product
+// ---------------------------------------------------------------------
+#define VEC3_DOT_TEST(VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z, R0)     \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        if (any(dot(v0, v1) != R0)) {                                   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testDot()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_DOT_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (3 * pi * pi + 21 * pi + 32));
+    VEC3_DOT_TEST(VAR, UNI, (pi + 1), (pi + 2), (pi + 3), (4), (5), (6), (15 * pi + 32));
+    VEC3_DOT_TEST(UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6), (6 * pi + 32));
+    VEC3_DOT_TEST(UNI, UNI, (1), (2), (3), (4), (5), (6), (32));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = cross(Vec3x, Vec3x) : cross product
+// ---------------------------------------------------------------------
+#define VEC3_CROSS_TEST(VURES, VUP0, VUP1, P0X, P0Y, P0Z, P1X, P1Y, P1Z) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), (VUP1 float) (P1Z)); \
+        const VURES Vec3f vuRes = cross(v0, v1);                        \
+        if (any(!isEqual(dot(v0, vuRes), 0.f)) ||                       \
+            any(!isEqual(dot(v1, vuRes), 0.f))) {                       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCross()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_CROSS_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6));
+    VEC3_CROSS_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (pi + 3), (4), (5), (6));
+    VEC3_CROSS_TEST(VAR, UNI, VAR, (1), (2), (3), (pi + 4), (pi + 5), (pi + 6));
+    VEC3_CROSS_TEST(UNI, UNI, UNI, (1), (2), (3), (4), (5), (6));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = length(Vec3x) euclidean length
+// ---------------------------------------------------------------------
+#define VEC3_LENGTH_TEST(VUP0, P0X, P0Y, P0Z, R0)                       \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 float r0 = (VUP0 float) sqrt((VUP0 float) (R0));     \
+        if (any(isEqual(length(v0), r0) == false)) {                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLength()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_LENGTH_TEST(VAR, (2 * pi), (3 * pi), (4 * pi), (29 * pi * pi));
+    VEC3_LENGTH_TEST(UNI, (2), (3), (4), (29));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = lengthSqr(Vec3x) euclidean length squared
+// ---------------------------------------------------------------------
+#define VEC3_LENGTH_SQR_TEST(VUP0, P0X, P0Y, P0Z, R0)                   \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 float r0 = (VUP0 float) (R0);                        \
+        if (any(isEqual(lengthSqr(v0), r0) == false)) {                 \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLengthSqr()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_LENGTH_SQR_TEST(VAR, (2 * pi), (3 * pi), (4 * pi), (29 * pi * pi));
+    VEC3_LENGTH_SQR_TEST(UNI, (2), (3), (4), (29));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = normalize(Vec3x) - normalize a vector
+// ---------------------------------------------------------------------
+#define VEC3_NORMALIZE_TEST(VUP0, P0X, P0Y, P0Z)                        \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 Vec3f nv0 = normalize(v0);                           \
+        if (any(isNormalized(nv0) == false)) {                          \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testNormalize()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC3_NORMALIZE_TEST(VAR, (pi + 1), (pi + 2), (pi + 3));
+    VEC3_NORMALIZE_TEST(UNI, (1), (2), (3));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = abs(Vec3x)
+// ---------------------------------------------------------------------
+#define VEC3_ABS_TEST(VUP0, P0X, P0Y, P0Z, R0X, R0Y, R0Z)               \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 Vec3f r0 = Vec3f_ctor((VUP0 float) (R0X), (VUP0 float) (R0Y), (VUP0 float) (R0Z)); \
+        const VUP0 Vec3f absV0 = abs(v0);                               \
+        if (any(isEqual(absV0, r0) == false)) {                         \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testAbs()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex;
+
+    VEC3_ABS_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3));
+    VEC3_ABS_TEST(VAR, (-pi - 1), (pi + 2), (pi + 3), (pi + 1) ,(pi + 2),(pi + 3));
+    VEC3_ABS_TEST(VAR, (pi + 1), (-pi - 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3));
+    VEC3_ABS_TEST(VAR, (-pi - 1), (-pi - 2), (pi + 3), (pi + 1), (pi + 2), (pi + 3));
+    VEC3_ABS_TEST(VAR, (pi + 1), (pi + 2), (-pi - 3), (pi + 1), (pi + 2), (pi + 3));
+    VEC3_ABS_TEST(VAR, (-pi - 1), (pi + 2), (-pi - 3), (pi + 1) ,(pi + 2),(pi + 3));
+    VEC3_ABS_TEST(VAR, (pi + 1), (-pi - 2), (-pi - 3), (pi + 1), (pi + 2), (pi + 3));
+    VEC3_ABS_TEST(VAR, (-pi - 1), (-pi - 2), (-pi - 3), (pi + 1), (pi + 2), (pi + 3));
+
+    VEC3_ABS_TEST(UNI, (1), (2), (3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (-1), (2), (3), (1) ,(2), (3));
+    VEC3_ABS_TEST(UNI, (1), (-2), (3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (-1), (-2), (3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (1), (2), (-3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (-1), (2), (-3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (1), (-2), (-3), (1), (2), (3));
+    VEC3_ABS_TEST(UNI, (-1), (-2), (-3), (1), (2), (3));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = neg(Vec3x) : -v
+// ---------------------------------------------------------------------
+#define VEC3_NEG_TEST(VUP0, P0X, P0Y, P0Z)                              \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 Vec3f negV0 = neg(v0);                               \
+        if (any(!isEqual(negV0.x, -v0.x)) ||                            \
+            any(!isEqual(negV0.y, -v0.y)) ||                            \
+            any(!isEqual(negV0.z, -v0.z))) {                            \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testNeg()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex + 1;
+
+    VEC3_NEG_TEST(VAR, (pi * 2), (pi * 4), (pi * 8));
+    VEC3_NEG_TEST(UNI, (2), (4), (8));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec3x = rcp(Vec3x) : 1 / v
+// ---------------------------------------------------------------------
+#define VEC3_RCP_TEST(VUP0, P0X, P0Y, P0Z, R0X, R0Y, R0Z)               \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        const VUP0 Vec3f r0 = Vec3f_ctor((VUP0 float) (R0X), (VUP0 float) (R0Y), (VUP0 float) (R0Z)); \
+        const VUP0 Vec3f rcpV0 = rcp(v0);                               \
+        if (any(!isEqual(rcpV0, r0))) {                                 \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testRcp()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex + 1;
+
+    VEC3_RCP_TEST(VAR, (pi * 2), (pi * 4), (pi * 8), (1. / (2. * pi)), (1. / (4. * pi)), (1. / (8. * pi)));
+    VEC3_RCP_TEST(UNI, (2), (4), (8), (.5), (.25), (.125));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isNormalized(Vec3) : is Vec3 a unit vector?
+// ---------------------------------------------------------------------
+#define VEC3_IS_NORMALIZED_TEST(VUP0, P0X, P0Y, P0Z, R0)                \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), (VUP0 float) (P0Z)); \
+        if (any(isNormalized(v0) != R0)) {                              \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsNormalized()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex;
+
+    VEC3_IS_NORMALIZED_TEST(VAR, (pi + 1), (pi + 2), (pi + 3), false);
+    VEC3_IS_NORMALIZED_TEST(VAR, (sqrt(1./3.)), (sqrt(1./3.)), (sqrt(1./3.)), true);
+    VEC3_IS_NORMALIZED_TEST(UNI, (0), (1), (0), true);
+    VEC3_IS_NORMALIZED_TEST(UNI, (1), (1), (0), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec3x = lerp(Vec3x, Vec3x, x)
+//----------------------------------------------------------------------
+#define VEC3_LERP_TEST(VURES, VUP0, VUP1, VUP2, P0X, P0Y, P0Z, P1X, P1Y, P1Z, P2, R0X, R0Y, R0Z) \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y), \
+                                         (VUP0 float) (P0Z));           \
+        const VUP1 Vec3f v1 = Vec3f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y), \
+                                         (VUP1 float) (P1Z));           \
+        const VUP2 float f = (VUP2 float) (P2);                         \
+        const VURES Vec3f res = lerp(v0, v1, f);                        \
+        if (any(!isEqual(res.x, (VURES float) (R0X))) ||                \
+            any(!isEqual(res.y, (VURES float) (R0Y))) ||                \
+            any(!isEqual(res.z, (VURES float) (R0Z)))) {                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLerp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_LERP_TEST(VAR, VAR, VAR, VAR,
+                   (pi), (2*pi), (3*pi),
+                   (pi + 1), (2*pi + 1), (3*pi + 1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (pi + 1)),
+                   ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (2*pi + 1)),
+                   ((1. - (pi / 64.)) * (3*pi) + (pi / 64.) * (3*pi + 1)));
+    VEC3_LERP_TEST(VAR, VAR, VAR, UNI,
+                   (pi), (2*pi), (3*pi),
+                   (pi + 1), (2*pi + 1), (3*pi + 1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (pi) + (1. / 64.) * (pi + 1)),
+                   ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (2*pi + 1)),
+                   ((1. - (1. / 64.)) * (3*pi) + (1. / 64.) * (3*pi + 1)));
+    VEC3_LERP_TEST(VAR, VAR, UNI, VAR,
+                   (pi), (2*pi), (3*pi),
+                   (1), (1), (1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (3*pi) + (pi / 64.) * (1)));
+    VEC3_LERP_TEST(VAR, VAR, UNI, UNI,
+                   (pi), (2*pi), (3*pi),
+                   (1), (1), (1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * pi + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (3*pi) + (1. / 64.) * (1)));
+    VEC3_LERP_TEST(VAR, UNI, VAR, VAR,
+                   (1), (2), (3),
+                   (pi + 1), (2*pi + 1), (3*pi + 1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (1) + (pi / 64.) * (pi + 1)),
+                   ((1. - (pi / 64.)) * (2) + (pi / 64.) * (2*pi + 1)),
+                   ((1. - (pi / 64.)) * (3) + (pi / 64.) * (3*pi + 1)));
+    VEC3_LERP_TEST(VAR, UNI, VAR, UNI,
+                   (1), (2), (3),
+                   (pi + 1), (2*pi + 1), (3*pi + 1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (1) + (1. / 64.) * (pi + 1)),
+                   ((1. - (1. / 64.)) * (2) + (1. / 64.) * (2*pi + 1)),
+                   ((1. - (1. / 64.)) * (3) + (1. / 64.) * (3*pi + 1)));
+    VEC3_LERP_TEST(VAR, UNI, UNI, VAR,
+                   (1), (2), (3),
+                   (1), (1), (1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (1) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (2) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (3) + (pi / 64.) * (1)));
+    VEC3_LERP_TEST(UNI, UNI, UNI, UNI,
+                   (1), (2), (3),
+                   (1), (1), (1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (1) + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (2) + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (3) + (1. / 64.) * (1)));
+
+    return error;
+}
+

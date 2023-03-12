@@ -1,0 +1,610 @@
+#!/bin/env python2.7
+# Copyright 2023 DreamWorks Animation LLC
+# SPDX-License-Identifier: Apache-2.0
+
+import re
+import subprocess
+import sys
+
+# Global state.
+classesToRemove = {}
+classesToRename = {}
+attrsToSet = {}
+attrsToRemove = {}
+attrsToRename = {}
+attrsToModify = {}
+
+# Functions we expect to be available when we eval() the migration file.
+def classRemove(name):
+    classesToRemove[name] = True
+
+def classRename(oldName, newName):
+    classesToRename[oldName] = newName
+
+def attrSet(className, name, value):
+    if not className in attrsToSet:
+        attrsToSet[className] = {}
+    attrsToSet[className][name] = value
+
+def attrRemove(className, name):
+    if not className in attrsToRemove:
+        attrsToRemove[className] = {}
+    attrsToRemove[className][name] = ''
+
+def attrRename(className, oldName, newName):
+    if not className in attrsToRename:
+        attrsToRename[className] = {}
+    attrsToRename[className][oldName] = newName
+
+def attrModify(className, name, search, replace):
+    if not className in attrsToModify:
+        attrsToModify[className] = {}
+    attrsToModify[className][name] = (search, replace)
+
+# Helper function to shell out an expression to the Lua interpreter to try to
+# simplify it.
+def luaEval(expression):
+    proc = subprocess.Popen(['lua', '-e', 'print({0})'.format(expression)],
+            stdout=subprocess.PIPE, stderr = subprocess.PIPE)
+    output = proc.communicate()[0]
+    retCode = proc.wait()
+    if retCode != 0:
+        return False
+    return output.strip()
+
+# Matches a bind expression with a value.
+#   Ex: bind(map, 1.23)
+bindWithValueRegex = re.compile(r"""
+    bind\(
+        (?P<binding>
+            [^,]+       # anything except a comma
+        ),              # followed by a comma
+        (?P<value>
+            .+          # the actual value
+        )
+    \)
+""", re.VERBOSE)
+
+# Matches a bind expression without a value.
+#   Ex: bind(map)
+bindWithoutValueRegex = re.compile(r"""
+    bind\(
+        (?P<binding>
+            [^,]+       # anything except a comma
+        )
+    \)
+""", re.VERBOSE)
+
+# Matches a blur expression.
+#   Ex: blur(1.23, 4.56)
+blurredValueRegex = re.compile(r"""
+    \s*blur\(
+        (?P<values>
+            .+          # the list of blurred values
+        )
+    \)\s*
+""", re.VERBOSE)
+
+# Breaks apart an expression in an attribute assignment. Specifically, it
+# destructures the value (or values, in the case of blur()), and the binding,
+# if the bind() statement was used. Ultimately you will be returned a dictionary
+# that contains 'binding' and 'value' members which may or may not be None, and
+# the 'value' may be a list of multiple values if the value was blurred.
+def destructureExpression(s):
+    # We start by assuming that expressions are not bound or blurred.
+    expression = {
+        'binding': None,
+        'value': s
+    }
+
+    # Check for bindings with a value.
+    result = bindWithValueRegex.match(expression['value'])
+    if result:
+        expression['binding'] = result.group('binding')
+        expression['value'] = result.group('value')
+    else:
+        # Check for bindings without a value.
+        result = bindWithoutValueRegex.match(expression['value'])
+        if result:
+            expression['binding'] = result.group('binding')
+            expression['value'] = None
+
+    # Check for blurred values.
+    if expression['value'] is not None:
+        result = blurredValueRegex.match(expression['value'])
+        if result:
+            values = result.group('values')
+
+            # Scan through the values chunk counting parens. The first comma
+            # we hit when our parentCount is 1 will be the comma that separates
+            # the two values.
+            parenCount = 1
+            pos = 0
+            for c in values:
+                if c == '(':
+                    parenCount = parenCount + 1
+                elif c == ')':
+                    parenCount = parenCount - 1
+                elif c == ',' and parenCount == 1:
+                    expression['value'] = [values[:pos], values[pos + 1:]]
+                    break
+                pos = pos + 1
+
+    return expression
+
+# The LineProcessor contains the collection of stateful methods that will
+# operate on our input files a line at a time. Many of these methods correspond
+# to the methods exposed to the migrate.py file and operate based on the data
+# structures built from them.
+class LineProcessor:
+    # Matches the opening line of an attribute block.
+    #   Ex: var = SceneClass("name") {
+    attrBlockStartRegex = re.compile(r"""
+        ^(?P<leadingJunk>
+            .*=\s*              # some chars, followed by an = and whitespace
+        )?
+
+        (?P<sceneClass>
+            [A-Z]\w*            # a capitalized lua identifier
+        )
+
+        (?P<trailingJunk>
+            (?:\s*\(.*\))?           # an argument list (object name)
+            \s*{.*              # an opening curly bracket and comments
+        )$
+    """, re.VERBOSE)
+
+    # Matches an assignment of a SceneObject.
+    #   Ex: var = SceneClass("name")
+    sceneObjectAssignRegex = re.compile(r"""
+        ^(?P<leadingJunk>
+            .*=\s*              # some chars, followed by an = and whitespace
+        )?
+
+        (?P<sceneClass>
+            [A-Z]\w*            # a capitalized lua identifier
+        )
+
+        (?P<trailingJunk>
+            \s*\(.*\)           # an argument list (object name)
+            .*                  # more junk (comments?)
+        )$
+    """, re.VERBOSE)
+
+    # Matches an attribute assignment in an attribute block.
+    #   Ex: ["filename"] = "/work/rd/raas/maps/misc/rgb_checker.tx",
+    attrAssignRegex = re.compile(r"""
+        ^(?P<leadingJunk>
+            \s*\[\"             # leading whitespace and opening ["
+        )
+
+        (?P<attrName>
+            .*                  # the attribute name
+        )
+
+        (?P<middleJunk>
+            "\]                 # the closing "] and =
+            \s*=\s*
+        )
+
+        (?P<attrExpr>
+            .*                  # the expression, possibly with trailing comma
+        )$
+    """, re.VERBOSE)
+
+    # Matches a scene object reference in an attribute block. This should be
+    # used with search instead of match, as there may be multiple references
+    # per line.
+    sceneObjectRefRegex = re.compile("""
+        (?P<sceneClass>
+            [A-Z]\w*            # a capitalized lua identifer
+        )
+
+        \s*\([^)]*\)            # a trailing function call (no capture needed)
+    """, re.VERBOSE)
+
+    # The constructor initializes line-to-line state.
+    def __init__(self):
+        self.changeLog = []
+        self.curSceneClass = None
+        self.setAttrs = {}
+        self.deleteSceneClass = False
+        self.braceCount = 0
+        self.lineNum = 1
+        self.lineBuffer = []
+
+    # The log tracks all the operations we've done to the input file.
+    def log(self, message):
+        self.changeLog.append((self.lineNum, message))
+
+    # Handles updating global state across multiple lines based on the contents
+    # of the current line.
+    def processGlobals(self, line):
+        # If we're not currently inside an attribute block, look for the start
+        # of an attribute block.
+        if self.curSceneClass is None:
+            result = LineProcessor.attrBlockStartRegex.match(line)
+            if result:
+                self.curSceneClass = result.group('sceneClass')
+                self.setAttrs = {}
+                self.braceCount = 1
+        else:
+            # Track each attribute that's set in the attribute block.
+            result = LineProcessor.attrAssignRegex.match(line)
+            if result:
+                self.setAttrs[result.group('attrName')] = True
+
+            # Count braces looking for the end of the attribute block. This
+            # totally does not handle unbalanced braces (syntax error anyway),
+            # braces inside strings (possible, but less likely), or braces in
+            # comments (possible, but more likely), etc.
+            self.braceCount += line.count('{')
+            self.braceCount -= line.count('}')
+
+            # Have we reached the end of the attribute block?
+            if self.braceCount <= 0:
+                # Yes, do we have attributes to set?
+                if self.curSceneClass in attrsToSet:
+                    # Apply attribute renamings to all the set attributes
+                    # before we set them.
+                    renamedSetAttrs = {}
+                    for oldName in self.setAttrs:
+                        if oldName in attrsToRename[self.curSceneClass]:
+                            renamedSetAttrs[attrsToRename[self.curSceneClass][oldName]] = True
+                        else:
+                            renamedSetAttrs[oldName] = True
+
+                    for name, value in attrsToSet[self.curSceneClass].iteritems():
+                        # Only set them if they were not set in the attribute
+                        # block.
+                        if name not in renamedSetAttrs:
+                            self.log('Set "{0}" to {1} on {2}'.format(
+                                    name, value, self.curSceneClass))
+
+                            # Try to ensure the preceding line ended with a
+                            # comma. This isn't 100% foolproof.
+                            prevLine = self.lineBuffer[-1].rstrip()
+                            if len(prevLine) > 1 and prevLine[-1] != ',' and prevLine[-1] != '{':
+                                self.lineBuffer[-1] = '{0},\n'.format(prevLine)
+
+                            self.lineBuffer.append('    ["{0}"] = {1},\n'.format(name, value))
+
+                # No matter what, reset some of our line-to-line state when we
+                # close out an attribute block.
+                self.curSceneClass = None
+                self.setAttrs = {}
+                self.braceCount = 0
+
+    # Handles any lines which could contain a SceneClass removal.
+    def processClassRemove(self, line):
+        # If we're actively deleting a SceneClass, continue swallowing lines
+        # until the end of the attribute block.
+        if self.deleteSceneClass:
+            line = ''
+            if self.braceCount == 0:
+                self.deleteSceneClass = False
+
+        # Did we run across the opening line of an attribute block for a
+        # SceneClass we want to delete?
+        result = LineProcessor.attrBlockStartRegex.match(line)
+        if result:
+            name = result.group('sceneClass')
+            if name in classesToRemove:
+                # Yes, flag subsequent lines for deletion.
+                self.deleteSceneClass = True
+                self.log('Deleted {0}'.format(name))
+                line = ''
+
+        # Delete single line assignments using this SceneClass as well.
+        #   Ex: teapot = Teapot("/scene/teapot")
+        result = LineProcessor.sceneObjectAssignRegex.match(line)
+        if result:
+            name = result.group('sceneClass')
+            if name in classesToRemove:
+                self.log('Deleted {0}'.format(name))
+                line = ''
+
+        # Handle case of SceneObject references inside attribute blocks.
+        # (May have multiple occurrences per line!
+        if self.curSceneClass is not None:
+            results = LineProcessor.sceneObjectRefRegex.findall(line)
+            for name in results:
+                if name in classesToRemove:
+                    self.log('WARNING: Binding or assignment exists to removed {0}'.format(name))
+
+        return line
+
+    # Handles any lines which could contain a SceneClass renaming.
+    def processClassRename(self, line):
+        # Is this the opening line of an attribute block?
+        result = LineProcessor.attrBlockStartRegex.match(line)
+        if result:
+            oldName = result.group('sceneClass')
+            if oldName in classesToRename:
+                # Yes, and we want to rename this SceneClass. Swap the new name
+                # for the old name and write the line back out.
+                newName = classesToRename[oldName]
+                self.log('Renamed {0} to {1}'.format(oldName, newName))
+                leadingJunk = result.group('leadingJunk') or ''
+                trailingJunk = result.group('trailingJunk') or ''
+                line = '{0}{1}{2}\n'.format(leadingJunk,
+                                            newName,
+                                            trailingJunk)
+
+                # Make sure the current object is updated to reflect the new
+                # name.
+                if self.curSceneClass == oldName:
+                    self.curSceneClass = newName
+
+        # Same as above, except handles renaming of single line assignments.
+        #   Ex: teapot = Teapot("/scene/teapot")
+        result = LineProcessor.sceneObjectAssignRegex.match(line)
+        if result:
+            oldName = result.group('sceneClass')
+            if oldName in classesToRename:
+                newName = classesToRename[oldName]
+                self.log('Renamed {0} to {1}'.format(oldName, newName))
+                leadingJunk = result.group('leadingJunk') or ''
+                trailingJunk = result.group('trailingJunk') or ''
+                line = '{0}{1}{2}\n'.format(leadingJunk,
+                                            newName,
+                                            trailingJunk)
+
+        # Handle case of SceneObject references inside attribute blocks.
+        # (May have multiple occurrences per line!
+        if self.curSceneClass is not None:
+            results = LineProcessor.sceneObjectRefRegex.findall(line)
+            for oldName in results:
+                if oldName in classesToRename:
+                    newName = classesToRename[oldName]
+                    line = line.replace(oldName, newName)
+                    self.log('Renamed {0} to {1}'.format(oldName, newName))
+
+        return line
+
+    # Handles any lines which could contain an attribute removal.
+    def processAttrRemove(self, line):
+        # Nothing to remove if we're not inside an attribute block.
+        if self.curSceneClass is None:
+            return line
+
+        # Does the current line look like an attribute assignment?
+        result = LineProcessor.attrAssignRegex.match(line)
+        if result:
+            name = result.group('attrName')
+            if self.curSceneClass in attrsToRemove and \
+               name in attrsToRemove[self.curSceneClass]:
+                # Yes, and we want to remove it, so swallow the line.
+                self.log('Deleted "{0}" from {1}'.format(name, self.curSceneClass))
+                line = ''
+
+                # Update the list of set attributes.
+                if name in self.setAttrs:
+                    del self.setAttrs[name]
+
+        return line
+
+    # Handles any lines which could contain an attribute rename.
+    def processAttrRename(self, line):
+        # Nothing to rename if we're not inside an attribute block.
+        if self.curSceneClass is None:
+            return line
+
+        # Does the current line look like an attribute assignment?
+        result = LineProcessor.attrAssignRegex.match(line)
+        if result:
+            oldName = result.group('attrName')
+            if self.curSceneClass in attrsToRename and \
+               oldName in attrsToRename[self.curSceneClass]:
+                # Yes, and we want to rename it, so swap attribute names and
+                # modify the line.
+                newName = attrsToRename[self.curSceneClass][oldName]
+                self.log('Renamed "{0}" to "{1}" on {2}'.format(oldName,
+                                                                newName,
+                                                                self.curSceneClass))
+                leadingJunk = result.group('leadingJunk') or ''
+                middleJunk = result.group('middleJunk') or ''
+                attrExpr = result.group('attrExpr') or ''
+                line = '{0}{1}{2}{3}\n'.format(leadingJunk,
+                                               newName,
+                                               middleJunk,
+                                               attrExpr)
+
+        return line
+
+    # Handles any lines which could contain an attribute modification.
+    def processAttrModify(self, line):
+        # Nothing to modify if we're not inside an attribute block.
+        if self.curSceneClass is None:
+            return line
+
+        # Does the current line look like an attribute assignment.
+        result = LineProcessor.attrAssignRegex.match(line)
+        if result:
+            name = result.group('attrName')
+            if self.curSceneClass in attrsToModify and \
+               name in attrsToModify[self.curSceneClass]:
+                # Yes, and we want to modify it. Grab the search and replace
+                # patterns.
+                (search, replace) = attrsToModify[self.curSceneClass][name]
+
+                # Pull the old expression out, and remove a trailing comma if
+                # there is one.
+                oldExpr = result.group('attrExpr').rstrip()
+                if oldExpr[-1] == ',':
+                    oldExpr = oldExpr[:-1]
+
+                # Extract binding and blurring information from the expression.
+                destructured = destructureExpression(oldExpr)
+                if destructured['binding'] is not None:
+                    self.log('WARNING: binding on "{0}" ({1})'.format(name, destructured['binding']) +
+                             ' cannot be updated, the bound map must be updated manually')
+                if destructured['value'] is None:
+                    return line
+
+                # For the sake of uniformity, make single values lists of
+                # length 1.
+                values = destructured['value']
+                if not isinstance(values, list):
+                    values = [values]
+
+                # For each value, apply the search and replace patterns and
+                # shell out to Lua to try to simplify it.
+                newValues = []
+                for value in values:
+                    newValue = re.sub(search, replace, value)
+                    simplifiedValue = luaEval(newValue)
+                    if simplifiedValue:
+                        newValue = simplifiedValue
+                    newValues.append(newValue)
+
+                # Reconstruct the original expression, with the new modified
+                # value(s).
+                if isinstance(destructured['value'], list):
+                    newExpr = 'blur(' + ', '.join(newValues) + ')'
+                else:
+                    newExpr = newValues[0]
+                if destructured['binding'] is not None:
+                    newExpr = 'bind(' + destructured['binding'] + ', ' + newExpr + ')'
+
+                # Log the modification and modify the line.
+                self.log('Modified "{0}" on {1} from "{2}" to "{3}"'.format(
+                        name, self.curSceneClass, oldExpr, newExpr))
+                leadingJunk = result.group('leadingJunk') or ''
+                middleJunk = result.group('middleJunk') or ''
+                line = '{0}{1}{2}{3},\n'.format(leadingJunk,
+                                                name,
+                                                middleJunk,
+                                                newExpr)
+
+        return line
+
+    # Applies all the migration rules we know about, in order. These rules may
+    # modify the line (or return it unmodifed), for subsequent rules to
+    # continue modifying it.
+    def processLine(self, line):
+        # Processing the globals doesn't modify the current line, but it may
+        # reach back into the line buffer or inject new lines based on the
+        # line-to-line state.
+        self.processGlobals(line)
+
+        # Process each rule in order. Subsequent rules are affected by the
+        # result of previous ones.
+        modifiedLine = self.processClassRemove(line)
+        modifiedLine = self.processClassRename(modifiedLine)
+        modifiedLine = self.processAttrRemove(modifiedLine)
+        modifiedLine = self.processAttrRename(modifiedLine)
+        modifiedLine = self.processAttrModify(modifiedLine)
+
+        # If the line is not empty, copy it to the output.
+        if modifiedLine != '':
+            self.lineBuffer.append(modifiedLine)
+
+    # Process the input file one line at a time, writing the result to the
+    # output file.
+    def processFile(self, inPath, outPath):
+        with open(inPath, 'r') as inFile:
+            with open(outPath, 'w') as outFile:
+                # Read in and process the lines.
+                for line in inFile:
+                    self.processLine(line)
+                    self.lineNum += 1
+
+                # Write out the modified lines.
+                for line in self.lineBuffer:
+                    outFile.write(line)
+
+    # Writes the change log to standard out.
+    def printChangeLog(self):
+        for change in self.changeLog:
+            (num, message) = change
+            print('{0:>5}: {1}'.format(num, message))
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print('Usage: {0} migrate.py <input rdla file> <output rdla file>'.format(sys.argv[0]))
+        print("""
+    The migrate.py file is simply a Python script with a list of the following
+    commands, which describe the transformations to apply to the RDLA data.
+
+    These transformations are applied in the order listed here. For example,
+    if you want to both rename a SceneClass and rename an attribute on that
+    SceneClass, use its new name in the attrRename() command.
+
+        Ex: classRename('BaseMaterial', 'FunMaterial')
+            attrRename('FunMaterial', 'show diffuse', 'diffuse')
+
+    classRemove(<name>)
+        Removes all objects of the given SceneClass. Useful for pruning dead
+        DSO types.
+
+        Ex: classRemove('NovaSpecialMaterial')
+
+    classRename(<old name>, <new name>)
+        Replaces instances of <old name> with <new name>.
+
+        Ex: classRename('AreaSpotLight', 'RectLight')
+
+    attrRemove(<class name>, <attr name>)
+        Removes all attributes of the given name on all objects of the given
+        SceneClass. Useful for pruning dead attributes.
+
+        Ex: attrRemove('RectLight', 'area width')
+
+    attrRename(<class name>, <old name>, <new name>)
+        Replaces instances of the old attribute name with the new name.
+
+        Ex: attrRename('SceneVariables', 'direct samples sqrt', 'light samples')
+
+    attrModify(<class name>, <attr name>, <search>, <replace>)
+        Modifies the value of an attribute. The search string is a regex and
+        can match subgroups to pull components out of the data. The replace
+        string can backreference regex match groups. Useful for modifying an
+        expression to maintain look (due to a semantic change), or for handling
+        type changes by destructuring components and instatiating the new
+        type. See Python's re.sub() function for details.
+
+        The search and replace strings must be raw strings to avoid embedding
+        backreferences as non-printable ASCII characters.
+
+        The replaced string will be shelled out to Lua to attempt to simplify
+        the expression. If the expression cannot be simplified (it's not a
+        simple math expression), the unsimplified form will be used instead.
+
+        Ex: attrModify('RectLight', 'intensity', r'(.+)', r'math.sqrt(\\1)')
+            attrModify('BaseMaterial', 'normal', r'Rgb\((.+),(.+),(.+)\)',
+                                                 r'Vec3(\\1,\\2,\\3)')
+
+    attrSet(<class name>, <attr name>, <attr value>)
+        Explicitly sets the given attribute to the given value. Only applies
+        if the given attribute was not set in the attribute block. Useful if
+        the default for a new attribute is unacceptable for existing data, or
+        to explicitly instantiate a previous default value if the default is
+        changing.
+
+        Ex: attrSet('SceneVariables', 'image width', '960')
+""")
+        sys.exit(1)
+
+    # Command line args.
+    migratePath = sys.argv[1]
+    inPath = sys.argv[2]
+    outPath = sys.argv[3]
+
+    # Eval the migration file to build our internal data structures.
+    exportList = [
+        'classRemove',
+        'classRename',
+        'attrSet',
+        'attrRemove',
+        'attrRename',
+        'attrModify'
+    ]
+    exportDict = dict([(k, locals().get(k, None)) for k in exportList])
+    execfile(migratePath, {"__builtins__":None}, exportDict)
+
+    # Process the file, line by line.
+    processor = LineProcessor()
+    processor.processFile(inPath, outPath)
+    processor.printChangeLog()

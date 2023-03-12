@@ -1,0 +1,485 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Quaternion.isph
+/// @brief
+/// defines a 4 component r, i, j, k Quaternion and its methods
+#pragma once
+
+#include "Constants.isph"
+#include "Math.isph"
+#include "Variform.isph"
+#include "Vec3.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+// Quaternion3f;
+#define MATH_DECLARE_QUATERNION(TYPE, NAME)     \
+    struct NAME                                 \
+    {                                           \
+        TYPE r;                                 \
+        TYPE i;                                 \
+        TYPE j;                                 \
+        TYPE k;                                 \
+    };
+/// @struct Vec3f
+/// @brief a 4 component, single precision, r-i-j-k Quaternion
+MATH_DECLARE_QUATERNION(float, Quaternion3f);
+
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
+
+// Quaternion3f = Quaternion3f_ctor(float);
+/** \cond */
+#define MATH_QUATERNION_CTOR_1()                \
+    {                                           \
+        result.r = p0;                          \
+        result.i = 0.;                          \
+        result.j = 0.;                          \
+        result.k = 0.;                          \
+    }
+/** \endcond */
+/// @{
+/// Construct a Quaternion from a single number
+MATH_DEFINE_UNARY_VARIFORM(Quaternion3f_ctor, Quaternion3f, float,
+                           MATH_QUATERNION_CTOR_1())
+/// @}
+
+// Quaternion3f = Quaternion3f_ctor(float, float, float, float);
+/** \cond */
+#define MATH_QUATERNION_CTOR_4()                \
+    {                                           \
+        result.r = p0;                          \
+        result.i = p1;                          \
+        result.j = p2;                          \
+        result.k = p3;                          \
+    }
+/** \endcond */
+/// @{
+/// construct a Quaternion from 4 numbers
+MATH_DEFINE_QUATERNION_VARIFORM(Quaternion3f_ctor, Quaternion3f,
+                                float, float, float, float,
+                                MATH_QUATERNION_CTOR_4())
+/// @}
+
+// Quaternion3f = Quaternion3f_ctor(Vec3f);
+/** \cond */
+#define MATH_QUATERNION_CTOR_V()                \
+    {                                           \
+        result.r = 0.;                          \
+        result.i = p0.x;                        \
+        result.j = p0.y;                        \
+        result.k = p0.z;                        \
+    }
+/** \endcond */
+/// @{
+/// construct a Quaternion from a Vec3
+MATH_DEFINE_UNARY_VARIFORM(Quaternion3f_ctor, Quaternion3f, Vec3f,
+                           MATH_QUATERNION_CTOR_V())
+/// @}
+
+// Quaternion3f = Quaternion3f_ctor(Vec3f, floatf);
+/** \cond */
+#define MATH_QUATERNION_CTOR_AR_L0_F()          \
+    struct { Vec3f a; }
+
+#define MATH_QUATERNION_CTOR_AR()               \
+    {                                           \
+        l0.a = sin(0.5 * p1) * normalize(p0);   \
+        result.r = cos(0.5 * p1);               \
+        result.i = l0.a.x;                      \
+        result.j = l0.a.y;                      \
+        result.k = l0.a.z;                      \
+    }
+/** \endcond */
+/// @{
+/// construct a Quaternion for rotation around arbitrary axis
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(Quaternion3f_ctor, Quaternion3f,
+                                   Vec3f, float,
+                                   MATH_QUATERNION_CTOR_AR_L0_F(),
+                                   MATH_QUATERNION_CTOR_AR())
+/// @}
+
+// TODO ctor takes 3 rows of Mat3,
+//      ctor takes 3 floats(yaw, pitch, roll),
+//      ctor takes float and Vec3 (r, v.x, v.y, v.z)
+
+// Vec3f = asVec3(Quaternion3);
+/** \cond */
+#define MATH_QUATERNION_AS_VEC3()               \
+    {                                           \
+        result.x = p0.i;                        \
+        result.y = p0.j;                        \
+        result.z = p0.k;                        \
+    }
+/** \endcond */
+/// @{
+/// returns the rotation axis of the quaternion as a vector
+MATH_DEFINE_UNARY_VARIFORM(asVec3, Vec3f, Quaternion3f, MATH_QUATERNION_AS_VEC3())
+/// @}
+
+// ---------------------------------------------------------------------------
+// Unary Operators
+// ---------------------------------------------------------------------------
+
+// Quaternion = conjugate(Quaternion)
+/** \cond */
+#define MATH_QUATERNION_CONJUGATE()             \
+    {                                           \
+        result.r =  p0.r;                       \
+        result.i = -p0.i;                       \
+        result.j = -p0.j;                       \
+        result.k = -p0.k;                       \
+    }
+/** \endcond */
+/// @{
+/// compute the conjugate of a Quaternion
+MATH_DEFINE_UNARY_VARIFORM(conjugate, Quaternion3f, Quaternion3f,
+        MATH_QUATERNION_CONJUGATE())
+/// @}
+
+
+// ---------------------------------------------------------------------------
+// Binary Operators
+// ---------------------------------------------------------------------------
+
+// Quaternion3f = float + Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_S_PRE_PLUS()            \
+    {                                           \
+        result.r = p0 + p1.r;                   \
+        result.i = p1.i;                        \
+        result.j = p1.j;                        \
+        result.k = p1.k;                        \
+    }
+/** \endcond */
+/// @{
+/// scalar pre-plus, p0 + p1
+MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, float, Quaternion3f,
+                            MATH_QUATERNION_S_PRE_PLUS())
+/// @}
+
+// Quaternion3f = Quaternion3f + float;
+/** \cond */
+#define MATH_QUATERNION_S_POST_PLUS()           \
+    {                                           \
+        result.r = p0.r + p1;                   \
+        result.i = p0.i;                        \
+        result.j = p0.j;                        \
+        result.k = p0.k;                        \
+    }
+/** \endcond */
+/// @{
+/// scalar post-plus, p0 + p1
+MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, Quaternion3f, float,
+                            MATH_QUATERNION_S_POST_PLUS())
+/// @}
+
+// Quaternion3f = Quaternion3f + Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_PLUS()                  \
+    {                                           \
+        result.r = p0.r + p1.r;                 \
+        result.i = p0.i + p1.i;                 \
+        result.j = p0.j + p1.j;                 \
+        result.k = p0.k + p1.k;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise add of 2 Quaternion, p0 + p1
+MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, Quaternion3f, Quaternion3f,
+                            MATH_QUATERNION_PLUS())
+/// @}
+
+// Quaternion3f = float - Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_S_PRE_MINUS()           \
+    {                                           \
+        result.r = p0 - p1.r;                   \
+        result.i = p1.i;                        \
+        result.j = p1.j;                        \
+        result.k = p1.k;                        \
+    }
+/** \endcond */
+/// @{
+/// scalar pre-minus, p0 - p1
+MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, float, Quaternion3f,
+                            MATH_QUATERNION_S_PRE_MINUS())
+/// @}
+
+// Quaternion3f = Quaternion3f - float;
+/** \cond */
+#define MATH_QUATERNION_S_POST_MINUS()          \
+    {                                           \
+        result.r = p0.r - p1;                   \
+        result.i = p0.i;                        \
+        result.j = p0.j;                        \
+        result.k = p0.k;                        \
+    }
+/** \endcond */
+/// @{
+/// scalar post-minus, p0 - p1
+MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, Quaternion3f, float,
+                            MATH_QUATERNION_S_POST_MINUS())
+/// @}
+
+// Quaternion3f = Quaternion3f - Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_MINUS()                 \
+    {                                           \
+        result.r = p0.r - p1.r;                 \
+        result.i = p0.i - p1.i;                 \
+        result.j = p0.j - p1.j;                 \
+        result.k = p0.k - p1.k;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise minus of 2 Quaternion, p0 - p1
+MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, Quaternion3f, Quaternion3f,
+                            MATH_QUATERNION_MINUS())
+/// @}
+
+// Quaternion3f = float * Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_S_PRE_MULT()            \
+    {                                           \
+        result.r = p0 * p1.r;                   \
+        result.i = p0 * p1.i;                   \
+        result.j = p0 * p1.j;                   \
+        result.k = p0 * p1.k;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar pre-multiply, p0 * p1
+MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, float, Quaternion3f,
+                            MATH_QUATERNION_S_PRE_MULT())
+/// @}
+
+// Quaternion3f = Quaternion3f * float;
+/** \cond */
+#define MATH_QUATERNION_S_POST_MULT()           \
+    {                                           \
+        result.r = p0.r * p1;                   \
+        result.i = p0.i * p1;                   \
+        result.j = p0.j * p1;                   \
+        result.k = p0.k * p1;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar post-multiply, p0 * p1
+MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, Quaternion3f, float,
+                            MATH_QUATERNION_S_POST_MULT())
+/// @}
+
+// Quaternion3f = Quaternion3f * Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_MULT()                                                 \
+    {                                                                          \
+        result.r = p0.r*p1.r - p0.i*p1.i - p0.j*p1.j - p0.k*p1.k;              \
+        result.i = p0.r*p1.i + p0.i*p1.r + p0.j*p1.k - p0.k*p1.j;              \
+        result.j = p0.r*p1.j - p0.i*p1.k + p0.j*p1.r + p0.k*p1.i;              \
+        result.k = p0.r*p1.k + p0.i*p1.j - p0.j*p1.i + p0.k*p1.r;              \
+    }
+/** \endcond */
+/// @{
+/// component-wise multiply of 2 Quaternion, p0 * p1
+MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, Quaternion3f, Quaternion3f,
+                            MATH_QUATERNION_MULT())
+/// @}
+
+// Vec3f = Quaternion3f * Vec3f;
+/** \cond */
+#define MATH_QUATERNION_V_POST_MULT()                                          \
+    {                                                                          \
+        result = asVec3(p0 * Quaternion3f_ctor(p1) * conjugate(p0));           \
+    }
+/** \endcond */
+/// @{
+///
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Quaternion3f, Vec3f,
+                            MATH_QUATERNION_V_POST_MULT())
+/// @}
+
+// Vec3f = transform(Quaternion3f, Vec3f)
+/// @{
+/// transform a Vec3 (p1) by a Quaternion (p0).
+MATH_DEFINE_BINARY_VARIFORM(transform, Vec3f, Quaternion3f, Vec3f,
+                            { result = p0 * p1; })
+
+// Quaternion = rcp(Quaternion)
+/** \cond */
+#define MATH_QUATERNION_RCP()                                                  \
+    {                                                                          \
+        result = conjugate(p0) *                                               \
+            rcp(p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);        \
+    }
+/** \endcond */
+/// @{
+/// compute the reciprocal of a Quaternion
+MATH_DEFINE_UNARY_VARIFORM(rcp, Quaternion3f, Quaternion3f,
+                           MATH_QUATERNION_RCP())
+/// @}
+
+// Quaternion3f = float / Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_S_PRE_DIV()             \
+    {                                           \
+        result = p0 * rcp(p1);                  \
+    }
+/** \endcond */
+/// @{
+/// scalar pre-divide, p0 / p1
+MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, float, Quaternion3f,
+                            MATH_QUATERNION_S_PRE_DIV())
+/// @}
+
+// Quaternion3f = Quaternion3f / float;
+/** \cond */
+#define MATH_QUATERNION_S_POST_DIV()            \
+    {                                           \
+        result = p0 * rcp(p1);                  \
+    }
+/** \endcond */
+/// @{
+/// scalar post-divide, p0 / p1
+MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, Quaternion3f, float,
+                            MATH_QUATERNION_S_POST_DIV())
+/// @}
+
+// Quaternion3f = Quaternion3f / Quaternion3f;
+/** \cond */
+#define MATH_QUATERNION_DIV()                   \
+    {                                           \
+        result = p0 * rcp(p1);                  \
+    }
+/** \endcond */
+/// @{
+/// scalar post-divide, p0 / p1
+MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, Quaternion3f, Quaternion3f,
+                            MATH_QUATERNION_DIV())
+/// @}
+
+
+// float = dot(Quaternion3f, Quaternion3f);
+/** \cond */
+#define MATH_QUATERNION_DOT()                                                  \
+    {                                                                          \
+        result = p0.r*p1.r + p0.i*p1.i + p0.j*p1.j + p0.k*p1.k;                \
+    }
+/** \endcond */
+/// @{
+/// dot product of 2 Quaternion, dot(p0, p1)
+MATH_DEFINE_BINARY_VARIFORM(dot, float, Quaternion3f, Quaternion3f,
+                            MATH_QUATERNION_DOT())
+/// @}
+
+// Quaternion = normalize(Quaternion)
+/** \cond */
+#define MATH_QUATERNION_NORMALIZE()                                            \
+    {                                                                          \
+        result = p0 *                                                          \
+            rsqrt(p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);      \
+    }
+/** \endcond */
+/// @{
+/// normalize a Quaternion
+MATH_DEFINE_UNARY_VARIFORM(normalize, Quaternion3f, Quaternion3f,
+                           MATH_QUATERNION_NORMALIZE())
+/// @}
+
+// bool = isNormalized(Quaternion)
+/** \cond */
+#define MATH_QUATERNION_IS_NORMALIZED()                                        \
+    {                                                                          \
+        result = isNormalizedLengthSqr(                                        \
+            p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);            \
+    }
+/** \endcond */
+/// @{
+/// is a Quaternion normalized?
+MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Quaternion3f,
+                           MATH_QUATERNION_IS_NORMALIZED())
+/// @}
+
+//  bool = isEqual(Quaternion3f, Quaternion3f, float)
+/** \cond */
+#define MATH_QUATERNION_IS_EQUAL()              \
+    {                                           \
+        result = isEqual(p0.r, p1.r, p2) &&     \
+            isEqual(p0.i, p1.i, p2) &&          \
+            isEqual(p0.j, p1.j, p2) &&          \
+            isEqual(p0.k, p1.k, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Quaternion (p0, p1) equal to within tolerance (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Quaternion3f, Quaternion3f, float,
+                             MATH_QUATERNION_IS_EQUAL())
+/// @}
+
+// bool isEqual(Quaternion3f, Quaternion3f)
+/// @{
+/// are two Quaternion3f equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Quaternion3f, Quaternion3f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+//  bool = isEqualFixedEps(Quaternion3f, Quaternion3f, float)
+/** \cond */
+#define MATH_QUATERNION_IS_EQUAL_FIXED_EPS()            \
+    {                                                   \
+        result = isEqualFixedEps(p0.r, p1.r, p2) &&     \
+            isEqualFixedEps(p0.i, p1.i, p2) &&          \
+            isEqualFixedEps(p0.j, p1.j, p2) &&          \
+            isEqualFixedEps(p0.k, p1.k, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Quaternion (p0, p1) equal to within tolerance (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Quaternion3f, Quaternion3f,
+                             float, MATH_QUATERNION_IS_EQUAL_FIXED_EPS())
+/// @}
+
+// bool isEqualFixedEps(Quaternion3f, Quaternion3f)
+/// @{
+/// are two Quaternion3f equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Quaternion3f, Quaternion3f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+//  Quaternion = slerp(Quaternion3f, Quaternion3f, float)
+/** \cond */
+#define MATH_QUATERNION_SLERP_L0_F()                                           \
+    struct { float angle; float sinAngle; float cosAngle; float rcpSin;        \
+             float rA; float rB; }
+
+#define MATH_QUATERNION_SLERP()                                                \
+    {                                                                          \
+        l0.angle = 0.;                                                         \
+        l0.sinAngle = 0.;                                                      \
+        l0.cosAngle = dot(p0, p1);                                             \
+        if (abs(l0.cosAngle) < 1.) {                                           \
+            l0.angle = acos(l0.cosAngle);                                      \
+            l0.sinAngle = sin(l0.angle);                                       \
+        }                                                                      \
+        if (abs(l0.sinAngle) < 0.00001) {                                      \
+            result = (1. - p2) * p0 + p2 * p1;                                 \
+        } else {                                                               \
+            l0.rcpSin = rcp(l0.sinAngle);                                      \
+            l0.rA = sin((1. - p2) * l0.angle) * l0.rcpSin;                     \
+            l0.rB = sin(p2 * l0.angle) * l0.rcpSin;                            \
+            result = l0.rA * p0 + l0.rB * p1;                                  \
+        }                                                                      \
+    }
+/** \endcond */
+/// @{
+///
+MATH_DEFINE_TERNARY_VARIFORM_WITH_L(slerp, Quaternion3f,
+                                    Quaternion3f, Quaternion3f, float,
+                                    MATH_QUATERNION_SLERP_L0_F(),
+                                    MATH_QUATERNION_SLERP())
+
+

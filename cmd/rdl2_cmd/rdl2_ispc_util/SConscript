@@ -1,0 +1,37 @@
+from ansi_colors import colorize
+Import('env')
+
+import os.path
+
+# ------------------------------------------
+name       = 'rdl2_ispc_util'
+sources    = env.DWAGlob('*.cc')
+components = [
+    'scene_rdl2'
+]
+
+# ------------------------------------------
+env.DWAForceWarningAsError()
+
+if 'gcc' in env['CC']:
+    env['CXXFLAGS'].append('-Wno-unknown-pragmas')
+
+env.DWAUseComponents(components)
+prog = env.DWAProgram(name, sources)
+result = env.DWAInstallBin(prog)
+env.DWAComponent(name, COMPONENTS=components)
+
+header_file = env.Dir('${BUILD_DIR}').abspath + "/lib/scene/rdl2/rdl2.isph"
+command = result[0].path;
+if 'MIC-AVX512' == env.GetOption('target-architecture'):
+    command = '/rel/third_party/intelsde/intelsde-7.49.0/sde -knl -- ' + command;
+    
+outputHeader = env.Command(
+    source = result,
+    target = header_file,
+    action = Action(command + ' > ' + header_file,
+        colorize('[install]', 'cyan') + ' ISPC/rdl2 header file '))
+
+env.DWAInstallInclude(header_file, 'scene_rdl2/scene/rdl2')
+
+

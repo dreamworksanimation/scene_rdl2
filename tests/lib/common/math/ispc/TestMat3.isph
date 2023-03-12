@@ -1,0 +1,917 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathMat3.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Mat3.isph>
+#include <scene_rdl2/common/math/ispc/Vec3.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Mat3x_ctor(Vec3x, Vec3x, Vec3x)
+// Mat3x_ctor(x, x, x, x, x, x, x, x, x)
+//----------------------------------------------------------------------
+#define MAT3_CTOR3_TEST(VURES, VUP0, VUP1, VUP2, P00, P01, P02,         \
+                        P10, P11, P12, P20, P21, P22)                   \
+    {                                                                   \
+        const VUP0 Vec3f vx = Vec3f_ctor((const VUP0 float) P00, (const VUP0 float) P01, (const VUP0 float) P02); \
+        const VUP1 Vec3f vy = Vec3f_ctor((const VUP1 float) P10, (const VUP1 float) P11, (const VUP1 float) P12); \
+        const VUP2 Vec3f vz = Vec3f_ctor((const VUP2 float) P20, (const VUP2 float) P21, (const VUP2 float) P22); \
+        const VURES Mat3f m = Mat3f_ctor(vx, vy, vz);                   \
+        if (any(m.vx.x != (P00)) || any(m.vx.y != (P01)) || any(m.vx.z != (P02)) || \
+            any(m.vy.x != (P10)) || any(m.vy.y != (P11)) || any(m.vy.z != (P12)) || \
+            any(m.vz.x != (P20)) || any(m.vz.y != (P21)) || any(m.vz.z != (P22))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define MAT3_CTORQ_TEST(VURES, VU0, VU1, P0, P1)                        \
+    {                                                                   \
+        const VURES Mat3f m = Mat3f_ctor(Quaternion3f_ctor(P0, P1));    \
+        const VURES Mat3f c = Mat3f_rotate(P0, P1);                     \
+        if (any(!isEqual(m, c))) {                                      \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+#define MAT3_CTOR9_TEST(VURES,                                          \
+                        VUP00, VUP01, VUP02,                            \
+                        VUP10, VUP11, VUP12,                            \
+                        VUP20, VUP21, VUP22,                            \
+                        P00, P01, P02,                                  \
+                        P10, P11, P12,                                  \
+                        P20, P21, P22)                                  \
+    {                                                                   \
+        const VUP00 float p00 = (const VUP00 float) (P00);              \
+        const VUP01 float p01 = (const VUP01 float) (P01);              \
+        const VUP02 float p02 = (const VUP02 float) (P02);              \
+        const VUP10 float p10 = (const VUP10 float) (P10);              \
+        const VUP11 float p11 = (const VUP11 float) (P11);              \
+        const VUP12 float p12 = (const VUP12 float) (P12);              \
+        const VUP20 float p20 = (const VUP20 float) (P20);              \
+        const VUP21 float p21 = (const VUP21 float) (P21);              \
+        const VUP22 float p22 = (const VUP22 float) (P22);              \
+                                                                        \
+        const VURES Mat3f m = Mat3f_ctor(p00, p01, p02, p10, p11, p12, p20, p21, p22); \
+        if (any(m.vx.x != p00) || any(m.vx.y != p01) || any(m.vx.z != p02) || \
+            any(m.vy.x != p10) || any(m.vy.y != p11) || any(m.vy.z != p12) || \
+            any(m.vz.x != p20) || any(m.vz.y != p21) || any(m.vz.z != p22)) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT3_CTOR3_TEST(VAR, VAR, VAR, VAR, (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (pi + 7), (pi + 8));
+    MAT3_CTOR3_TEST(VAR, VAR, VAR, UNI, (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (     6), (     7), (     8));
+    MAT3_CTOR3_TEST(VAR, VAR, UNI, VAR, (pi + 0), (pi + 1), (pi + 2), (     3), (     4), (     5), (pi + 6), (pi + 7), (pi + 8));
+    MAT3_CTOR3_TEST(VAR, VAR, UNI, UNI, (pi + 0), (pi + 1), (pi + 2), (     3), (     4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR3_TEST(VAR, UNI, VAR, VAR, (     0), (     1), (     2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (pi + 7), (pi + 8));
+    MAT3_CTOR3_TEST(VAR, UNI, VAR, UNI, (     0), (     1), (     2), (pi + 3), (pi + 4), (pi + 5), (     6), (     7), (     8));
+    MAT3_CTOR3_TEST(VAR, UNI, UNI, VAR, (     0), (     1), (     2), (     3), (     4), (     5), (pi + 6), (pi + 7), (pi + 8));
+    MAT3_CTOR3_TEST(UNI, UNI, UNI, UNI, (     0), (     1), (     2), (     3), (     4), (     5), (     6), (     7), (     8));
+
+    MAT3_CTORQ_TEST(VAR, UNI, VAR, (Vec3f_ctor(1, 2, 3)), (pi + 4));
+    MAT3_CTORQ_TEST(VAR, VAR, UNI, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), 4);
+    MAT3_CTORQ_TEST(VAR, VAR, VAR, (Vec3f_ctor(pi + 1, pi + 2, pi + 3)), (pi + 4));
+    MAT3_CTORQ_TEST(UNI, UNI, UNI, (Vec3f_ctor(1, 2, 3)), 4);
+
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (pi + 7), (pi + 8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (pi + 7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, VAR, VAR, VAR, UNI, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (pi + 6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, VAR, VAR, UNI, UNI, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (pi + 5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, VAR, UNI, UNI, UNI, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (pi + 4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, VAR, UNI, UNI, UNI, UNI, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (pi + 3), (     4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, VAR, UNI, UNI, UNI, UNI, UNI, UNI,
+                    (pi + 0), (pi + 1), (pi + 2), (     3), (     4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, VAR, UNI, UNI, UNI, UNI, UNI, UNI, UNI,
+                    (pi + 0), (pi + 1), (     2), (     3), (     4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(VAR, VAR, UNI, UNI, UNI, UNI, UNI, UNI, UNI, UNI,
+                    (pi + 0), (     1), (     2), (     3), (     4), (     5), (     6), (     7), (     8));
+    MAT3_CTOR9_TEST(UNI, UNI, UNI, UNI, UNI, UNI, UNI, UNI, UNI, UNI,
+                    (     0), (     1), (     2), (     3), (     4), (     5), (     6), (     7), (     8));
+    
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x OP Mat3x (+, -)
+//----------------------------------------------------------------------
+#define MAT3_OP_TEST(VURES, VUP0, VUP1, PI0, PI1, OP)                   \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        const VURES Mat3f m = m0 OP m1;                                 \
+        if (any(!isEqual(m.vx.x, m0.vx.x OP m1.vx.x)) ||                \
+            any(!isEqual(m.vx.y, m0.vx.y OP m1.vx.y)) ||                \
+            any(!isEqual(m.vx.z, m0.vx.z OP m1.vx.z)) ||                \
+            any(!isEqual(m.vy.x, m0.vy.x OP m1.vy.x)) ||                \
+            any(!isEqual(m.vy.y, m0.vy.y OP m1.vy.y)) ||                \
+            any(!isEqual(m.vy.z, m0.vy.z OP m1.vy.z)) ||                \
+            any(!isEqual(m.vz.x, m0.vz.x OP m1.vz.x)) ||                \
+            any(!isEqual(m.vz.y, m0.vz.y OP m1.vz.y)) ||                \
+            any(!isEqual(m.vz.z, m0.vz.z OP m1.vz.z))) {                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x + Mat3x
+//----------------------------------------------------------------------
+#define MAT3_TEST_ADD(VURES, VUP0, VUP1, PI0, PI1)      \
+    MAT3_OP_TEST(VURES, VUP0, VUP1, PI0, PI1, +)
+
+inline uniform int
+testAdd()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_TEST_ADD(VAR, VAR, VAR, pi, pi);
+    MAT3_TEST_ADD(VAR, VAR, UNI, pi, 0);
+    MAT3_TEST_ADD(VAR, UNI, VAR, 0, pi);
+    MAT3_TEST_ADD(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x - Mat3x
+//----------------------------------------------------------------------
+#define MAT3_TEST_MINUS(VURES, VUP0, VUP1, PI0, PI1)    \
+    MAT3_OP_TEST(VURES, VUP0, VUP1, PI0, PI1, -)
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_TEST_MINUS(VAR, VAR, VAR, pi, pi);
+    MAT3_TEST_MINUS(VAR, VAR, UNI, pi, 0);
+    MAT3_TEST_MINUS(VAR, UNI, VAR, 0, pi);
+    MAT3_TEST_MINUS(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = x * Mat3x
+//----------------------------------------------------------------------
+#define MAT3_SCALAR_MULT_MAT3_TEST(VURES, VUP0, VUP1, PI0, PI1)         \
+    {                                                                   \
+        const VUP0 float f0 = (VUP0 float)(1. + PI0);                   \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        const VURES Mat3f m = f0 * m1;                                  \
+        if (any(!isEqual(m.vx.x, f0 * m1.vx.x)) ||                      \
+            any(!isEqual(m.vx.y, f0 * m1.vx.y)) ||                      \
+            any(!isEqual(m.vx.z, f0 * m1.vx.z)) ||                      \
+            any(!isEqual(m.vy.x, f0 * m1.vy.x)) ||                      \
+            any(!isEqual(m.vy.y, f0 * m1.vy.y)) ||                      \
+            any(!isEqual(m.vy.z, f0 * m1.vy.z)) ||                      \
+            any(!isEqual(m.vz.x, f0 * m1.vz.x)) ||                      \
+            any(!isEqual(m.vz.y, f0 * m1.vz.y)) ||                      \
+            any(!isEqual(m.vz.z, f0 * m1.vz.z))) {                      \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testScalarMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_SCALAR_MULT_MAT3_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_SCALAR_MULT_MAT3_TEST(VAR, VAR, UNI, pi, 0);
+    MAT3_SCALAR_MULT_MAT3_TEST(VAR, UNI, VAR, 0, pi);
+    MAT3_SCALAR_MULT_MAT3_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x * x
+//----------------------------------------------------------------------
+#define MAT3_MULT_SCALAR_TEST(VURES, VUP0, VUP1, PI0, PI1)              \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 float f1 = (VUP1 float)(1. + PI1);                   \
+        const VURES Mat3f m = m0 * f1;                                  \
+        if (any(!isEqual(m.vx.x, m0.vx.x * f1)) ||                      \
+            any(!isEqual(m.vx.y, m0.vx.y * f1)) ||                      \
+            any(!isEqual(m.vx.z, m0.vx.z * f1)) ||                      \
+            any(!isEqual(m.vy.x, m0.vy.x * f1)) ||                      \
+            any(!isEqual(m.vy.y, m0.vy.y * f1)) ||                      \
+            any(!isEqual(m.vy.z, m0.vy.z * f1)) ||                      \
+            any(!isEqual(m.vz.x, m0.vz.x * f1)) ||                      \
+            any(!isEqual(m.vz.y, m0.vz.y * f1)) ||                      \
+            any(!isEqual(m.vz.z, m0.vz.z * f1))) {                      \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testMatMultScalar()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_MULT_SCALAR_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_MULT_SCALAR_TEST(VAR, VAR, UNI, pi, 0);
+    MAT3_MULT_SCALAR_TEST(VAR, UNI, VAR, 0, pi);
+    MAT3_MULT_SCALAR_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Vec3x * Mat3x
+//----------------------------------------------------------------------
+#define VEC3_MULT_MAT3_TEST(VURES, VUP0, VUP1, PI0, PI1)                \
+    {                                                                   \
+        const VUP0 Vec3f v0 = Vec3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0)); \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        const VURES Vec3f v = v0 * m1;                                  \
+        if (any(!isEqual(v.x, dot(v0, Vec3f_ctor(m1.vx.x, m1.vy.x, m1.vz.x)))) || \
+            any(!isEqual(v.y, dot(v0, Vec3f_ctor(m1.vx.y, m1.vy.y, m1.vz.y)))) || \
+            any(!isEqual(v.z, dot(v0, Vec3f_ctor(m1.vx.z, m1.vy.z, m1.vz.z))))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testVecMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC3_MULT_MAT3_TEST(VAR, VAR, VAR, pi, pi);
+    VEC3_MULT_MAT3_TEST(VAR, VAR, UNI, pi, 0);
+    VEC3_MULT_MAT3_TEST(VAR, UNI, VAR, 0, pi);
+    VEC3_MULT_MAT3_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x * Vec3
+//----------------------------------------------------------------------
+#define MAT3_MULT_VEC3_TEST(VURES, VUP0, VUP1, PI0, PI1)                \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 Vec3f v1 = Vec3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1)); \
+        const VURES Vec3f v = m0 * v1;                                  \
+        if (any(!isEqual(v.x, m0.vx.x * v1.x + m0.vx.y * v1.y + m0.vx.z * v1.z)) || \
+            any(!isEqual(v.y, m0.vy.x * v1.x + m0.vy.y * v1.y + m0.vy.z * v1.z)) || \
+            any(!isEqual(v.z, m0.vz.x * v1.x + m0.vz.y * v1.y + m0.vz.z * v1.z))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testMatMultVec()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_MULT_VEC3_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_MULT_VEC3_TEST(VAR, VAR, UNI, pi, 0);
+    MAT3_MULT_VEC3_TEST(VAR, UNI, VAR, 0, pi);
+    MAT3_MULT_VEC3_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x * Mat3x
+//----------------------------------------------------------------------
+#define MAT3_MULT_MAT3_TEST(VURES, VUP0, VUP1, PI0, PI1)                \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        const VURES Mat3f m = m0 * m1;                                  \
+        if (any(!isEqual(m.vx.x, dot(m0.vx, Vec3f_ctor(m1.vx.x, m1.vy.x, m1.vz.x)))) || \
+            any(!isEqual(m.vx.y, dot(m0.vx, Vec3f_ctor(m1.vx.y, m1.vy.y, m1.vz.y)))) || \
+            any(!isEqual(m.vx.z, dot(m0.vx, Vec3f_ctor(m1.vx.z, m1.vy.z, m1.vz.z)))) || \
+            any(!isEqual(m.vy.x, dot(m0.vy, Vec3f_ctor(m1.vx.x, m1.vy.x, m1.vz.x)))) || \
+            any(!isEqual(m.vy.y, dot(m0.vy, Vec3f_ctor(m1.vx.y, m1.vy.y, m1.vz.y)))) || \
+            any(!isEqual(m.vy.z, dot(m0.vy, Vec3f_ctor(m1.vx.z, m1.vy.z, m1.vz.z)))) || \
+            any(!isEqual(m.vz.x, dot(m0.vz, Vec3f_ctor(m1.vx.x, m1.vy.x, m1.vz.x)))) || \
+            any(!isEqual(m.vz.y, dot(m0.vz, Vec3f_ctor(m1.vx.y, m1.vy.y, m1.vz.y)))) || \
+            any(!isEqual(m.vz.z, dot(m0.vz, Vec3f_ctor(m1.vx.z, m1.vy.z, m1.vz.z))))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testMatMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_MULT_VEC3_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_MULT_VEC3_TEST(VAR, VAR, UNI, pi, 0);
+    MAT3_MULT_VEC3_TEST(VAR, UNI, VAR, 0, pi);
+    MAT3_MULT_VEC3_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqual(Mat3x, Mat3x)
+//----------------------------------------------------------------------
+#define MAT3_ISEQUAL_TEST(VURES, VUP0, VUP1, PI0, PI1)                  \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        if (any(!isEqual(m0, m1))) {                                    \
+            ++error;                                                    \
+        }                                                               \
+        const VURES Mat3f m = m0 + m1;                                  \
+        if (any(isEqual(m, m0))) {                                      \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_ISEQUAL_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_ISEQUAL_TEST(VAR, VAR, UNI, 0, 0);
+    MAT3_ISEQUAL_TEST(VAR, UNI, VAR, 0, 0);
+    MAT3_ISEQUAL_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// bool = isEqualFixedEps(Mat3x, Mat3x)
+//----------------------------------------------------------------------
+#define MAT3_IS_EQUAL_FIXED_EPS_TEST(VURES, VUP0, VUP1, PI0, PI1)       \
+    {                                                                   \
+        const VUP0 Mat3f m0 = Mat3f_ctor                                \
+            ((VUP0 float)(1. + PI0), (VUP0 float)(2. + PI0), (VUP0 float)(3. + PI0), \
+             (VUP0 float)(4. + PI0), (VUP0 float)(5. + PI0), (VUP0 float)(6. + PI0), \
+             (VUP0 float)(7. + PI0), (VUP0 float)(8. + PI0), (VUP0 float)(9. + PI0)); \
+        const VUP1 Mat3f m1 = Mat3f_ctor                                \
+            ((VUP1 float)(1. + PI1), (VUP1 float)(2. + PI1), (VUP1 float)(3. + PI1), \
+             (VUP1 float)(4. + PI1), (VUP1 float)(5. + PI1), (VUP1 float)(6. + PI1), \
+             (VUP1 float)(7. + PI1), (VUP1 float)(8. + PI1), (VUP1 float)(9. + PI1)); \
+        if (any(!isEqualFixedEps(m0, m1))) {                            \
+            ++error;                                                    \
+        }                                                               \
+        const VURES Mat3f m = m0 + m1;                                  \
+        if (any(isEqualFixedEps(m, m0))) {                              \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    MAT3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, VAR, pi, pi);
+    MAT3_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, UNI, 0, 0);
+    MAT3_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, VAR, 0, 0);
+    MAT3_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, UNI, 0, 0);
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// x = Mat3x_det(Mat3x)
+//----------------------------------------------------------------------
+#define TEST_DET(FTYPE, VTYPE, MTYPE, DET, ISEQUAL)                     \
+    {                                                                   \
+        VAR VTYPE v0 = VTYPE##_ctor((VAR FTYPE) (1. * pi), (VAR FTYPE) (2. * pi), (VAR FTYPE) (3. * pi)); \
+        VAR VTYPE v1 = VTYPE##_ctor((VAR FTYPE) (4. * pi), (VAR FTYPE) (5. * pi), (VAR FTYPE) (6. * pi)); \
+        VAR VTYPE v2 = VTYPE##_ctor((VAR FTYPE) (7. * pi), (VAR FTYPE) (8. * pi), (VAR FTYPE) (9. * pi)); \
+        VAR MTYPE m = MTYPE##_ctor(v0, v1, v2);                         \
+        VAR FTYPE det = DET(m);                                         \
+        VAR FTYPE expected = 0.;                                        \
+        if (any(!ISEQUAL(det, expected))) {                             \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testDet()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    TEST_DET(float, Vec3f, Mat3f, det, isEqual);
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x  = Mat3x_transpose(Mat3x)
+//----------------------------------------------------------------------
+#define TEST_TRANSPOSE(FTYPE, MTYPE, TRANSPOSE)                         \
+    {                                                                   \
+        VAR MTYPE m = MTYPE##_ctor((VAR FTYPE) (1. * pi), (VAR FTYPE) (2. * pi), (VAR FTYPE) (3. * pi), \
+                                   (VAR FTYPE) (4. * pi), (VAR FTYPE) (5. * pi), (VAR FTYPE) (6. * pi), \
+                                   (VAR FTYPE) (7. * pi), (VAR FTYPE) (8. * pi), (VAR FTYPE) (9. * pi)); \
+        VAR MTYPE mt = TRANSPOSE(m);                                    \
+        if (any(mt.vx.x != m.vx.x) ||                                   \
+            any(mt.vx.y != m.vy.x) ||                                   \
+            any(mt.vx.z != m.vz.x) ||                                   \
+            any(mt.vy.x != m.vx.y) ||                                   \
+            any(mt.vy.y != m.vy.y) ||                                   \
+            any(mt.vy.z != m.vz.y) ||                                   \
+            any(mt.vz.x != m.vx.z) ||                                   \
+            any(mt.vz.y != m.vy.z) ||                                   \
+            any(mt.vz.z != m.vz.z)) {                                   \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m = MTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3., \
+                                   (UNI FTYPE) 4., (UNI FTYPE) 5., (UNI FTYPE) 6., \
+                                   (UNI FTYPE) 7., (UNI FTYPE) 8., (UNI FTYPE) 9.); \
+        UNI MTYPE mt = TRANSPOSE(m);                                    \
+        if (any(mt.vx.x != m.vx.x) ||                                   \
+            any(mt.vx.y != m.vy.x) ||                                   \
+            any(mt.vx.z != m.vz.x) ||                                   \
+            any(mt.vy.x != m.vx.y) ||                                   \
+            any(mt.vy.y != m.vy.y) ||                                   \
+            any(mt.vy.z != m.vz.y) ||                                   \
+            any(mt.vz.x != m.vx.z) ||                                   \
+            any(mt.vz.y != m.vy.z) ||                                   \
+            any(mt.vz.z != m.vz.z)) {                                   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTranspose()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    TEST_TRANSPOSE(float, Mat3f, transpose);
+
+    return error;
+}
+
+
+//----------------------------------------------------------------------
+// Mat3x  = Mat3x_adjoint(Mat3x)
+//----------------------------------------------------------------------
+#define TEST_ADJOINT(FTYPE, MTYPE, ADJOINT, ISEQUAL)                    \
+    {                                                                   \
+        VAR MTYPE m = MTYPE##_ctor((VAR FTYPE) (1. * pi), (VAR FTYPE) (2. * pi), (VAR FTYPE) (3. * pi), \
+                                   (VAR FTYPE) (4. * pi), (VAR FTYPE) (5. * pi), (VAR FTYPE) (6. * pi), \
+                                   (VAR FTYPE) (7. * pi), (VAR FTYPE) (8. * pi), (VAR FTYPE) (9. * pi)); \
+        VAR MTYPE adj = ADJOINT(m);                                     \
+        if (any(!ISEQUAL(adj.vx.x, -3.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vx.y,  6.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vx.z, -3.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vy.x,  6.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vy.y, -12. * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vy.z,  6.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vz.x, -3.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vz.y,  6.  * (VAR FTYPE) (pi * pi))) ||    \
+            any(!ISEQUAL(adj.vz.z, -3.  * (VAR FTYPE) (pi * pi)))) {    \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m = MTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3., \
+                                   (UNI FTYPE) 4., (UNI FTYPE) 5., (UNI FTYPE) 6., \
+                                   (UNI FTYPE) 7., (UNI FTYPE) 8., (UNI FTYPE) 9.); \
+        UNI MTYPE adj = ADJOINT(m);                                     \
+        if (any(!ISEQUAL(adj.vx.x, (UNI FTYPE)  -3.)) ||                \
+            any(!ISEQUAL(adj.vx.y, (UNI FTYPE)   6.)) ||                \
+            any(!ISEQUAL(adj.vx.z, (UNI FTYPE)  -3.)) ||                \
+            any(!ISEQUAL(adj.vy.x, (UNI FTYPE)   6.)) ||                \
+            any(!ISEQUAL(adj.vy.y, (UNI FTYPE) -12.)) ||                \
+            any(!ISEQUAL(adj.vy.z, (UNI FTYPE)   6.)) ||                \
+            any(!ISEQUAL(adj.vz.x, (UNI FTYPE)  -3.)) ||                \
+            any(!ISEQUAL(adj.vz.y, (UNI FTYPE)   6.)) ||                \
+            any(!ISEQUAL(adj.vz.z, (UNI FTYPE)  -3.))) {                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testAdjoint()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    TEST_ADJOINT(float, Mat3f, adjoint, isEqual);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Mat3x = Mat3x_inverse(Mat3x)
+// Mat3x = rcp(Mat3x)
+//----------------------------------------------------------------------
+#define TEST_INVERSE(FTYPE, MTYPE, INVERSE, ISEQUAL)                    \
+    {                                                                   \
+        VAR MTYPE m = MTYPE##_ctor((VAR FTYPE) (1. * pi), (VAR FTYPE) (2. * pi), (VAR FTYPE) (3. * pi), \
+                                   (VAR FTYPE) (0. * pi), (VAR FTYPE) (1. * pi), (VAR FTYPE) (4. * pi), \
+                                   (VAR FTYPE) (5. * pi), (VAR FTYPE) (6. * pi), (VAR FTYPE) (0. * pi)); \
+        VAR MTYPE inv = INVERSE(m);                                     \
+        if (any(!ISEQUAL(inv.vx.x, -24. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vx.y,  18. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vx.z,   5. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vy.x,  20. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vy.y, -15. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vy.z,  -4. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vz.x,  -5. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vz.y,   4. * rcp((VAR FTYPE) pi))) ||      \
+            any(!ISEQUAL(inv.vz.z,   1. * rcp((VAR FTYPE) pi)))) {      \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m = MTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3., \
+                                   (UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 4., \
+                                   (UNI FTYPE) 5., (UNI FTYPE) 6., (UNI FTYPE) 0.); \
+        UNI MTYPE inv = INVERSE(m);                                     \
+        if (any(!ISEQUAL(inv.vx.x, (UNI FTYPE) -24.)) ||                \
+            any(!ISEQUAL(inv.vx.y, (UNI FTYPE)  18.)) ||                \
+            any(!ISEQUAL(inv.vx.z, (UNI FTYPE)   5.)) ||                \
+            any(!ISEQUAL(inv.vy.x, (UNI FTYPE)  20.)) ||                \
+            any(!ISEQUAL(inv.vy.y, (UNI FTYPE) -15.)) ||                \
+            any(!ISEQUAL(inv.vy.z, (UNI FTYPE)  -4.)) ||                \
+            any(!ISEQUAL(inv.vz.x, (UNI FTYPE)  -5.)) ||                \
+            any(!ISEQUAL(inv.vz.y, (UNI FTYPE)   4.)) ||                \
+            any(!ISEQUAL(inv.vz.z, (UNI FTYPE)   1.))) {                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testInverse()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    TEST_INVERSE(float, Mat3f, inverse, isEqual);
+    TEST_INVERSE(float, Mat3f, rcp, isEqual);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// setToIdentity(Mat3)
+// Mat3_identity()
+//----------------------------------------------------------------------
+#define SET_TO_IDENTITY_TEST(MTYPE, SET_TO_IDENTITY)                    \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        SET_TO_IDENTITY(m);                                             \
+        if (any(m.vx.x != 1.) || any(m.vx.y != 0.) || any(m.vx.z != 0.) || \
+            any(m.vy.x != 0.) || any(m.vy.y != 1.) || any(m.vy.z != 0.) || \
+            any(m.vz.x != 0.) || any(m.vz.y != 0.) || any(m.vz.z != 1.)) { \
+            ++error;                                                    \
+        }                                                               \
+        if (any(!isEqual(m, (VAR MTYPE) MTYPE##_identity()))) {         \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m;                                                    \
+        SET_TO_IDENTITY(m);                                             \
+        if (any(m.vx.x != 1.) || any(m.vx.y != 0.) || any(m.vx.z != 0.) || \
+            any(m.vy.x != 0.) || any(m.vy.y != 1.) || any(m.vy.z != 0.) || \
+            any(m.vz.x != 0.) || any(m.vz.y != 0.) || any(m.vz.z != 1.)) { \
+            ++error;                                                    \
+        }                                                               \
+        if (any(!isEqual(m, MTYPE##_identity()))) {                     \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testSetToIdentity()
+{
+    uniform int error = 0;
+    SET_TO_IDENTITY_TEST(Mat3f, setToIdentity);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// setToScale(Mat3, Vec3)
+// Mat3_scale(Vec3)
+//----------------------------------------------------------------------
+#define SET_TO_SCALE_CMP(MTYPE)                                         \
+    if (any(m.vx.x != v.x) || any(m.vx.y != 0.) || any(m.vx.z != 0.) || \
+        any(m.vy.x != 0.) || any(m.vy.y != v.y) || any(m.vy.z != 0.) || \
+        any(m.vz.x != 0.) || any(m.vz.y != 0.) || any(m.vz.z != v.z)) { \
+        ++error;                                                        \
+    }                                                                   \
+    if (any(!isEqual(m, MTYPE##_scale(v)))) {                           \
+        ++error;                                                        \
+    }
+#define SET_TO_SCALE_TEST(MTYPE, VTYPE, FTYPE, SET_TO_SCALE)            \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        VAR VTYPE v = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2 * pi, (VAR FTYPE) 3 * pi); \
+        SET_TO_SCALE(m, v);                                             \
+        SET_TO_SCALE_CMP(MTYPE);                                        \
+    }                                                                   \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        SET_TO_SCALE(m, v);                                             \
+        SET_TO_SCALE_CMP(MTYPE);                                        \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m;                                                    \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        SET_TO_SCALE(m, v);                                             \
+        SET_TO_SCALE_CMP(MTYPE);                                        \
+    }
+
+inline uniform int
+testSetToScale()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    SET_TO_SCALE_TEST(Mat3f, Vec3f, float, setToScale);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// setToRotation(Mat3, Vec3, x)
+// Mat3_rotate(Vec3, x)
+//   we'll rotate each primary axis onto another and test the rather
+//   interesting property of rotation matrices that their determinant
+//   should always be 1.
+//----------------------------------------------------------------------
+#define SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION)    \
+    SET_TO_ROTATION(m, xaxis, angle);                           \
+    res = zaxis * m;                                            \
+    if (any(!isEqual(res, yaxis))) {                            \
+        ++error;                                                \
+    }                                                           \
+    SET_TO_ROTATION(m, yaxis, angle);                           \
+    res = xaxis * m;                                            \
+    if (any(!isEqual(res, zaxis))) {                            \
+        ++error;                                                \
+    }                                                           \
+    SET_TO_ROTATION(m, zaxis, angle);                           \
+    res = yaxis * m;                                            \
+    if (any(!isEqual(res, xaxis))) {                            \
+        ++error;                                                \
+    }                                                           \
+    SET_TO_ROTATION(m, axis, angle);                            \
+    if (any(!isEqual(det(m), detRes))) {                        \
+        ++error;                                                \
+    }                                                           \
+    if (any(!isEqual(m, MTYPE##_rotate(axis, angle)))) {        \
+        ++error;                                                \
+    }
+#define SET_TO_ROTATION_TEST(MTYPE, VTYPE, FTYPE, SET_TO_ROTATION)      \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        VAR VTYPE xaxis = VTYPE##_ctor((VAR FTYPE) 1., (VAR FTYPE) 0., (VAR FTYPE) 0.); \
+        VAR VTYPE yaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 1., (VAR FTYPE) 0.); \
+        VAR VTYPE zaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 0., (VAR FTYPE) 1.); \
+        VAR VTYPE axis = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        VAR FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        VAR FTYPE detRes = 1.;                                          \
+        SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION);           \
+    }                                                                   \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        VAR VTYPE xaxis = VTYPE##_ctor((VAR FTYPE) 1., (VAR FTYPE) 0., (VAR FTYPE) 0.); \
+        VAR VTYPE yaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 1., (VAR FTYPE) 0.); \
+        VAR VTYPE zaxis = VTYPE##_ctor((VAR FTYPE) 0., (VAR FTYPE) 0., (VAR FTYPE) 1.); \
+        VAR VTYPE axis = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        VAR FTYPE detRes = 1.;                                          \
+        SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION);           \
+    }                                                                   \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        VAR FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        VAR FTYPE detRes = 1.;                                          \
+        SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION);           \
+    }                                                                   \
+    {                                                                   \
+        VAR MTYPE m;                                                    \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        VAR VTYPE res;                                                  \
+        VAR FTYPE detRes = 1.;                                          \
+        SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION);           \
+    }                                                                   \
+    {                                                                   \
+        UNI MTYPE m;                                                    \
+        UNI VTYPE xaxis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 0., (UNI FTYPE) 0.); \
+        UNI VTYPE yaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 1., (UNI FTYPE) 0.); \
+        UNI VTYPE zaxis = VTYPE##_ctor((UNI FTYPE) 0., (UNI FTYPE) 0., (UNI FTYPE) 1.); \
+        UNI VTYPE axis = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3.); \
+        UNI FTYPE angle = -PI * .5;                                     \
+        UNI VTYPE res;                                                  \
+        UNI FTYPE detRes = 1.;                                          \
+        SET_TO_ROTATION_TEST_AND_CMP(MTYPE, SET_TO_ROTATION);           \
+    }
+
+inline uniform int
+testSetToRotation()
+{
+    uniform int error = 0;
+    varying int pi = programIndex + 1;
+
+    SET_TO_ROTATION_TEST(Mat3f, Vec3f, float, setToRotation);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------
+// Vec3 = transform(Mat3)
+//-----------------------------------------------------------------------
+#define TRANSFORM_TEST(MTYPE, VTYPE, FTYPE, TRANSFORM)                  \
+    {                                                                   \
+        VAR VTYPE v = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        VAR MTYPE s = MTYPE##_scale(v);                                 \
+        VAR MTYPE r = MTYPE##_rotate(v, (VAR FTYPE) PI / 4.);           \
+        VAR VTYPE res1 = TRANSFORM(s * r, v);                           \
+        VAR VTYPE res2 = v * s * r;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3); \
+        VAR MTYPE s = MTYPE##_scale(v);                                 \
+        VAR MTYPE r = MTYPE##_rotate(v, (VAR FTYPE) PI / 4.);           \
+        VAR VTYPE res1 = TRANSFORM(s * r, v);                           \
+        VAR VTYPE res2 = v * s * r;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3); \
+        UNI MTYPE s = MTYPE##_scale(v);                                 \
+        UNI MTYPE r = MTYPE##_rotate(v, (UNI FTYPE) PI / 4.);           \
+        UNI VTYPE res1 = TRANSFORM(s * r, v);                           \
+        UNI VTYPE res2 = v * s * r;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransform()
+{
+    uniform int error = 0;
+    varying int pi = programIndex + 1;
+
+    TRANSFORM_TEST(Mat3f, Vec3f, float, transform);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------
+// Vec3 = transformNormal(Mat3)
+//-----------------------------------------------------------------------
+#define TRANSFORM_NORMAL_TEST(MTYPE, VTYPE, FTYPE, TRANSFORM_NORMAL)    \
+    {                                                                   \
+        VAR VTYPE v = VTYPE##_ctor((VAR FTYPE) 1. * pi, (VAR FTYPE) 2. * pi, (VAR FTYPE) 3. * pi); \
+        VAR MTYPE s = MTYPE##_scale(v);                                 \
+        VAR MTYPE r = MTYPE##_rotate(v, (VAR FTYPE) PI / 4.);           \
+        VAR VTYPE res1 = TRANSFORM_NORMAL(s * r, v);                    \
+        VAR VTYPE res2 = s * r * v;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3); \
+        VAR MTYPE s = MTYPE##_scale(v);                                 \
+        VAR MTYPE r = MTYPE##_rotate(v, (VAR FTYPE) PI / 4.);           \
+        VAR VTYPE res1 = TRANSFORM_NORMAL(s * r, v);                    \
+        VAR VTYPE res2 = s * r * v;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }                                                                   \
+    {                                                                   \
+        UNI VTYPE v = VTYPE##_ctor((UNI FTYPE) 1., (UNI FTYPE) 2., (UNI FTYPE) 3); \
+        UNI MTYPE s = MTYPE##_scale(v);                                 \
+        UNI MTYPE r = MTYPE##_rotate(v, (UNI FTYPE) PI / 4.);           \
+        UNI VTYPE res1 = TRANSFORM_NORMAL(s * r, v);                    \
+        UNI VTYPE res2 = s * r * v;                                     \
+        if (any(!isEqual(res1, res2))) {                                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransformNormal()
+{
+    uniform int error = 0;
+    varying int pi = programIndex + 1;
+
+    TRANSFORM_NORMAL_TEST(Mat3f, Vec3f, float, transformNormal);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------
+// Various haphazard tests, rather than rigorously testing a particular
+// function, this test is a good place to just put some random things.
+//-----------------------------------------------------------------------
+inline uniform int
+testMedley()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+    // this test really demonstrates the limitations of single precision
+    // and most of our fast math paths (e.g.. rcp() rather than /).
+    const uniform float tol = 1e-4;
+
+    varying Mat3f m0 = Mat3f_ctor
+        ((varying float) (1. * pi), (varying float) (2. * pi), (varying float) (3. * pi),
+         (varying float) (0. * pi), (varying float) (1. * pi), (varying float) (4. * pi),
+         (varying float) (5. * pi), (varying float) (6. * pi), (varying float) (0. * pi));
+    varying Vec3f v0 = Vec3f_ctor
+        ((varying float) (1. * pi), (varying float) (2. * pi), (varying float) (3. * pi));
+    varying Vec3f v1 = v0 * m0;
+    varying Mat3f m1 = inverse(m0);
+    if (any(!isEqual(m0 * m1, Mat3f_identity(), tol))) {
+        ++error;
+    }
+    Vec3f v2 = v1 * m1;
+    if (any(!isEqual(v2, v0, tol))) {
+        ++error;
+    }
+
+    return error;
+}
+
+

@@ -1,0 +1,112 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathConstants.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Constants.isph>
+#include <scene_rdl2/common/math/ispc/Math.isph>
+#include "Extents.isph"
+
+inline uniform int
+testValues(const uniform Extents cExtents)
+{
+    uniform int error = 0;
+
+    if (!isEqual(sEpsilon, 1e-6)) {
+        ++error;
+    }
+    if (!isEqual(sEpsilonSqr, sEpsilon * sEpsilon)) {
+        ++error;
+    }
+    if (!isEqual(sOneMinusEpsilon, 1.0 - sEpsilon)) {
+        ++error;
+    }
+    if (!isEqual(sPi, PI)) {
+        ++error;
+    }
+    if (!isEqual(sPiSqr, sPi * sPi)) {
+        ++error;
+    }
+    if (!isEqual(sTwoPiSqr, 2.0 * sPi * sPi)) {
+        ++error;
+    }
+    if (!isEqual(sPiCube, sPi * sPi *sPi)) {
+        ++error;
+    }
+    if (!isEqual(sTwoPi, 2.0 * sPi)) {
+        ++error;
+    }
+    if (!isEqual(sFourPi, 4.0 * sPi)) {
+        ++error;
+    }
+    if (!isEqual(sOneOverPi, rcp(sPi))) {
+        ++error;
+    }
+    if (!isEqual(sOneOverTwoPi, rcp(2.0 * sPi))) {
+        ++error;
+    }
+    if (!isEqual(sHalfPi, sPi / 2.0)) {
+        ++error;
+    }
+    if (!isEqual(sOneOverFourPi, rcp(4.0 * sPi))) {
+        ++error;
+    }
+    if (!isEqual(sSqrtTwoPi, sqrt(2.0 * sPi))) {
+        ++error;
+    }
+    if (!isEqual(sMaxValue, cExtents.mFloatMax)) {
+        ++error;
+    }
+    if (!isEqual(sOneOver255, rcp(255.0))) {
+        ++error;
+    }
+    if (!isEqual(sNormalizedLengthThreshold, 1e-3)) {
+        ++error;
+    }
+    if (!isEqual(sNormalizedLengthSqrMin, pow(1.0 - sNormalizedLengthThreshold, 2.0))) {
+        ++error;
+    }
+    if (!isEqual(sNormalizedLengthSqrMax, pow(1.0 + sNormalizedLengthThreshold, 2.0))) {
+        ++error;
+    }
+    if (sMaxInt8 != cExtents.mInt8Max) {
+        ++error;
+    }
+    if (sMaxInt16 != cExtents.mInt16Max) {
+        ++error;
+    }
+    if (sMaxInt32 != cExtents.mInt32Max) {
+        ++error;
+    }
+    if (sMaxInt64 != cExtents.mInt64Max) {
+        ++error;
+    }
+    if (sMaxUInt8 != cExtents.mUInt8Max) {
+        ++error;
+    }
+    if (sMaxUInt16 != cExtents.mUInt16Max) {
+        ++error;
+    }
+    if (sMaxUInt32 != cExtents.mUInt32Max) {
+        ++error;
+    }
+    if (sMaxUInt64 != cExtents.mUInt64Max) {
+        ++error;
+    }
+    if (sMinInt8 != cExtents.mInt8Min) {
+        ++error;
+    }
+    if (sMinInt16 != cExtents.mInt16Min) {
+        ++error;
+    }
+    if (sMinInt32 != cExtents.mInt32Min) {
+        ++error;
+    }
+    if (sMinInt64 != cExtents.mInt64Min) {
+        ++error;
+    }
+
+    return error;
+}
+

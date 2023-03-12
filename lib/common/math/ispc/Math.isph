@@ -1,0 +1,466 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Math.isph
+/// @brief
+/// general math functions that are not specific to a particular type
+
+/**
+ * @mainpage
+ *
+ * @section intro_sec Introduction
+ * This is the ISPC math library for the Moonray core renderer.  It is
+ * composed of the basic math structures, typedefs, functions, and constants
+ * needed to implement an MCRT renderer.  The motivating requirements in its
+ * implementation are performance, exhaustive correctness testing
+ * and the avoidance of code duplication.  It is _not_ meant as an 
+ * example of how to write clean, readable ISPC code any more than the
+ * STL headers are meant as an example of how to write clean, readable
+ * C++ code.  If you want to learn to use the library, do not try to do
+ * so by reading the headers or looking at the unit tests.
+ *
+ * @section precision_sec Precision
+ * The math library only supports single precision.  Most of the types
+ * and functions are implemented using macros where the 'float' type is
+ * taken as an argument.  Extending to double precision is possible.  In fact,
+ * the library originally supported double and float, but double was removed
+ * due to lack of use and the associated higher maintenance costs. (If
+ * you need to implement double precision, check back in the git history).
+ * Most types end with the 'f' symbol to indicate single precision.  Double precision
+ * types would have the 'd' suffix.
+ *
+ * The library favors performance over exact results.  For example, it
+ * makes use of the higher performance 'rcp()' functions rather than
+ * the slower, but more accurate division instruction.
+ *
+ * @section organization_sec Organziation
+ * The math library is organized around a set of structures.  For the most
+ * part, each important structure has its own .isph include file.  Within that
+ * file, the structure is defined along with its functions and operators.  For
+ * example, Vec3.isph defines the Vec3f struct along with the
+ * functions and operators that are relevant to it.  Numeric constants
+ * are defined in Constants.isph while functions and types that don't
+ * really warrant their own file can be found in the generic Math.isph file.
+ *
+ * @section autodiff_sec Auto Differentiation
+ * One of the novel features of the math library is auto-differentiation
+ * through the use of Dual number types.  The main header is Dual.isph.
+ * Functions of one to three variables are supported by the base Dual types.
+ * Think of these as replacements for floats.  Additionally, some of the
+ * higher level structures (e.g. Vec4, Vec3, Vec2, and Col3) have
+ * Dual versions as well.
+ *
+ * @section tutorial_sec Tutorial
+ * \code
+ * #include <Color.isph>
+ * #include <Xform.isph>
+ *
+ * varying bool
+ * magnitudeOfSumGreaterThan1(const varying Color c0, const varying Color c1)
+ * {
+ *    // the library makes extensive use of operator overloading
+ *    // generally, if it makes sense to add, subtract, multiply,
+ *    // or divide types, an operator overload exists to accomplish
+ *    // the task.
+ *    Color sum = c0 + c1;
+ *
+ *    // Colors don't have a 'magnitude' function.  But Vec3
+ *    // has a length function, which will do exactly what
+ *    // we want.  The 'asA' functions in asA.isph can be used
+ *    // to cast compatible types.  In this case we cast
+ *    // Color to a Vec3f and call its length function.
+ *    varying float mag = length(asAVec3f(sum));
+ *
+ *    // and now return our result
+ *    return mag > 1.;
+ * }
+ *
+ * varying Vec3f
+ * scaleThenRotateThenTranslate(const varying Vec3f scale,
+ *                              const varying Vec3f rotAxis,
+ *                              const varying float rotAngle,
+ *                              const varying Vec3f trans,
+ *                              const varying Vec3f point)
+ * {
+ *     Xform3f xform = Xform3f_scale(scale)                 *
+ *                     Xform3f_rotate(rotateAxis, rotAngle) *
+ *                     Xform3f_translate(trans);
+ *     
+ *     // an xform3 is essentially a 4 row, 3 col matrix
+ *     // hence there isn't a vec3 * xform3 operator.  instead
+ *     // we use the 'transformPoint' function which is
+ *     // overloaded to take an Xform3f initial parameter.
+ *     varying Vec3f result = transformPoint(xform3, point);
+ *
+ *     return result;
+ * }
+ *    
+ * \endcode
+ *
+ * @section todo_sec TODO
+ * Moonray's ISPC math library is based on the scene_rdl2 c++ common math library.
+ * It is not a direct port, C++ and ISPC are just too different for that to
+ * make complete sense.  But is does aim to be at least functionally
+ * equivalent.  In that vain, the following features are missing, would make
+ * good additions and must be added before the library can be considered
+ * complete.  Not all missing features from the c++ version are listed, as
+ * not all of them are appropriate (e.g. they may duplicate functions that
+ * already exist in the ISPC standard library.)
+ * - BBox.isph bounding box struct and methods
+ * - Mat3.isph some missing methods related to Mat3
+ *    - quat() convert a rotation matrix to a quaternion
+ *    - row0(), row1(), row2() convenience methods
+ *    - col0(), col1(), col2() consruct Vec3 cols on the fly
+ *    - frame() construct a coordinate frame from a normal
+ *    - slerp() slerp between two rotation matrices
+ * - Math.isph some missing common math functions
+ *    - sign()  (but see ISPC's built-in function signbits())
+ *    - sq()
+ *    - Merge in some functions from MathUtil.h
+ *       - solve2x2LinearSystem()
+ *       - computeTrianglePartialDerivatives()
+ *
+ * Note that Random and Permutation are intentionally omitted.
+ */
+#pragma once
+
+#include "Constants.isph"
+#include "Variform.isph"
+
+// bool = isEqual(float, float, float)
+/** \cond */
+#define MATH_IS_EQUAL(ONE)                                      \
+    {                                                           \
+        result = (abs(p0 - p1) <= (max(abs(p0), ONE) * p2));    \
+    }
+/** \endcond */
+/// @{
+/// deterimine if two numbers are equal within a tolerance
+/// parameter (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, float, float, float, MATH_IS_EQUAL(1.f))
+/// @}
+
+// bool = isEqual(float, float);
+/// @{
+/// deterimine if two numbers are equal within the default tolerance (sEpsilon)
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, float, float,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+// bool = isEqualFixedEps(float, float, float)
+/** \cond */
+#define MATH_IS_EQUAL_FIXED_EPS()               \
+    {                                           \
+        result = (abs(p0 - p1) <= p2);          \
+    }
+/** \endcond */
+/// @{
+/// deterimine if two numbers are equal within a tolerance
+/// parameter (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, float, float, float, MATH_IS_EQUAL_FIXED_EPS())
+/// @}
+
+// bool = isEqualFixedEps(float, float);
+/// @{
+/// deterimine if two numbers are equal within the default tolerance (sEpsilon)
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, float, float,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+// bool = isZero(float, float);
+/** \cond */
+#define MATH_IS_ZERO()                          \
+    {                                           \
+        result = (abs(p0) <= p1);               \
+    }
+/** \endcond */
+/// @{
+/// deterimine if a number (p0) is equal to 0 within a given tolerance (p1)
+MATH_DEFINE_BINARY_VARIFORM(isZero, bool, float, float, MATH_IS_ZERO())
+/// @}
+
+// bool = isZero(float);
+/// @{
+/// deterimine if a number (p0) is equal to 0 within the default tolerance (sEpsilon)
+MATH_DEFINE_UNARY_VARIFORM(isZero, bool, float,
+                           { result = isZero(p0, sEpsilon); })
+/// @}
+
+// bool = isOne(float, float);
+/** \cond */
+#define MATH_IS_ONE()                           \
+    {                                           \
+        result = (abs(1.0f - p0) <= p1);        \
+    }
+/** \endcond */
+/// @{
+/// deterimine if a number (p0) is equal to 1 within a given tolerance (p1)
+MATH_DEFINE_BINARY_VARIFORM(isOne, bool, float, float, MATH_IS_ONE())
+/// @}
+
+// bool = isOne(float);
+/// @{
+/// deterimine if a number (p0) is equal to 1 within the default tolerance (sEpsilon)
+MATH_DEFINE_UNARY_VARIFORM(isOne, bool, float,
+                           { result = isOne(p0, sEpsilon); })
+/// @}
+
+// bool = isNormalizedLengthSqr(float)
+/** \cond */
+#define MATH_IS_NORMALIZED_LEN_SQR()            \
+    {                                           \
+        result =                                \
+            (p0 > sNormalizedLengthSqrMin &&    \
+             p0 < sNormalizedLengthSqrMax);     \
+    }
+/** \endcond */
+/// @{
+/// determine if a squared length value implies a unit length
+MATH_DEFINE_UNARY_VARIFORM(isNormalizedLengthSqr, bool, float, MATH_IS_NORMALIZED_LEN_SQR())
+/// @}
+
+// unsigned int privateGet754Fraction(float);
+/** \cond */
+#define MATH_GET_754_FLOAT_FRACTION()          \
+    {                                          \
+        result = intbits(p0);                  \
+        /* Mask off the 23 bits of fraction */ \
+        result &= 0x7FFFFFu;                   \
+    }
+// Get the fractional part of a IEEE-754 float
+MATH_DEFINE_UNARY_VARIFORM(privateGet754Fraction, unsigned int, float, MATH_GET_754_FLOAT_FRACTION())
+
+// unsigned int privateGet754BiasedExponent(float);
+#define MATH_GET_754_FLOAT_BIASED_EXPONENT()    \
+    {                                           \
+        result = intbits(p0);                   \
+        result >>= 23; /* Shift by fraction */  \
+        /* Mask off the 8 bits of exponent */   \
+        result &= 0xFFu;                        \
+    }
+// Get the fractional part of a IEEE-754 float
+MATH_DEFINE_UNARY_VARIFORM(privateGet754BiasedExponent, unsigned int, float, MATH_GET_754_FLOAT_BIASED_EXPONENT())
+/** \endcond */
+
+// bool issubnormal(float);
+/** \cond */
+#define MATH_IS_SUBNORMAL()                               \
+    {                                                     \
+        result = (privateGet754BiasedExponent(p0) == 0);  \
+    }
+/** \endcond */
+/// @{
+/// Determine if a value is subnormal
+MATH_DEFINE_UNARY_VARIFORM(issubnormal, bool, float, MATH_IS_SUBNORMAL())
+/// @}
+
+// bool isinf(float)
+/// @{
+/** \cond */
+#define MATH_IS_INF_FLOAT()                                    \
+    {                                                          \
+        result = (privateGet754BiasedExponent(p0) == 0xFFu &&  \
+                  privateGet754Fraction(p0) == 0);             \
+    }
+/** \endcond */
+/// Mimics std::isinf(float)
+MATH_DEFINE_UNARY_VARIFORM(isinf, bool, float, MATH_IS_INF_FLOAT())
+/// @}
+
+// bool isfinite(float)
+// bool = isFinite(float);
+/** \cond */
+#define MATH_IS_FINITE()                      \
+    {                                         \
+        result = (!isnan(p0) && !isinf(p0));  \
+    }
+/** \endcond */
+/// @{
+/// Mimics std::isfinite(float): deterimine if a number (p0) is neither NaN nor infinite
+MATH_DEFINE_UNARY_VARIFORM(isfinite, bool, float, MATH_IS_FINITE())
+/// @}
+
+// bool isnormal(float)
+/// @{
+/** \cond */
+#define MATH_IS_NORMAL()             \
+    {                                \
+        result = (p0 != 0.0f &&      \
+                  isfinite(p0) &&    \
+                  !issubnormal(p0)); \
+    }
+/** \endcond */
+/// Mimics std::isnormal(float)
+MATH_DEFINE_UNARY_VARIFORM(isnormal, bool, float, MATH_IS_NORMAL())
+
+// float trunc(float)
+/// @{
+/** \cond */
+#define MATH_TRUNC()                              \
+    {                                             \
+        result = (p0 > 0) ? floor(p0) : ceil(p0); \
+    }
+/** \endcond */
+/// Mimics std::trunc(float)
+MATH_DEFINE_UNARY_VARIFORM(trunc, float, float, MATH_TRUNC())
+
+// lerp anything that supports - * and +
+// float = lerp(float p0, float p1, float p2);
+/** \cond */
+#define MATH_LERP()                             \
+    {                                           \
+        result = (1 - p2) * p0 + p2 * p1;       \
+    }
+/** \endcond */
+/// @{
+/// linearly interpolate p0 and p1 by weight p2
+MATH_DEFINE_TERNARY_VARIFORM(lerp, float, float, float, float, MATH_LERP())
+/// @}
+
+/** \cond */
+#define MATH_BILERP()                           \
+    {                                           \
+        result = lerp(lerp(p0, p1, p4), lerp(p2, p3, p4), p5); \
+    }
+/** \endcond */
+/// @{
+MATH_DEFINE_SENARY_VARIFORM(bilerp, float, float, float, float, float, float, float, MATH_BILERP())
+/// @}
+
+// float = deg2rad(float deg)
+/** \cond */
+#define MATH_DEG_2_RAD()                        \
+    {                                           \
+        result = p0 * sPi / 180.0;              \
+    }
+/** \endcond */
+/// @{
+/// convert degrees to radians
+/// @param p0 input degrees
+/// @return result in radians
+MATH_DEFINE_UNARY_VARIFORM(deg2rad, float, float, MATH_DEG_2_RAD())
+/// @}
+
+// float = rad2deg(float rad)
+/** \cond */
+#define MATH_RAD_2_DEG()                        \
+    {                                           \
+        result = p0 * 180.0 * sOneOverPi;       \
+    }
+/** \endcond */
+/// @{
+/// convert radians to degrees
+/// @param p0 input radians
+/// @return result in degrees
+MATH_DEFINE_UNARY_VARIFORM(rad2deg, float, float, MATH_RAD_2_DEG())
+/// @}
+
+// float = bias(float val, float bias)
+/** \cond */
+#define MATH_BIAS()                                             \
+    {                                                           \
+        if (p1 == 0.5f || p0 <= 0.0f || p0 >= 1.0f)             \
+            result = p0;                                        \
+        else if (p1 <= 0.0f)                                    \
+            result = 0.0f;                                      \
+        else {                                                  \
+            const uniform float sFactor = 1.0f / log(0.5f);     \
+            result = pow(p0, log(p1) * sFactor);                \
+        }                                                       \
+    }
+/** \endcond */
+/// @{
+/// The classic PDI lib/shading definition of "bias"
+/// @param p0 input value
+/// @param p1 bias value
+/// @return biased result
+MATH_DEFINE_BINARY_VARIFORM(bias, float, float, float, MATH_BIAS())
+/// @}
+
+// float = gain(float val, float gain)
+/** \cond */
+#define MATH_GAIN()                                                     \
+    {                                                                   \
+        if (p1 == 0.5f) {                                               \
+            result = p0;                                                \
+        } else {                                                        \
+            result = p0 < 0.5f ?                                        \
+                bias(2.0f * p0, 1.0f - p1) * 0.5f :                     \
+                1.0f - bias(2.0f - 2.0f * p0, 1.0f - p1) * 0.5f;        \
+        }                                                               \
+    }
+/** \endcond */
+/// @{
+/// The classic PDI lib/shading defintion of "gain"
+/// @param p0 input value
+/// @param p1 gain value
+/// @return gained result
+MATH_DEFINE_BINARY_VARIFORM(gain, float, float, float, MATH_GAIN())
+/// @}
+
+// float = fmod(float, float)
+/** \cond */
+#define MATH_FMOD()                                             \
+    {                                                           \
+        MNRY_ASSERT(!isEqual(p1, 0.0f));                         \
+        result = p0 - trunc(p0/p1) * p1;                        \
+    }                                                           
+/** \endcond */
+/// @{
+/// Floating point modulus operation
+/// @param p0 input dividend value
+/// @param p1 input divisor value
+/// @return modulus result
+MATH_DEFINE_BINARY_VARIFORM(fmod, float, float, float, MATH_FMOD())
+/// @}
+
+// float = saturate(float p0);
+/// @{
+/// clamp p0 to range [0,1]
+/// @param p0 input value
+/// @return clamped result
+MATH_DEFINE_UNARY_VARIFORM(saturate, float, float,
+                           { result = clamp(p0, 0.0f, 1.0f); })
+/// @}
+
+// float = copysign(float, float)
+/** \cond */
+#define MATH_COPYSIGN()                                                \
+    {                                                                  \
+        l0 = (intbits(p0) & 0x7fffffff) | (intbits(p1) & 0x80000000);  \
+        result = floatbits(l0);                                        \
+    }
+/** \endcond */
+/// @{
+/// Composes a value with the magnitude of p0 and the sign of p1
+/// @param p0 input magnitude
+/// @param p1 input sign
+/// @return result
+MATH_DEFINE_BINARY_VARIFORM_WITH_L(copysign, float, float, float, unsigned int, MATH_COPYSIGN())
+/// @}
+
+// float = erf(float)
+// Algorithm 7.1.25 in Abromowitz and Stegun, Handbook of Mathematical
+// Functions With Formulas, Graphs, and Mathematical Tables (pg. 299)
+// (maximum error: 2.5×10−5)
+// http://www.math.ubc.ca/~cbm/aands/abramowitz_and_stegun.pdf (pg. 88)
+/** \cond */
+#define MATH_ERF()                                              \
+    {                                                           \
+        const uniform float p  =  0.47047f;                     \
+        const uniform float a1 =  0.3480242f;                   \
+        const uniform float a2 = -0.0958798f;                   \
+        const uniform float a3 =  0.7478556f;                   \
+        l0 = 1.0f / (1.0f + p * abs(p0));                       \
+        result = 1.0f - l0 * (a1 + l0 * (a2 + l0 * a3)) *       \
+                exp( -(p0 * p0) );                              \
+        result = copysign(result, p0);                          \
+    }                                                           
+/** \endcond */
+/// @{
+/// Approximates the error function at p0
+/// @param p0 input
+/// @return result
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(erf, float, float, float, MATH_ERF())
+/// @}
+

@@ -1,0 +1,87 @@
+Import('env')
+
+def addTestDso(env, test, dsoName):
+    dso = env.DWARdl2Dso(
+        env.File(dsoName + '/' + dsoName + '.so'),
+        [dsoName + '/' + dsoName + '.cc'],
+        RDL2_ATTRIBUTES_SOURCE = dsoName + '/attributes.cc',
+        RDL2_BUILD_PATH_APPEND = "..",
+        TEST_DSO = True)
+    env.Depends(test, dso['source'])
+    env.Depends(test, dso['proxy'])
+
+# -----------------------------------------------------------------------------
+# Test configuration.
+
+name = 'rdl2'
+
+sources = [
+    'main.cc',
+    'TestAscii.cc',
+    'TestAttribute.cc',
+    'TestAttributeKey.cc',
+    'TestBinary.cc',
+    'TestDso.cc',
+    'TestDsoFinder.cc',
+    'TestJoint.cc',
+    'TestLayer.cc',
+    'TestProxies.cc',
+    'TestRenderOutput.cc',
+    'TestSceneClass.cc',
+    'TestSceneContext.cc',
+    'TestSceneObject.cc',
+    'TestSets.cc',
+    'TestSplit.cc',
+    'TestTraceSet.cc',
+    'TestTypes.cc',
+    'TestUserData.cc',
+    'TestValueContainer.cc'
+]
+
+ref = []
+
+components = [
+    'render_util',
+    'scene_rdl2',
+]
+
+env.DWAForceWarningAsError()
+env.DWAUseComponents(components)
+
+# Warnings in cppunit
+if 'icc' in env['CC']:
+    env['CXXFLAGS'].append('-wd1478') # std::auto_ptr<>.... was declared deprecated
+elif 'gcc' in env['CC']:
+    env['CXXFLAGS'].append(['-fno-var-tracking-assignments', '-std=c++17'])
+
+# -----------------------------------------------------------------------------
+
+env['RUN_TEST_ENV']['SOFTMAP_PATH'] = env.subst('${INSTALL_DIR}:${BASE_MAP_DIR}')
+print("========================== {} ==================".format(env['RUN_TEST_ENV']['SOFTMAP_PATH']))
+test = env.DWAPdevUnitTest(name, sources, ref,
+                           COMPONENTS=components)
+
+# Build test DSOs.
+addTestDso(env, test, 'BadObject')
+addTestDso(env, test, 'DeclareAndCreateObject')
+addTestDso(env, test, 'DeclareAndDestroyObject')
+addTestDso(env, test, 'ExampleObject')
+addTestDso(env, test, 'ExtensiveObject')
+addTestDso(env, test, 'FakeDisplacement')
+addTestDso(env, test, 'FakeLight')
+addTestDso(env, test, 'FakeMaterial')
+addTestDso(env, test, 'FakeTeapot')
+addTestDso(env, test, 'FakeVolumeShader')
+addTestDso(env, test, 'LibLadenDwaBaseLayerable')
+addTestDso(env, test, 'LibLadenCamera')
+addTestDso(env, test, 'LibLadenDisplayFilter')
+addTestDso(env, test, 'LibLadenEnvMap')
+addTestDso(env, test, 'LibLadenGeometry')
+addTestDso(env, test, 'LibLadenLight')
+addTestDso(env, test, 'LibLadenLightFilter')
+addTestDso(env, test, 'LibLadenMap')
+addTestDso(env, test, 'LibLadenNormalMap')
+addTestDso(env, test, 'LibLadenMaterial')
+addTestDso(env, test, 'ThrowDuringConstruct')
+addTestDso(env, test, 'ThrowDuringDeclare')
+addTestDso(env, test, 'UpdateTracker')

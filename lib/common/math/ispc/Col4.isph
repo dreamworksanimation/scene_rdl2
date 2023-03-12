@@ -1,0 +1,229 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Col4.isph
+/// @brief
+/// defines the 4-channel rgba Col4 types and methods
+#pragma once
+
+#include "Constants.isph"
+#include "Math.isph"
+#include "Variform.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+#define MATH_DECLARE_COL4(TYPE, NAME)           \
+    struct NAME                                 \
+    {                                           \
+        TYPE r;                                 \
+        TYPE g;                                 \
+        TYPE b;                                 \
+        TYPE a;                                 \
+    };
+
+/// @struct Col4f
+/// @brief a 4 channel, single precision rgba color
+MATH_DECLARE_COL4(float, Col4f);
+
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
+
+// Col4f c = Col4f_ctor(f);
+/** \cond */
+#define MATH_COL4_CTOR_1()                      \
+    {                                           \
+        result.r = p0;                          \
+        result.g = p0;                          \
+        result.b = p0;                          \
+        result.a = p0;                          \
+    }
+/** \endcond */
+/// @{
+/// construct a Col4 from a single number
+MATH_DEFINE_UNARY_VARIFORM(Col4f_ctor, Col4f, float,
+                           MATH_COL4_CTOR_1())
+/// @}
+
+// Col4f col = Col4f_ctor(f0, f1, f2, f3);
+/** \cond */
+#define MATH_COL4_CTOR_4()                      \
+    {                                           \
+        result.r = p0;                          \
+        result.g = p1;                          \
+        result.b = p2;                          \
+        result.a = p3;                          \
+    }
+/** \endcond */
+/// @{
+/// construct a Col4 from 4 numbers
+MATH_DEFINE_QUATERNION_VARIFORM(Col4f_ctor, Col4f,
+                                float, float, float, float,
+                                MATH_COL4_CTOR_4())
+/// @}
+
+// Col4f c = Col4f_ctor(float a[]);
+/** \cond */
+#define MATH_COL4_CTOR_ARRAY()                  \
+    {                                           \
+        result.r = p0[0];                       \
+        result.g = p0[1];                       \
+        result.b = p0[2];                       \
+        result.a = p0[3];                       \
+    }
+/** \endcond */
+/// @{
+/// construct a Col4 from an array
+MATH_DEFINE_UNARY_ARRAY_VARIFORM(Col4f_ctor, Col4f, float, MATH_COL4_CTOR_ARRAY())
+/// @}
+
+// ---------------------------------------------------------------------------
+// Binary Operators
+// ---------------------------------------------------------------------------
+
+// Col4f c = c1 + c2;
+/** \cond */
+#define MATH_COL4_PLUS()                        \
+    {                                           \
+        result.r = p0.r + p1.r;                 \
+        result.g = p0.g + p1.g;                 \
+        result.b = p0.b + p1.b;                 \
+        result.a = p0.a + p1.a;                 \
+    }
+/** \endcond */
+/// @{
+/// add two Col4 component-wise and return result by value
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col4f, Col4f, Col4f, MATH_COL4_PLUS())
+/// @}
+
+// Col4f c = c1 - c2;
+/** \cond */
+#define MATH_COL4_MINUS()                       \
+    {                                           \
+        result.r = p0.r - p1.r;                 \
+        result.g = p0.g - p1.g;                 \
+        result.b = p0.b - p1.b;                 \
+        result.a = p0.a - p1.a;                 \
+    }
+/** \endcond */
+/// @{
+/// subtract two Col4 component-wise and return result by value
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col4f, Col4f, Col4f, MATH_COL4_MINUS())
+/// @}
+
+// Col4f = float * Col4f;
+/** \cond */
+#define MATH_COL4_S_PRE_MULT()                  \
+    {                                           \
+        result.r = p0 * p1.r;                   \
+        result.g = p0 * p1.g;                   \
+        result.b = p0 * p1.b;                   \
+        result.a = p0 * p1.a;                   \
+    }
+/** \endcond */
+/// @{
+/// multiply a scalar by a Col4 (scalar * Col4f)
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col4f, float, Col4f, MATH_COL4_S_PRE_MULT())
+/// @}
+
+// Col4f = Col4f * float;
+/** \cond */
+#define MATH_COL4_S_POST_MULT()                 \
+    {                                           \
+        result.r = p0.r * p1;                   \
+        result.g = p0.g * p1;                   \
+        result.b = p0.b * p1;                   \
+        result.a = p0.a * p1;                   \
+    }
+/** \endcond */
+/// @{
+/// multiply a Col4 by a scalar (Col4f * scalar)
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col4f, Col4f, float, MATH_COL4_S_POST_MULT())
+/// @}
+
+// Col4f = Col4f * Col4f;
+/** \cond */
+#define MATH_COL4_MULT()                        \
+    {                                           \
+        result.r = p0.r * p1.r;                 \
+        result.g = p0.g * p1.g;                 \
+        result.b = p0.b * p1.b;                 \
+        result.a = p0.a * p1.a;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise multiplication of two Col4
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col4f, Col4f, Col4f, MATH_COL4_MULT())
+/// @}
+
+// ---------------------------------------------------------------------------
+// Ternary Operations
+// ---------------------------------------------------------------------------
+
+// bool isEqual(col1, col2, tol);
+/** \cond */
+#define MATH_COL4_IS_EQUAL()                    \
+    {                                           \
+        result = isEqual(p0.r, p1.r, p2) &&     \
+            isEqual(p0.g, p1.g, p2) &&          \
+            isEqual(p0.b, p1.b, p2) &&          \
+            isEqual(p0.a, p1.a, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Col4 (p0, an p1) equal within a specified tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Col4f, Col4f, float, MATH_COL4_IS_EQUAL())
+/// @}
+
+/// @{
+/// are two Col4 (p0, and p1) equal within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Col4f, Col4f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+// bool isEqualFixedEps(col1, col2, tol);
+/** \cond */
+#define MATH_COL4_IS_EQUAL_FIXED_EPS()                  \
+    {                                                   \
+        result = isEqualFixedEps(p0.r, p1.r, p2) &&     \
+            isEqualFixedEps(p0.g, p1.g, p2) &&          \
+            isEqualFixedEps(p0.b, p1.b, p2) &&          \
+            isEqualFixedEps(p0.a, p1.a, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Col4 (p0, an p1) equal within a specified tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Col4f, Col4f, float, MATH_COL4_IS_EQUAL_FIXED_EPS())
+/// @}
+
+/// @{
+/// are two Col4 (p0, and p1) equal within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Col4f, Col4f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+
+// Col4f c = clamp(Col4f c, float low, float high)
+/** \cond */
+#define MATH_COL4_CLAMP()                       \
+    {                                           \
+        result.r = clamp(p0.r, p1, p2);         \
+        result.g = clamp(p0.g, p1, p2);         \
+        result.b = clamp(p0.b, p1, p2);         \
+        result.a = clamp(p0.a, p1, p2);         \
+    }
+/** \endcond */
+/// @{
+/// clamp a Col4 (p0), between low (p1), and high (p2)
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col4f, Col4f, float, float, MATH_COL4_CLAMP())
+/// @}
+
+// Col4f c = lerp(Col4f, Col4f, float)
+/// @{
+/// linearly interpolate two Col4 (p0, and p1) by a value (p2)
+MATH_DEFINE_TERNARY_VARIFORM(lerp, Col4f, Col4f, Col4f, float, MATH_LERP())
+/// @}
+
+

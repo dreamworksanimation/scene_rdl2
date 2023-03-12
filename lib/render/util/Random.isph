@@ -1,0 +1,197 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+#pragma once
+
+
+#include "BitUtils.isph"
+
+struct DWARNGState
+{
+    uint64 mState;
+    uint64 mStream;
+};
+
+static const uniform uint64 s_default_state  = 0x853c49e6748fea9bULL;
+static const uniform uint64 s_default_stream = 0xda3e39cb94b95bdbULL;
+static const uniform uint64 s_mult           = 0x5851f42d4c957f2dULL;
+
+inline uniform uint64 DWARNGStatePrivate_bump(const uniform DWARNGState& self, uniform uint64 state)
+{
+    assert(self.mStream % 2 == 1);
+    return state * s_mult + self.mStream;
+}
+
+inline varying uint64 DWARNGStatePrivate_bump(const varying DWARNGState& self, varying uint64 state)
+{
+    //assert(self.mStream % 2 == 1);
+    assert(self.mStream & 1 == 1); // The mod is a performance warning because the compiler is dumb.
+
+    return state * s_mult + self.mStream;
+}
+
+inline uniform uint64 DWARNGStatePrivate_generate(uniform DWARNGState& self)
+{
+    return self.mState = DWARNGStatePrivate_bump(self, self.mState);
+}
+
+inline varying uint64 DWARNGStatePrivate_generate(varying DWARNGState& self)
+{
+    return self.mState = DWARNGStatePrivate_bump(self, self.mState);
+}
+
+inline uniform uint32 DWARNGStatePrivate_solveForExponent(uniform uint32 v)
+{
+    const uniform float f = (uniform float)(2u * v - 1u);
+    const uniform uint32 u = intbits(f);
+    return (u >> 23u) - 0x7Fu;
+}
+
+inline varying uint32 DWARNGStatePrivate_solveForExponent(varying uint32 v)
+{
+#pragma ignore warning(perf)
+    const varying float f = (varying float)(2u * v - 1u);
+    const varying uint32 u = intbits(f);
+    return (u >> 23u) - 0x7Fu;
+}
+
+inline uniform uint32 DWARNGStatePrivate_output(uniform uint64 input)
+{
+    const uniform uint8 bits        = 64u;
+    const uniform uint8 xtypebits   = 32u;
+    const uniform uint8 sparebits   = 32u;
+    const uniform uint8 opbits      = 5u;
+    const uniform uint8 mask        = (1u << opbits) - 1u;
+    const uniform uint8 topspare    = opbits;
+    const uniform uint8 bottomspare = sparebits - topspare;
+    const uniform uint8 xshift      = (topspare + xtypebits)/2u;
+    const uniform uint8 rot = (input >> (bits - opbits)) & mask;
+    input ^= input >> xshift;
+    const uniform uint32 amprot = (uniform uint32)(rot & mask);
+    const uniform uint32 result = (uniform uint32)(input >> bottomspare);
+    return rotateRight(result, amprot);
+}
+
+inline varying uint32 DWARNGStatePrivate_output(varying uint64 input)
+{
+    const uniform uint8 bits        = 64u;
+    const uniform uint8 xtypebits   = 32u;
+    const uniform uint8 sparebits   = 32u;
+    const uniform uint8 opbits      = 5u;
+    const uniform uint8 mask        = (1u << opbits) - 1u;
+    const uniform uint8 topspare    = opbits;
+    const uniform uint8 bottomspare = sparebits - topspare;
+    const uniform uint8 xshift      = (topspare + xtypebits)/2u;
+    const varying uint8 rot = (input >> (bits - opbits)) & mask;
+    input ^= input >> xshift;
+    const varying uint32 amprot = (varying uint32)(rot & mask);
+    const varying uint32 result = (varying uint32)(input >> bottomspare);
+    return rotateRight(result, amprot);
+}
+
+inline uniform uint32 DWARNGState_getNextUInt(uniform DWARNGState& self)
+{
+    return DWARNGStatePrivate_output(DWARNGStatePrivate_generate(self));
+}
+
+inline varying uint32 DWARNGState_getNextUInt(varying DWARNGState& self)
+{
+    return DWARNGStatePrivate_output(DWARNGStatePrivate_generate(self));
+}
+
+inline uniform uint32 DWARNGState_getNextUInt(uniform DWARNGState& self, uniform uint32 limit)
+{
+    assert(limit > 0);
+    const uniform uint32 bits = DWARNGStatePrivate_solveForExponent(limit);
+    const uniform uint32 mask = ~((~0u) << bits);
+
+    while (true) {
+        const uniform uint32 r = DWARNGState_getNextUInt(self) & mask;
+        if (r < limit) {
+            return r;
+        }
+    }
+}
+
+inline varying uint32 DWARNGState_getNextUInt(varying DWARNGState& self, varying uint32 limit)
+{
+    assert(limit > 0);
+    const varying uint32 bits = DWARNGStatePrivate_solveForExponent(limit);
+    const varying uint32 mask = ~((~0u) << bits);
+
+    while (true) {
+        const varying uint32 r = DWARNGState_getNextUInt(self) & mask;
+        if (r < limit) {
+            return r;
+        }
+    }
+}
+
+inline uniform float DWARNGState_getNextFloat(uniform DWARNGState& self)
+{
+    return bitsToFloat(useHighOrderBits(DWARNGState_getNextUInt(self)));
+}
+
+inline varying float DWARNGState_getNextFloat(varying DWARNGState& self)
+{
+    return bitsToFloat(useHighOrderBits(DWARNGState_getNextUInt(self)));
+}
+
+inline void DWARNGState_setSeed(uniform DWARNGState& self, uniform uint64 state, uniform uint64 stream = 1u)
+{
+    self.mState = 0u;
+    self.mStream = (stream << 1u) | 1u;
+    DWARNGState_getNextUInt(self);
+    self.mState += state;
+    DWARNGState_getNextUInt(self);
+}
+
+inline void DWARNGState_setSeed(varying DWARNGState& self, varying uint64 state, varying uint64 stream = 1u)
+{
+    self.mState = 0u;
+    self.mStream = (stream << 1u) | 1u;
+    DWARNGState_getNextUInt(self);
+    self.mState += state;
+    DWARNGState_getNextUInt(self);
+}
+
+inline void DWARNGState_init(uniform DWARNGState& self, uniform uint64 state, uniform uint64 stream = 1u)
+{
+    DWARNGState_setSeed(self, state, stream);
+}
+
+inline void DWARNGState_init(varying DWARNGState& self, varying uint64 state, varying uint64 stream = 1u)
+{
+    DWARNGState_setSeed(self, state, stream);
+}
+
+// Interface that mimics the ISPC default RNG interface
+inline void seed_rng(varying DWARNGState* uniform rng, varying uint64 seed, varying uint64 stream = 1u)
+{
+    DWARNGState_setSeed(*rng, seed, stream);
+}
+
+inline void seed_rng(uniform DWARNGState* uniform rng, uniform uint64 seed, uniform uint64 stream = 1u)
+{
+    DWARNGState_setSeed(*rng, seed, stream);
+}
+
+inline uniform uint32 random(uniform DWARNGState* uniform rng)
+{
+    return DWARNGState_getNextUInt(*rng);
+}
+
+inline varying uint32 random(varying DWARNGState* uniform rng)
+{
+    return DWARNGState_getNextUInt(*rng);
+}
+
+inline varying float frandom(varying DWARNGState* uniform rng)
+{
+    return DWARNGState_getNextFloat(*rng);
+}
+
+inline uniform float frandom(uniform DWARNGState* uniform rng)
+{
+    return DWARNGState_getNextFloat(*rng);
+}

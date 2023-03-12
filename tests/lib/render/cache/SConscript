@@ -1,0 +1,12 @@
+Import('env')
+# --------------------------------------------------------------------
+name       = 'render_cache'
+sources    = env.DWAGlob('*.cc')
+ref        = []
+components = [
+	      'scene_rdl2'
+              ]
+# --------------------------------------------------------------------
+env.DWAForceWarningAsError()
+
+ut = env.DWAPdevUnitTest(name, sources, ref, COMPONENTS=components, TIMEOUT=600)

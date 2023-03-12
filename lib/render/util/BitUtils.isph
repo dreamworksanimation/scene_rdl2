@@ -1,0 +1,111 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+#pragma once
+
+
+static const uniform unsigned int32 kFloatFractionBits = 23;
+
+inline unsigned int32 useHighOrderBits(varying unsigned int32 n)
+{
+    // Isolate top kFloatFractionBits bits.
+    return n >> (32 - kFloatFractionBits);
+}
+
+inline unsigned int32 useLowOrderBits(varying unsigned int32 n)
+{
+    // Isolate bottom kFloatFractionBits bits.
+    return n & ((1 << kFloatFractionBits) - 1);
+}
+
+inline uniform unsigned int32 useHighOrderBits(uniform unsigned int32 n)
+{
+    // Isolate top kFloatFractionBits bits.
+    return n >> (32 - kFloatFractionBits);
+}
+
+inline uniform unsigned int32 useLowOrderBits(uniform unsigned int32 n)
+{
+    // Isolate bottom kFloatFractionBits bits.
+    return n & ((1 << kFloatFractionBits) - 1);
+}
+
+inline float bitsToFloat(varying unsigned int32 n)
+{
+    //return ((n >> 8) & 0xffffff) / (float)(1 << 24);
+    // Set the exponent to 127, but leave the sign as zero. With the bias, self
+    // ultimately means the exponent bits are set to zero and the exponent is
+    // therefore implicitly one.  This allows us to fill in the bits for a
+    // number in [1, 2), which is uniformly distributed.
+    const uniform unsigned int32 expMask = 127u << 23u;
+
+    const varying unsigned int32 asInt = expMask | n;
+
+    // Force our bits into a floating point representation, and subtract one,
+    // to get in [0, 1).
+    const varying float f = floatbits(asInt) - 1.0f;
+    assert(f >= 0.0f && f < 1.0f);
+    return f;
+}
+
+inline uniform float bitsToFloat(uniform unsigned int32 n)
+{
+    //return ((n >> 8) & 0xffffff) / (float)(1 << 24);
+    // Set the exponent to 127, but leave the sign as zero. With the bias, self
+    // ultimately means the exponent bits are set to zero and the exponent is
+    // therefore implicitly one.  This allows us to fill in the bits for a
+    // number in [1, 2), which is uniformly distributed.
+    const uniform unsigned int32 expMask = 127u << 23u;
+
+    const uniform unsigned int32 asInt = expMask | n;
+
+    // Force our bits into a floating point representation, and subtract one,
+    // to get in [0, 1).
+    const uniform float f = floatbits(asInt) - 1.0f;
+    assert(f >= 0.0f && f < 1.0f);
+    return f;
+}
+
+inline uniform uint32 rotateRight(uniform uint32 n, uniform uint32 d)
+{
+    assert(d <= 32);
+    if (d == 0 || d == 32) {
+        return n;
+    }
+    const uniform uint32 bits = 32u;
+    return (n >> d) | (n << (bits - d));
+}
+
+inline varying uint32 rotateRight(uniform uint32 n, varying uint32 d)
+{
+    assert(d <= 32);
+    if (d == 0 || d == 32) {
+        return n;
+    }
+    const uniform uint32 bits = 32u;
+#pragma ignore warning(perf)
+    return (n >> d) | (n << (bits - d));
+}
+
+inline varying uint32 rotateRight(varying uint32 n, uniform uint32 d)
+{
+    assert(d <= 32);
+    if (d == 0 || d == 32) {
+        return n;
+    }
+    const uniform uint32 bits = 32u;
+    return (n >> d) | (n << (bits - d));
+}
+
+inline varying uint32 rotateRight(varying uint32 n, varying uint32 d)
+{
+    assert(d <= 32);
+    if (d == 0 || d == 32) {
+        return n;
+    }
+    const uniform uint32 bits = 32u;
+#pragma ignore warning(perf)
+    return (n >> d) | (n << (bits - d));
+}
+
+

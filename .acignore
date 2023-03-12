@@ -1,0 +1,12 @@
+build
+install
+sdk_config
+SConstruct
+SConscript
+.metadata_.
+.metadata_src_project
+.src_project*
+.config.xml
+site_scons
+bamboo_tools
+

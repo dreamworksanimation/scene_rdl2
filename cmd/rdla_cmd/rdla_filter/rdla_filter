@@ -1,0 +1,944 @@
+#!/bin/env python3
+# Copyright 2023 DreamWorks Animation LLC
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# @file rdla_filter
+# $Id$
+#
+
+from optparse import OptionParser
+import re
+import subprocess
+
+class SceneObject:
+    def __init__(self, object_name, object_type, variable_name, contents):
+        self.name = object_name
+        self._type = object_type
+        self.variable_name = variable_name
+        self.contents = contents
+
+        # Set of other scene objects that reference this one
+        self.dependents = set()
+
+class LayerAssignment:
+    def __init__(self,
+                 assignment_line,
+                 geo_type,
+                 geo_name,
+                 material_type,
+                 material_name,
+                 disaplcement_type,
+                 displacement_name,
+                 volume_type,
+                 volumeName,
+                 light_set_name,
+                 shadow_set_name,
+                 light_filter_set_name):
+        self.assignment_line = assignment_line
+        self.geo_type = geo_type
+        self.geo_name = geo_name
+        self.material_type = material_type
+        self.material_name = material_name
+        self.displacement_type = disaplcement_type
+        self.displacement_name = displacement_name
+        self.volume_type = volume_type
+        self.volume_name = volumeName
+        self.light_set_name = light_set_name
+        self.shadow_set_name = shadow_set_name
+        self.light_filter_set_name = light_filter_set_name
+
+class RdlParameterDef:
+    def __init__(self,
+                 name,
+                 type,
+                 default,
+                 enumerable,
+                 enumeration,
+                 comment):
+        self.name = name
+        self._type = type
+        self.default = default
+        self.enumerable = enumerable
+        self.enumeration = enumeration
+        self.comment = comment
+
+    def get_enumeration(self, keyValue):
+        try:
+            key = int(keyValue)
+            if not self.enumerable or not self.enumeration or not key in self.enumeration:
+                return int_value
+            else:
+                return self.enumeration[key]
+        except ValueError:
+            return keyValue
+
+def get_type_and_name(input_string, regex):
+    match = re.search(regex, input_string)
+    if match:
+        type_name = match.group(1)
+        object_name = match.group(2)
+        return (type_name, object_name)
+    else:
+        return (None, None)
+
+def check_identity(line_in):
+    ident = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    matches = re.findall(r"([0-9.]+?)[,)]", line_in)
+    num_matches = len(matches)
+    if num_matches == 16 or num_matches == 32:
+        for i, m in enumerate(matches):
+            if ident[i % 16] != float(matches[i]):
+                return False
+        return True
+    return False
+
+
+class RdlaFilter:
+    def __init__(self):
+
+        # TODO:
+        # - Create and use RdlObjectDef class to hold list of RdlParameterDef objects
+        # - Fix broken default value cases
+        #       Non-default emission when show_emission is false
+        #            ["emission"] = Rgb(0.0, 0.0, 0.0),
+        #       Normal dial value when there's no input_normal map
+        #            ["input_normal_dial"] = 0.0,
+
+        if not self.parse_command_line():
+            return
+
+        # Set to prevent object duplication
+        self.unique_object_set = set()
+
+        # Set to prevent object variable duplication
+        self.unique_variable_names = set()
+
+        # Regex used to capture typical rdla object reference in the form:
+        # ObjectType("ObjectName")
+        self.component_regex = re.compile('(\w*)\(\"(.*?)\"\)')
+
+        # Regex to capture a parameter name and it's value
+        self.param_regex = re.compile('\[\"(.*?)\"\]\s*=\s*(.*?),$')
+
+        # Parse output of rdl2_print
+        self.rdl2_print_dict = dict()
+        if self.options.skipdefault or self.options.replaceenums:
+            self.parse_rdl2_print()
+
+        # Read all of the objects in the input rdla file
+        # into a list of SceneObjects.
+        self.scene_objects = dict()
+        self.read_input_scene()
+
+        # Open the output rdla file
+        self.output_handle = open(self.output_rdla_file, 'w')
+
+        scene_variables = self.get_scene_variables()
+        if scene_variables:
+            self.write_object(scene_variables)
+
+        if not self.options.skipmetadata:
+            metaData = self.get_object_from_parameter(scene_variables, "exr_header_attributes")
+            if metaData:
+                self.write_object(metaData)
+
+        camera = self.get_object_from_parameter(scene_variables, "camera")
+        self.write_object(camera)
+
+        self.layer_assignments = list()
+        layer = self.get_object_from_parameter(scene_variables, "layer")
+        self.get_layer_assignments(layer)
+
+        self.light_set_list = set()
+        self.shadow_set_list = set()
+        self.light_filter_set_list = set()
+        self.geom_list = set()
+        self.material_list = set()
+        self.displacement_list = set()
+        self.volume_list = set()
+        self.get_assignment_objects()
+
+        if not self.options.skiplights:
+            self.output_handle.write('\n---------- LIGHTS ----------\n\n')
+
+            for l in self.light_set_list:
+                self.write_object_and_dependents(l)
+
+            for s in self.shadow_set_list:
+                self.write_object_and_dependents(s)
+
+            for l in self.light_filter_set_list:
+                self.write_object_and_dependents(l)
+
+        if len(self.geom_list) > 0:
+            self.output_handle.write('\n---------- GEOMETRY ----------\n\n')
+
+            for g in self.geom_list:
+                self.write_object_and_dependents(g)
+
+            self.write_geometry_set()
+
+        if len(self.displacement_list) > 0:
+            self.output_handle.write('\n---------- DISPLACEMENTS ----------\n\n')
+
+            for d in self.displacement_list:
+                self.write_object_and_dependents( d)
+
+        if len(self.volume_list) > 0:
+            self.output_handle.write('\n---------- VOLUMES ----------\n\n')
+
+            for v in self.volume_list:
+                self.write_object_and_dependents( v)
+
+        self.replacement_materials = dict()
+        if len(self.material_list) > 0:
+            self.output_handle.write('\n---------- MATERIALS ----------\n\n')
+
+            for m in self.material_list:
+                if self.options.replacematerials:
+                    self.replacement_materials[m.name] = (m, self.create_material(m.name))
+                    self.write_object_and_dependents(self.replacement_materials[m.name][1])
+                else:
+                    self.write_object_and_dependents(m)
+
+        self.write_layer(layer)
+
+        if not self.options.skiprenderoutputs:
+            self.write_render_outputs()
+
+        self.output_handle.close()
+
+    def parse_rdl2_print(self):
+        # Regex to match a parameter and capture it's name, default, type, and if it's enumberable
+        # ["motion_blur_type"] = -1,  -- Int, enumerable (best)
+        param_regex = re.compile('\[\"(.*?)\"\] = (.*?),\s*--\s*(\w*),*\s*(\w*)')
+
+        # Regex to match a parameter's enumeration values
+        #    -- -1 = best
+        #     -- 8 = light aov
+        # not this
+        # -- disable when: { map_type != 'map color' }
+        #enum_regex = re.compile('\s*--\s*(-?\d*?) = (\w*)')
+        enum_regex = re.compile('\s*--\s*(-?\d*?) = (.*)')
+
+        rdl2_print_out = subprocess.check_output(['rdl2_print'])
+        rdl2_print_outList = rdl2_print_out.splitlines()
+
+        in_object = False
+        in_parameter = False
+        param_name = None
+        param_default = None
+        para_type = None
+        enumerable = None
+        enumeration = None
+        comment = None
+        param_dict = None
+        previous_object_type = None
+
+        for line in rdl2_print_outList:
+            try:
+                line = line.decode("utf-8")
+            except:
+                pass
+
+            if in_object:
+                if line == "}": # End of object definition
+                    # The last parameter
+                    if param_name and param_default and para_type:
+                        param_dict[param_name] = RdlParameterDef(param_name,
+                                                                 para_type,
+                                                                 param_default,
+                                                                 enumerable,
+                                                                 enumeration,
+                                                                 comment)
+
+                    in_object = False
+                    in_parameter = False
+                    param_name = None
+                    param_default = None
+                    para_type = None
+                    enumerable = None
+                    enumeration = None
+                    comment = None
+                    continue
+
+                # Get a parameter's comment and enumeration if enumerable
+                if in_parameter:
+                    if "-- comment:" in line:
+                        comment = line
+                    elif enumerable:
+                        match = re.search(enum_regex, line)
+                        if match:
+                            int_value = int(match.group(1))
+                            string_value = match.group(2)
+                            enumeration[int_value] = string_value
+
+                # Detect a new parameter
+                match = re.search(param_regex, line)
+                if match:
+                    if param_name and param_default and para_type:
+                        # Create RdlParameterDef with the previous values
+                        # and append it to the parameter list
+                        param_dict[param_name] = RdlParameterDef(param_name,
+                                                                 para_type,
+                                                                 param_default,
+                                                                 enumerable,
+                                                                 enumeration,
+                                                                 comment)
+
+                    param_name = match.group(1)
+                    param_default = match.group(2)
+                    para_type = match.group(3)
+                    enumerable = match.group(4) == 'enumerable'
+                    if enumerable: enumeration = dict()
+                    in_parameter = True
+
+            # Detect new object definition
+            (object_type, object_name) = get_type_and_name(line, self.component_regex)
+            if not in_object and object_type and object_name:
+                # Add entry from previous object to dictionary
+                if param_dict:
+                    self.rdl2_print_dict[previous_object_type] = param_dict
+
+                # Reset parameter list
+                param_dict = dict()
+                previous_object_type = object_type
+                in_object = True
+
+        # The last object
+        if param_dict:
+            self.rdl2_print_dict[previous_object_type] = param_dict
+
+    def add_scene_object(self, obj):
+        if not obj._type in self.scene_objects:
+            self.scene_objects[obj._type] = dict()
+        if not obj.name in self.scene_objects[obj._type]:
+            self.scene_objects[obj._type][obj.name] = obj
+
+    def get_scene_object(self, object_type, object_name):
+        if object_type in self.scene_objects:
+            if object_name in self.scene_objects[object_type]:
+                return self.scene_objects[object_type][object_name]
+        return None
+
+    def write_render_outputs(self):
+        self.output_handle.write('-- Render Outputs\n')
+        if 'RenderOutput' in self.scene_objects:
+            for object_name in self.scene_objects['RenderOutput'].keys():
+                o = self.scene_objects['RenderOutput'][object_name]
+                self.write_object(o)
+
+    def replace_with_variables(self, line):
+        new_parts = list()
+        for part in line.split(","):
+            (obj_type, obj_name) = get_type_and_name(part, self.component_regex)
+            if obj_type and obj_name:
+                o = self.get_scene_object(obj_type, obj_name)
+                if o and o in self.unique_object_set:
+                    part = o.variable_name
+                else:
+                    part = "undef()"
+            new_parts.append(part)
+        new_line = ', '.join(new_parts)
+        new_line = new_line[0:-2]
+        if new_line.endswith("}") :
+            new_line = "    {%s," % new_line
+        else:
+            new_line = "    {%s}," % new_line
+
+        return new_line
+
+    def create_material(self, material_name):
+        contents = list()
+        contents.append("DwaEmissiveMaterial(\"%s\") {" % material_name)
+        contents.append("    [\"emission\"] = Rgb(1.1, 1.3, 1.2),")
+        contents.append("}")
+        material = SceneObject(material_name,
+                               "DwaEmissiveMaterial",
+                               self.generate_variable_name("DwaEmissiveMaterial", material_name),
+                               contents)
+        self.add_scene_object(material)
+        return material
+
+    def replace_layer_material(self, line):
+        for key in self.replacement_materials.keys():
+            if key in line:
+                orig_type = self.replacement_materials[key][0]._type
+                orig_string = '%s(\"%s\")' % (orig_type, key)
+                new_type = self.replacement_materials[key][1]._type
+                new_string = '%s(\"%s\")' % (new_type, key)
+                line = line.replace(orig_string, new_string)
+        return line
+
+    def write_layer(self, layer):
+        self.output_handle.write('-- Layer\n')
+        self.output_handle.write('%s("%s") {\n' % (layer._type, layer.name))
+        num_assignments = len(self.layer_assignments)
+        for asset_name in self.asset_names:
+            for i, l in enumerate(self.layer_assignments):
+
+                # Split the assigments in half if --binarysplit option is present
+                if self.options.binarysplit == 0:
+                    if i >= (num_assignments / 2):
+                        continue
+                elif self.options.binarysplit == 1:
+                    if i < (num_assignments / 2):
+                        continue
+
+                if re.search(asset_name, l.geo_name):
+                    line = l.assignment_line
+                    if self.options.replacematerials:
+                        line = self.replace_layer_material(line)
+                    if self.options.usevariablenames:
+                        line = self.replace_with_variables(line)
+                    self.output_handle.write(line)
+                    self.output_handle.write('\n')
+        self.output_handle.write('}\n')
+        self.output_handle.write('\n')
+
+    def write_geometry_set(self):
+        self.output_handle.write('GeometrySet("/Scene/geoset") {\n')
+        for g in self.geom_list:
+            if self.options.usevariablenames:
+                self.output_handle.write('\t%s,\n' % g.variable_name)
+            else:
+                self.output_handle.write('\t%s("%s"),\n' % (g._type, g.name))
+        self.output_handle.write('}\n')
+        self.output_handle.write('\n')
+
+    def get_assignment_objects(self):
+        # Gather objects from the layer assignents and asset names
+        # command line argument
+        num_assignments = len(self.layer_assignments)
+        for asset_name in self.asset_names:
+            for i, l in enumerate(self.layer_assignments):
+
+                # Split the assigments in half if --binarysplit option is present
+                if self.options.binarysplit == 0:
+                    if i >= (num_assignments / 2):
+                        continue
+                elif self.options.binarysplit == 1:
+                    if i < (num_assignments / 2):
+                        continue
+
+                if not re.search(asset_name, l.geo_name):
+                    continue
+
+                o = self.get_scene_object("LightSet", l.light_set_name)
+                if o: self.light_set_list.add(o)
+
+                o = self.get_scene_object("ShadowSet", l.shadow_set_name)
+                if o: self.shadow_set_list.add(o)
+
+                o = self.get_scene_object("LightFilterSet", l.light_filter_set_name)
+                if o: self.light_filter_set_list.add(o)
+
+                o = self.get_scene_object(l.geo_type, l.geo_name)
+                if o: self.geom_list.add(o)
+
+                o = self.get_scene_object(l.material_type, l.material_name)
+                if o: self.material_list.add(o)
+
+                o = self.get_scene_object(l.displacement_type, l.displacement_name)
+                if o: self.displacement_list.add(o)
+
+                o = self.get_scene_object(l.volume_type, l.volume_name)
+                if o: self.volume_list.add(o)
+
+    def get_scene_variables(self):
+        if "SceneVariables" in self.scene_objects:
+            return self.scene_objects["SceneVariables"]["SceneVariables"]
+        else:
+            return None
+
+    def get_object_from_parameter(self, parent_object, parameter_name):
+        """ Gets an object that is assigned to a parameter through
+            a binding or other reference """
+        for c in parent_object.contents:
+            if ('[\"%s\"]' % parameter_name) in c:
+                (object_type, object_name) = get_type_and_name(c.split('=')[1], self.component_regex)
+                if object_type and object_name:
+                    return self.get_scene_object(object_type, object_name)
+        return None
+
+    def get_rdl_parameter_def(self, obj_type, param_name):
+        if obj_type in self.rdl2_print_dict:
+            if param_name in self.rdl2_print_dict[obj_type]:
+                return self.rdl2_print_dict[obj_type][param_name]
+        return None
+
+    def parse_parameter(self, line):
+        match = re.search(self.param_regex, line)
+        if match:
+            return (match.group(1), match.group(2))
+        else:
+            return (None, None)
+
+    def is_value_default(self, line, obj):
+        (param_name, param_value) = self.parse_parameter(line)
+        if not param_name or not param_value:
+            return False
+
+        if 'bind' in param_value:
+            return False
+
+        param_def = self.get_rdl_parameter_def(obj._type, param_name)
+        if not param_def:
+            return False
+
+        if param_def._type == "Float":
+            if self.options.roundvalues:
+                try:
+                    param_value = round(float(param_value), self.options.roundvalues)
+                except:
+                    return False
+            if param_value == float(param_def.default):
+                return True
+        elif param_def._type in {"Vec2f", "Vec3f", "Rgb"}:
+            regex = re.compile(".*\((.*?),(.*?)(?:,(.*?))*\)")
+            match = re.search(regex, param_value)
+            match_default = re.search(regex, param_def.default)
+            if match and match_default:
+                for i in range(len(match.groups())):
+                    try:
+                        default_value = float(match_default.group(i+1))
+                        param_value = round(float(match.group(i+1)), self.options.roundvalues)
+                        if default_value != param_value:
+                            return False
+                    except:
+                        return False
+                return True
+        else:
+            if param_value == param_def.default:
+                return True
+
+        return False
+
+    def replace_enum(self, line, obj):
+        (param_name, param_value) = self.parse_parameter(line)
+        if param_name and param_value:
+            param_def = self.get_rdl_parameter_def(obj._type, param_name)
+            if param_def and param_def.enumerable:
+                enum_value = param_def.get_enumeration(param_value)
+                if enum_value.startswith("\""):
+                    return line.replace(param_value, enum_value)
+                else:
+                    return line.replace(param_value, "\"" + enum_value + "\"")
+        return line
+
+    def replace_object_names_with_variables(self, obj, line):
+        new_line = ""
+        new_lineParts = list()
+        for p in line.split(','):
+            newP = p
+            (object_type, object_name) = get_type_and_name(p, self.component_regex)
+            if object_type and object_name:
+                o = self.get_scene_object(object_type, object_name)
+                if o:
+                    self.generate_object_variable_name(o)
+                    newP = p.replace(("%s(\"%s\")" % (object_type, object_name)), o.variable_name)
+            new_lineParts.append(newP)
+        new_line = ','.join(new_lineParts)
+        return new_line
+
+    def round_value(self, line, obj):
+        (param_name, param_value) = self.parse_parameter(line)
+        if not param_name or not param_value:
+            return line
+
+        param_def = self.get_rdl_parameter_def(obj._type, param_name)
+        if not param_def:
+            return line
+
+        if param_def._type == "Float":
+            try:
+                rounded_value = str(round(float(param_value), self.options.roundvalues))
+                return line.replace(param_value, rounded_value)
+            except:
+                return line
+
+        elif param_def._type in {"Vec2f", "Vec3f", "Rgb"}:
+            match = re.search("^(Rgb|Vec2|Vec3)\((.*?), (.*?), (.*?)\)$", param_value)
+            if match:
+                try:
+                    typ = match.group(1)
+                    x = str(round(float(match.group(2)), self.options.roundvalues))
+                    y = str(round(float(match.group(3)), self.options.roundvalues))
+                    if match.group(4):
+                        z = str(round(float(match.group(4)), self.options.roundvalues))
+                        replacement = "%s(%s, %s, %s)" % (typ, x, y, z)
+                    else:
+                        replacement = "%s(%s, %s)" % (typ, x, y)
+                    return line.replace(param_value, replacement)
+                except:
+                    return line
+        return line
+
+    def get_comment(self, line, obj):
+        (param_name, param_value) = self.parse_parameter(line)
+        if param_name and param_value:
+            param_def = self.get_rdl_parameter_def(obj._type, param_name)
+            if param_def:
+                comment = ""
+                if param_def.comment:
+                    comment += "%s\n" % param_def.comment
+                if param_def.enumerable:
+                    for k in param_def.enumeration.keys():
+                        comment += "\t\t-- %s = %s\n" % (k, param_def.get_enumeration(k))
+                return comment
+        return ""
+
+    def write_object(self, obj):
+        # Skip if the object has already been written
+        if obj in self.unique_object_set:
+            return
+
+        if self.options.skipuserdata and obj._type == "UserData":
+            return
+
+        # Write comment showing dependent objects
+        if self.options.addreferencecomments:
+            for d in obj.dependents:
+                if self.options.usevariablenames:
+                    self.generate_object_variable_name(d)
+                    self.output_handle.write('-- Referenced by: %s = %s(%s)\n' % (d.variable_name, d._type, d.name))
+                else:
+                    self.output_handle.write('-- Referenced by: %s(%s)\n' % (d._type, d.name))
+
+        no_variables = { "SceneVariables",
+                         "PerspectiveCamera",
+                         "RenderOutput",
+                         "Metadata" }
+
+        for i, c in enumerate(obj.contents):
+            if self.options.skipuserdata and ("UserData" in c or "part_list" in c):
+                continue
+
+            if self.options.usevariablenames and i == 0 and not obj._type in no_variables:
+                self.generate_object_variable_name(obj)
+                c = "%s = %s" % (obj.variable_name, c)
+
+            if self.options.skipidentity and check_identity(c):
+                continue
+
+            if self.options.skipdefault:
+                if self.is_value_default(c, obj):
+                    continue
+
+            if self.options.replaceenums:
+                c = self.replace_enum(c, obj)
+
+            if self.options.roundvalues != 13:
+                c = self.round_value(c, obj)
+
+            if self.options.usevariablenames and i != 0 and not obj._type in no_variables:
+                c = self.replace_object_names_with_variables(obj, c)
+
+            self.output_handle.write(c)
+            self.output_handle.write('\n')
+
+            if self.options.addparamcomments:
+                comment = self.get_comment(c, obj)
+                if comment:
+                    self.output_handle.write(comment)
+
+        self.output_handle.write('\n')
+        self.unique_object_set.add(obj)
+
+    def write_object_and_dependents(self, parent_object):
+        if not parent_object in self.unique_object_set:
+            self.output_handle.write('-- Network for: %s(%s)\n\n' % (parent_object._type, parent_object.name))
+        dependent_objects = list()
+        self.get_dependent_objects(parent_object, dependent_objects)
+        for do in dependent_objects:
+            self.write_object(do)
+        self.write_object(parent_object)
+
+    def get_parameter_type(self, object_type, parameter_name):
+        if object_type in self.rdl2_print_dict:
+            if parameter_name in self.rdl2_print_dict[object_type]:
+                parameter = self.rdl2_print_dict[object_type][parameter_name]
+                return parameter._type
+
+
+    def get_dependent_objects(self, current_object, output_object_list):
+        for i, c in enumerate(current_object.contents):
+            if i == 0:
+                # Skip the first line so we don't match ourself
+                continue
+
+            for p in c.split(','):
+                (object_type, object_name) = get_type_and_name(p, self.component_regex)
+                if object_type and object_name:
+                    o = self.get_scene_object(object_type, object_name)
+                    if o and not o in output_object_list:
+                        o.dependents.add(current_object)
+                        self.get_dependent_objects(o, output_object_list)
+                        output_object_list.append(o)
+
+    def get_layer_assignments(self, layer):
+        if not layer:
+            print("No Layer object found")
+            return
+
+        for c in layer.contents:
+            match = re.search('{(.*)}', c)
+            if not match:
+                continue
+
+            assignment_line = c
+            geo_type = None
+            geo_name = None
+            material_type = None
+            material_name = None
+            disaplcement_type = None
+            displacement_name = None
+            volume_type = None
+            volumeName = None
+            light_set_name = None
+            shadow_set_name = None
+            light_filter_set_name = None
+
+            for ac in match.group(1).split(','):
+                (object_type, object_name) = get_type_and_name(ac, self.component_regex)
+                if object_type and object_name:
+                    if 'undef()' in ac:
+                        continue
+
+                    if object_type == 'LightSet':
+                        light_set_name = object_name
+                    elif object_type == 'ShadowSet':
+                        shadow_set_name = object_name
+                    elif object_type == 'LightFilterSet':
+                        light_filter_set_name = object_name
+                    elif 'Displacement' in object_type:
+                        disaplcement_type = object_type
+                        displacement_name = object_name
+                    elif 'Volume' in object_type:
+                        volume_type = object_type
+                        volumeName = object_name
+                    elif 'Geometry' in object_type:
+                        geo_type = object_type
+                        geo_name = object_name
+                    elif 'Material' in object_type or 'Surface' in object_type:
+                        material_type = object_type
+                        material_name = object_name
+
+            # Create the LayerAssigment object from the parsed line
+            layer_assignment = LayerAssignment(assignment_line,
+                                               geo_type,
+                                               geo_name,
+                                               material_type,
+                                               material_name,
+                                               disaplcement_type,
+                                               displacement_name,
+                                               volume_type,
+                                               volumeName,
+                                               light_set_name,
+                                               shadow_set_name,
+                                               light_filter_set_name)
+            self.layer_assignments.append(layer_assignment)
+
+
+    def generate_variable_name(self, object_type, object_name):
+        n = 0
+        variable_name = object_type.lower()
+        while True:
+            variable_name = "%s_%s" % (object_type.lower(), str(n))
+            if not variable_name in self.unique_variable_names:
+                self.unique_variable_names.add(variable_name)
+                break
+            n = n + 1
+        return variable_name
+
+    def generate_object_variable_name(self, obj):
+        if obj.variable_name != "":
+            return
+        else:
+            obj.variable_name = self.generate_variable_name(obj._type, obj.name)
+
+    def read_input_scene(self):
+        # read the file
+        input_handle = open(self.source_rdla_file, 'r')
+        scene_contents = input_handle.read().split('\n')
+        input_handle.close()
+
+        in_object = False
+        object_type = str()
+        object_name = str()
+        object_variable = str()
+        object_contents = list()
+        for i, line in enumerate(scene_contents):
+            if in_object:
+                object_contents.append(line)
+                match = re.search('^\}', line)
+                if match:
+                    in_object = False
+                    self.add_scene_object(SceneObject(object_name,
+                                                      object_type,
+                                                      object_variable,
+                                                      object_contents))
+
+            match = re.search('^(\w*)\(\"(.*)\"\)\s*\{$', line)
+            if match:
+                object_contents = list()
+                object_contents.append(match.group(0))
+                in_object = True
+                object_type = match.group(1)
+                object_name = match.group(2)
+                object_variable = ""
+            else:
+                # Special case for scene variables
+                match = re.search('^(\w*)\s*\{$', line)
+                if match:
+                    object_contents = list()
+                    object_contents.append(match.group(0))
+                    in_object = True
+                    object_type = match.group(1)
+                    object_name = match.group(1)
+
+
+    def parse_command_line(self):
+        parser = OptionParser(usage="%prog [options] <input rdla file> <output rdla file>\n\n" +
+                                    "   Required arguments:\n\n" +
+                                    "           <input rdla file>   - Input rdla file to read and filter\n\n" +
+                                    "           <output rdla file>  - Output filtered rdla file\n",
+                              description="Filters the assets in an rdla file.   Keeps only selected assets and their dependents " +
+                                          "grouping them together in a logical and easy to follow ordering.  The scene variables, " +
+                                          "camera, layer, are retained in the output.   Other object types are also retained based " +
+                                          "on the selected options.")
+
+        parser.add_option("--assets-to-keep",
+                          dest="assetstokeep",
+                          help="Space separated list of asset names to keep.  " +
+                               "Use quotes for multiple assets.  " +
+                               "The asset names should be the names of the " +
+                               "geometry objects assigned in the Layer of the " +
+                               "input rdla file.  The full path can be used, " +
+                               "just a portion of it, or a regular expression " +
+                               "which could match multiple objects.\n\n")
+
+        parser.add_option("--binary-split",
+                          dest="binarysplit",
+                          type="int",
+                          default=-1,
+                          help="Keep only half of the layer assignments.  A value of 0 " +
+                               "keeps the first half and a value of 1 keeps the second half")
+
+        parser.add_option("--skip-identity",
+                          dest="skipidentity",
+                          action="store_true",
+                          help="Skips writing node_xform parameter if it's value is identity")
+
+        parser.add_option("--skip-default",
+                          dest="skipdefault",
+                          action="store_true",
+                          help="Skips writing parameter if it's value is the same as the default value")
+
+        parser.add_option("--replace-enums",
+                          dest="replaceenums",
+                          action="store_true",
+                          help="If parameter is an enumerated list, replace integer value with string")
+
+        parser.add_option("--add-param-comments",
+                          dest="addparamcomments",
+                          action="store_true",
+                          help="Add help comments under parameters")
+
+        parser.add_option("--add-reference-comments",
+                          dest="addreferencecomments",
+                          action="store_true",
+                          help="Add comments above objects showing which objects reference them")
+
+        parser.add_option("--round-values",
+                          dest="roundvalues",
+                          type="int",
+                          default=13,
+                          help="Round float, Vec2, Vec3, and Rgb types to the specified decimal place")
+
+        parser.add_option("--use-variable-names",
+                          dest="usevariablenames",
+                          action="store_true",
+                          help="Assigns each object to a variable and refers to this instead of the full name")
+
+        parser.add_option("--replace-materials",
+                          dest="replacematerials",
+                          action="store_true",
+                          help="Replaces all materials with DwaEmissiveMaterial")
+
+        parser.add_option("--skip-metadata",
+                          dest="skipmetadata",
+                          action="store_true",
+                          help="Skips writing the MetaData object")
+
+        parser.add_option("--skip-lights",
+                          dest="skiplights",
+                          action="store_true",
+                          help="Skips writing out lights")
+
+        parser.add_option("--skip-render-outputs",
+                          dest="skiprenderoutputs",
+                          action="store_true",
+                          help="Skips writing render outputs")
+
+        parser.add_option("--skip-user-data",
+                          dest="skipuserdata",
+                          action="store_true",
+                          help="Skips writing user data")
+
+        parser.add_option("--nice-and-clean",
+                          dest="niceandclean",
+                          action="store_true",
+                          help="Applies the following options: --skip-identity, --skip-default, " + \
+                               "--replace-enums, --add-reference-comments, --round-values 5")
+
+        parser.add_option("--minimal",
+                          action="store_true",
+                          help="Applies the following options: --nice-and-clean, --replace-materials, " + \
+                               "--skip-lights, --skip-render-outputs, --skip-user-data, --skip-metadata")
+
+        (self.options, args) = parser.parse_args()
+
+        if len(args) != 2:
+            parser.error("incorrect number of arguments")
+            return False
+
+        if self.options.binarysplit < -1 or self.options.binarysplit > 1:
+            parser.error("The --binarysplit option must be 0 or 1")
+            return False
+
+
+        if self.options.assetstokeep and self.options.binarysplit != -1:
+            parser.error("Must use either --assetstokeep or --binarysplit but not both")
+            return False
+
+        if self.options.minimal:
+            self.options.niceandclean = True
+            self.options.replacematerials = True
+            self.options.skiplights = True
+            self.options.skiprenderoutputs = True
+            self.options.skipuserdata = True
+            self.options.skipmetadata = True
+
+        if self.options.niceandclean:
+            self.options.skipidentity = True
+            self.options.skipdefault = True
+            self.options.replaceenums = True
+            self.options.addreferencecomments = True
+            if self.options.roundvalues == 13:
+                self.options.roundvalues = 5
+
+        self.source_rdla_file = args[0]
+        self.output_rdla_file = args[1]
+
+        if self.options.assetstokeep:
+            self.asset_names = self.options.assetstokeep.split()
+        else:
+            self.asset_names = [".*"]
+
+        return True
+
+if __name__ == '__main__':
+    RdlaFilter()
+

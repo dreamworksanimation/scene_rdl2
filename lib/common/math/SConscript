@@ -1,0 +1,107 @@
+Import('env')
+from os import path
+
+# extract library name from current/parent path
+modname = path.basename(path.abspath('..'))
+libname = path.basename(path.abspath('.'))
+# --------------------------------------------------------------------------
+name       = modname+'_'+libname
+sources    = env.DWAGlob('*.cc')
+# Add sources depending on the target
+if 'icc_mic' in env['COMPILER_LABEL']:
+  sources += [
+      'mic_f.cpp',
+      'mic_i.cpp',
+      'mic_m.cpp'
+  ]
+else:
+  sources += ['sse.cpp']
+
+incdir     = [env.Dir('#include')]
+private_components = []
+components = [
+    'common_platform',
+    'math_ispc'
+]
+ccflags    = []
+
+if 'gcc' in env['CC']:
+    ccflags.append('-fabi-version=6')
+    ccflags.append('-Wno-narrowing')
+    ccflags.append('-Wno-conversion')
+    ccflags.append('-Wno-unknown-pragmas')
+
+# --------------------------------------------------------------------------
+publicHeaders = [
+            'BBox.h',
+            'BBox2iIterator.h',
+            'Col3.h',
+            'Col4.h',
+            'Color.h',
+            'ColorSpace.h',
+            'Constants.h',
+            'Mat3.h',
+            'Mat4.h',
+            'Math.h',
+            'MathUtil.h',
+            'Permutation.h',
+            'Quaternion.h',
+            'ReferenceFrame.h',
+            'Vec2.h',
+            'Vec3ba.h',
+            'Vec3ba_mic.h',
+            'Vec3fa.h',
+            'Vec3fa_mic.h',
+            'Vec3.h',
+            'Vec3ia.h',
+            'Vec3ia_mic.h',
+            'Vec4.h',
+            'Viewport.h',
+            'Xform.h',
+            'avxb.h',
+            'avxf.h',
+            'avx.h',
+            'avxi_emu.h',
+            'avxi.h',
+            'immintrin_emu.h',
+            'mic_f.h',
+            'mic.h',
+            'mic_i.h',
+            'mic_m.h',
+            'simd.h',
+            'smmintrin_emu.h',
+            'sseb.h',
+            'sseb_mic.h',
+            'ssef.h',
+            'ssef_mic.h',
+            'sse.h',
+            'ssei.h',
+            'ssei_mic.h',
+            'sse_mic.h',
+            'sse_special.h'
+            ]
+env.DWAInstallInclude(publicHeaders, 'scene_rdl2/common/math')
+
+env.DWAForceWarningAsError()
+env.DWAUseComponents(components+private_components)
+
+env.Append(CPPPATH=incdir)
+env.AppendUnique(CCFLAGS=ccflags)
+
+lib = env.DWASharedLibrary(name, sources)
+target = env.DWAInstallLib(lib)
+
+env.DWAComponent(
+    name,
+    LIBS=target,
+    CPPPATH=incdir,
+    COMPONENTS=components,
+    CCFLAGS=ccflags,
+    )
+env.DWAInstallSConscriptStub(
+    name,
+    LIBS=target,
+    CPPPATH=[env.Dir('$INSTALL_DIR/include')],
+    COMPONENTS=components,
+    )
+env.DWALinkValidate(name)

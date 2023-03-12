@@ -1,0 +1,12 @@
+Import('env')
+# ------------------------------------------
+name       = 'snapshotDeltaDump'
+sources    = env.DWAGlob('*.cc')
+components = [
+    'common_grid_util'
+]
+# ------------------------------------------
+env.DWAForceWarningAsError()
+env.DWAUseComponents(components)
+prog = env.DWAProgram(name, sources)
+env.DWAInstallBin(prog)

@@ -1,0 +1,39 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+//
+// Low level ISPC specific code config. Based on Platform.h.
+//
+#pragma once
+
+#include "Platform.hh"
+
+#ifdef DEBUG
+
+    // inlining and debugging ISPC code in a debugger don't mix well. For this
+    // reason we don't inline functions when building in debug. Typically this
+    // is done by the compiler at optimization level 0, but ISPC seems to want
+    // to inline them anyway. As a workaround, we define inline to mean static
+    // for debug builds to avoid the inlining and also to avoid duplicate symbol
+    // issues.
+    #define inline                  static
+
+    #define MNRY_ASSERT(exp)         assert(exp)
+    #define MNRY_DURING_ASSERTS(exp) exp
+#else
+    #define MNRY_ASSERT(exp)
+    #define MNRY_DURING_ASSERTS(exp)
+#endif
+
+#define nullptr             NULL
+
+typedef int8                int8_t;
+typedef int16               int16_t;
+typedef int32               int32_t;
+typedef int64               int64_t;
+
+typedef unsigned int8       uint8_t;
+typedef unsigned int16      uint16_t;
+typedef unsigned int32      uint32_t;
+typedef unsigned int64      uint64_t;
+

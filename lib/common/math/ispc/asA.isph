@@ -1,0 +1,95 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file asA.isph
+/// Brian Green
+/// @brief
+/// defines converters and casts between compatible types.
+/// @details
+/// each conversion typically involves creating 4 functions: 2
+/// 2 function set variforms that differ by const / non-const
+#pragma once
+
+#include "autodiff.isph"
+#include "Col3.isph"
+#include "Col4.isph"
+#include "Color.isph"
+#include "Vec2.isph"
+#include "Vec3.isph"
+#include "Vec4.isph"
+
+
+#define MATH_DEFINE_ASA_VARIFORM(TO, FROM)                              \
+    inline uniform TO &asA##TO(uniform FROM &t)                         \
+    {                                                                   \
+        return (uniform TO &) t;                                        \
+    }                                                                   \
+    inline varying TO &asA##TO(varying FROM &t)                         \
+    {                                                                   \
+        return (varying TO &) t;                                        \
+    }                                                                   \
+    inline const uniform TO &asA##TO(const uniform FROM &t)             \
+    {                                                                   \
+        return (const uniform TO &) t;                                  \
+    }                                                                   \
+    inline const varying TO &asA##TO(const varying FROM &t)             \
+    {                                                                   \
+        return (const varying TO &) t;                                  \
+    }
+#define MATH_DEFINE_ASARRAY_VARIFORM(TO, FROM)                  \
+    inline uniform TO * uniform asArray(const uniform FROM &t)  \
+    {                                                           \
+        return (uniform TO * uniform) &t;                       \
+    }                                                           \
+    inline varying TO * uniform asArray(const varying FROM &t)  \
+    {                                                           \
+        return (varying  TO * uniform) &t;                      \
+    }
+
+/// @{
+/// convertert to Vec2
+MATH_DEFINE_ASA_VARIFORM(Vec2f, Vec3f)
+MATH_DEFINE_ASA_VARIFORM(Vec2f, Vec4f)
+/// @}
+
+/// @{
+/// convert to Vec3
+MATH_DEFINE_ASA_VARIFORM(Vec3f, Vec4f)
+MATH_DEFINE_ASA_VARIFORM(Vec3f, Col3f);
+MATH_DEFINE_ASA_VARIFORM(Vec3Dual, ColorDual);
+MATH_DEFINE_ASA_VARIFORM(Vec3Dual3f, Col3Dual3f);
+/// @}
+
+/// @{
+/// convert to Col3
+MATH_DEFINE_ASA_VARIFORM(Col3f, Vec3f);
+MATH_DEFINE_ASA_VARIFORM(ColorDual, Vec3Dual);
+MATH_DEFINE_ASA_VARIFORM(Col3Dual3f, Vec3Dual3f);
+MATH_DEFINE_ASA_VARIFORM(Col3f, Col4f);
+/// @}
+
+/// @{
+/// convert to Color
+MATH_DEFINE_ASA_VARIFORM(Color, Vec3f);
+MATH_DEFINE_ASA_VARIFORM(Color, Col4f);
+/// @}
+
+/// @{
+/// convert to Vec4
+MATH_DEFINE_ASA_VARIFORM(Vec4f, Col4f);
+/// @}
+
+/// @{
+/// convert to Col4
+MATH_DEFINE_ASA_VARIFORM(Col4f, Vec4f);
+/// @}
+
+/// @{
+/// convert to float array
+MATH_DEFINE_ASARRAY_VARIFORM(float, Vec2f);
+MATH_DEFINE_ASARRAY_VARIFORM(float, Vec3f);
+MATH_DEFINE_ASARRAY_VARIFORM(float, Vec4f);
+MATH_DEFINE_ASARRAY_VARIFORM(float, Col3f);
+MATH_DEFINE_ASARRAY_VARIFORM(float, Col4f);
+/// @}
+

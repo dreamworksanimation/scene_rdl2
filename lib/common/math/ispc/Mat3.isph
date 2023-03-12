@@ -1,0 +1,426 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Mat3.isph
+/// @brief
+/// defines the 3x3 matrix type Mat3 and its methods
+/// @details
+/// a Mat3 matrix is laid out as<BR>
+///   |vx.x vx.y vx.z|<BR>
+///   |vy.x vy.y vy.z|<BR>
+///   |vz.x vz.y vz.z|<BR>
+///
+/// The Mat3 class can be used to represent linear transformations.
+/// Primarily this means scales and rotations of points, vectors, and normals
+/// stored as Vec3.  The matrices are encoded such that when vec3' = vec3 *
+/// mat3, vec3' is the transformed version of vec3 - i.e. matrix on the right,
+/// vector on the left.  To reduce ambiguity, a set of transform() functions
+/// are given that can be used in lieu of the raw "*" operator.
+
+#pragma once
+
+#include "Constants.isph"
+#include "Math.isph"
+#include "Quaternion.isph"
+#include "Variform.isph"
+#include "Vec3.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+// Mat3f;
+#define MATH_DECLARE_MAT3(TYPE, NAME)           \
+    struct NAME                                 \
+    {                                           \
+        TYPE vx;                                \
+        TYPE vy;                                \
+        TYPE vz;                                \
+    };
+/// @struct Mat3f
+/// @brief a single precision 3x3 matrix
+MATH_DECLARE_MAT3(Vec3f, Mat3f);
+
+//---------------------------------------------------------------------------
+// Construction
+//---------------------------------------------------------------------------
+
+// Mat3f = Mat3f_ctor(Vec3f, Vec3f, Vec3f);
+/** \cond */
+#define MATH_MAT3_CTOR_3()                      \
+    {                                           \
+        result.vx = p0;                         \
+        result.vy = p1;                         \
+        result.vz = p2;                         \
+    }
+/** \endcond */
+/// @{
+/// construct a mat3 from 3 vec3
+MATH_DEFINE_TERNARY_VARIFORM(Mat3f_ctor, Mat3f,
+                             Vec3f, Vec3f, Vec3f,
+                             MATH_MAT3_CTOR_3())
+/// @}
+
+// Mat3f = Mat3f_ctor(Quaternion3f);
+/** \cond */
+#define MATH_MAT3_CTOR_Q()                      \
+    {                                           \
+        result.vx = Vec3f_ctor(                 \
+            1.0f-2.0f*(p0.j*p0.j + p0.k*p0.k),  \
+                 2.0f*(p0.i*p0.j + p0.r*p0.k),  \
+                 2.0f*(p0.i*p0.k - p0.r*p0.j)); \
+        result.vy = Vec3f_ctor(                 \
+                 2.0f*(p0.i*p0.j - p0.r*p0.k),  \
+            1.0f-2.0f*(p0.i*p0.i + p0.k*p0.k),  \
+                 2.0f*(p0.j*p0.k + p0.r*p0.i)); \
+        result.vz = Vec3f_ctor(                 \
+                 2.0f*(p0.i*p0.k + p0.r*p0.j),  \
+                 2.0f*(p0.j*p0.k - p0.r*p0.i),  \
+            1.0f-2.0f*(p0.i*p0.i + p0.j*p0.j)); \
+    }
+/** \endcond */
+/// @{
+/// construct a mat3 from 3 vec3
+MATH_DEFINE_UNARY_VARIFORM(Mat3f_ctor, Mat3f, Quaternion3f, MATH_MAT3_CTOR_Q())
+/// @}
+
+//  Mat3f = Mat3f_ctor(float, float, float,
+//                     float, float, float,
+//                     float, float, float)
+/** \cond */
+#define MATH_MAT3_CTOR_9()                                      \
+    {                                                           \
+        result.vx.x = p0; result.vx.y = p1; result.vx.z = p2;   \
+        result.vy.x = p3; result.vy.y = p4; result.vy.z = p5;   \
+        result.vz.x = p6; result.vz.y = p7; result.vz.z = p8;   \
+    }
+/** \endcond */
+/// @{
+/// construct a Mat3 from 9 floats
+MATH_DEFINE_P9_UNIVAR_VARIFORM(Mat3f_ctor, Mat3f,
+                               float, MATH_MAT3_CTOR_9())
+/// @}
+
+//----------------------------------------------------------------------
+// Binary operators
+//----------------------------------------------------------------------
+
+// Mat3f = Mat3f + Mat3f;
+/** \cond */
+#define MATH_MAT3_ADD()                         \
+    {                                           \
+        result.vx = p0.vx + p1.vx;              \
+        result.vy = p0.vy + p1.vy;              \
+        result.vz = p0.vz + p1.vz;              \
+    }
+/** \endcond */
+/// @{
+/// add two matrices
+MATH_DEFINE_BINARY_VARIFORM(operator+, Mat3f, Mat3f, Mat3f, MATH_MAT3_ADD())
+/// @}
+
+//  Mat3f = Mat3f - Mat3f;
+/** \cond */
+#define MATH_MAT3_MINUS()                       \
+    {                                           \
+        result.vx = p0.vx - p1.vx;              \
+        result.vy = p0.vy - p1.vy;              \
+        result.vz = p0.vz - p1.vz;              \
+    }
+/** \endcond */
+/// @{
+/// subtract two matrices
+MATH_DEFINE_BINARY_VARIFORM(operator-, Mat3f, Mat3f, Mat3f, MATH_MAT3_MINUS())
+/// @}
+
+// Mat3f = float * Mat3f;
+/// @{
+/// scalar * Mat3
+/** \cond */
+#define MATH_S_MULT_MAT3()                      \
+    {                                           \
+        result.vx = p0 * p1.vx;                 \
+        result.vy = p0 * p1.vy;                 \
+        result.vz = p0 * p1.vz;                 \
+    }
+/** \endcond */
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, float, Mat3f, MATH_S_MULT_MAT3())
+/// @}
+
+//  Mat3f = Mat3f * float;
+/** \cond */
+#define MATH_MAT3_MULT_S()                      \
+    {                                           \
+        result.vx = p0.vx * p1;                 \
+        result.vy = p0.vy * p1;                 \
+        result.vz = p0.vz * p1;                 \
+    }
+/** \endcond */
+/// @{
+/// Mat3 * scalar
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, Mat3f, float, MATH_MAT3_MULT_S())
+/// @}
+
+// Vec3f = Vec3f * Mat3f;
+/** \cond */
+#define MATH_VEC3_MULT_MAT3()                                           \
+    {                                                                   \
+        result.x = p0.x * p1.vx.x + p0.y * p1.vy.x + p0.z * p1.vz.x;    \
+        result.y = p0.x * p1.vx.y + p0.y * p1.vy.y + p0.z * p1.vz.y;    \
+        result.z = p0.x * p1.vx.z + p0.y * p1.vy.z + p0.z * p1.vz.z;    \
+    }
+/** \endcond */
+/// @{
+/// Vec3 * Mat3
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Vec3f, Mat3f, MATH_VEC3_MULT_MAT3())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3Dual3f, Vec3Dual3f, Mat3f,
+                            MATH_VEC3_MULT_MAT3())
+/// @}
+
+// Vec3f = Mat3f * Vec3f;
+/** \cond */
+#define MATH_MAT3_MULT_VEC3()                   \
+    {                                           \
+        result.x = dot(p0.vx, p1);              \
+        result.y = dot(p0.vy, p1);              \
+        result.z = dot(p0.vz, p1);              \
+    }
+/** \endcond */
+/// @{
+/// Mat3 * Vec3
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Mat3f, Vec3f, MATH_MAT3_MULT_VEC3())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3Dual3f, Mat3f, Vec3Dual3f,
+                            MATH_MAT3_MULT_VEC3())
+/// @}
+
+// Mat3f = Mat3f * Mat3f;
+/** \cond */
+#define MATH_MAT3_MULT()                        \
+    {                                           \
+        result.vx = p0.vx * p1;                 \
+        result.vy = p0.vy * p1;                 \
+        result.vz = p0.vz * p1;                 \
+    }
+/** \endcond */
+/// @{
+/// Mat3 * Mat3
+MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, Mat3f, Mat3f, MATH_MAT3_MULT())
+/// @}
+
+//  bool = isEqual(Mat3f, Mat3f, float);
+/** \cond */
+#define MATH_MAT3_ISEQUAL()                     \
+    {                                           \
+        result =                                \
+            isEqual(p0.vx, p1.vx, p2) &&        \
+            isEqual(p0.vy, p1.vy, p2) &&        \
+            isEqual(p0.vz, p1.vz, p2);          \
+    }
+/** \endcond */
+/// @{
+/// are two matrices equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Mat3f, Mat3f, float, MATH_MAT3_ISEQUAL())
+/// @}
+
+// bool = isEqual(Mat3f, Mat3f);
+/// @{
+/// are two matrices equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Mat3f, Mat3f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+/// @}
+
+//  bool = isEqualFixedEps(Mat3f, Mat3f, float);
+/** \cond */
+#define MATH_MAT3_IS_EQUAL_FIXED_EPS()                  \
+    {                                                   \
+        result =                                        \
+            isEqualFixedEps(p0.vx, p1.vx, p2) &&        \
+            isEqualFixedEps(p0.vy, p1.vy, p2) &&        \
+            isEqualFixedEps(p0.vz, p1.vz, p2);          \
+    }
+/** \endcond */
+/// @{
+/// are two matrices equal to within tolerance (p2)?
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Mat3f, Mat3f, float, MATH_MAT3_IS_EQUAL_FIXED_EPS())
+/// @}
+
+// bool = isEqualFixedEps(Mat3f, Mat3f);
+/// @{
+/// are two matrices equal to within the default tolerance (sEpsilon)?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Mat3f, Mat3f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+/// @}
+
+// ---------------------------------------------------------------------------
+// Ternary Operations
+// ---------------------------------------------------------------------------
+
+// Mat3f = lerp(Mat3f, Mat3f, float)
+/// @{
+/// lerp two Mat3f (p0, p1) by a value (p2)
+MATH_DEFINE_TERNARY_VARIFORM(lerp, Mat3f, Mat3f, Mat3f, float, MATH_LERP())
+/// @}
+
+//----------------------------------------------------------------------
+// unary operations
+//----------------------------------------------------------------------
+
+//  float = det(Mat3f);
+/** \cond */
+#define MATH_MAT3_DET()                                 \
+    {                                                   \
+        result = dot(p0.vx, cross(p0.vy, p0.vz));       \
+    }
+/** \endcond */
+/// @{
+/// compute the determinant of a Mat3
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(det, float, Mat3f, MATH_MAT3_DET())
+/// @}
+
+//  Mat3f = transpose(Mat3f);
+/** \cond */
+#define MATH_MAT3_TRANSPOSE(MTYPE)                              \
+    {                                                           \
+        result = MTYPE##_ctor(p0.vx.x, p0.vy.x, p0.vz.x,        \
+                              p0.vx.y, p0.vy.y, p0.vz.y,        \
+                              p0.vx.z, p0.vy.z, p0.vz.z);       \
+    }
+/** \endcond */
+/// @{
+/// Compute the transpose of a Mat3
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(transpose, Mat3f, Mat3f, MATH_MAT3_TRANSPOSE(Mat3f))
+/// @}
+
+// Mat3f = adjoint(Mat3f);
+/** \cond */
+#define MATH_MAT3_ADJOINT(MTYPE)                                \
+    {                                                           \
+        result = transpose(MTYPE##_ctor(cross(p0.vy, p0.vz),    \
+                                        cross(p0.vz, p0.vx),    \
+                                        cross(p0.vx, p0.vy)));  \
+    }
+/** \endcond */
+/// @{
+/// compute the adjoint (transpose of the cofactor matrix) of a Mat3
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(adjoint, Mat3f, Mat3f, MATH_MAT3_ADJOINT(Mat3f))
+/// @}
+
+// Mat3f = inverse(Mat3f);
+// Mat3f = rcp(Mat3f);
+/** \cond */
+#define MATH_MAT3_INVERSE()                     \
+    {                                           \
+        result = rcp(det(p0)) * adjoint(p0);    \
+    }
+/** \endcond */
+/// @{
+/// compute the inverse of a Mat3
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(inverse, Mat3f, Mat3f, MATH_MAT3_INVERSE())
+MATH_DEFINE_UNARY_UNIVAR_VARIFORM(rcp, Mat3f, Mat3f, { result = inverse(p0); })
+/// @}
+
+//----------------------------------------------------------------------
+// Transformations
+//----------------------------------------------------------------------
+
+// setToIdentity(Mat3f);
+/** \cond */
+#define MATH_MAT3_SET_TO_IDENTITY()                     \
+    {                                                   \
+        p0.vx.x = 1.; p0.vx.y = 0.; p0.vx.z = 0.;       \
+        p0.vy.x = 0.; p0.vy.y = 1.; p0.vy.z = 0.;       \
+        p0.vz.x = 0.; p0.vz.y = 0.; p0.vz.z = 1.;       \
+    }
+/** \endcond */
+/// @{
+/// create an identity transform
+MATH_DEFINE_SET_VARIFORM(setToIdentity, Mat3f, MATH_MAT3_SET_TO_IDENTITY())
+
+// Mat3f = Mat3f_identity()
+// note that this is not a variform!  we can only define the
+// uniform return value case and rely on the compiler to convert to
+// varying when the lhs of the assignment is varying.
+/** \cond */
+#define MATH_MAT3_IDENTITY(MTYPE)               \
+    uniform MTYPE res;                          \
+    setToIdentity(res);                         \
+    return res;
+/** \endcond */
+inline uniform Mat3f Mat3f_identity() { MATH_MAT3_IDENTITY(Mat3f) }
+/// @}
+
+// setToScale(Mat3f, Vec3f)
+/** \cond */
+#define MATH_MAT3_SET_TO_SCALE()                        \
+    {                                                   \
+        p0.vx.x = p1.x; p0.vx.y = 0.;   p0.vx.z = 0.;   \
+        p0.vy.x = 0.;   p0.vy.y = p1.y; p0.vy.z = 0.;   \
+        p0.vz.x = 0.;   p0.vz.y = 0.;   p0.vz.z = p1.z; \
+    }
+/** \endcond */
+/// @{
+/// xyz scale transform specified by a Vec3 param
+MATH_DEFINE_UNARY_SET_VARIFORM(setToScale, Mat3f, Vec3f, MATH_MAT3_SET_TO_SCALE())
+
+// Mat3f = Mat3f_scale(Vec3f)
+MATH_DEFINE_UNARY_VARIFORM(Mat3f_scale, Mat3f, Vec3f, { setToScale(result, p0); })
+/// @}
+
+//   setToRotation(Mat3f, Vec3f, float)
+/** \cond */
+#define MATH_MAT3_SET_TO_ROTATION_L0_F()                \
+    struct { Vec3f v; float s; float c; float t; }
+#define MATH_MAT3_SET_TO_ROTATION_L0_D()                \
+    struct { Vec3d v; double s; double c; double t; }
+#define MATH_MAT3_SET_TO_ROTATION()                             \
+    {                                                           \
+        l0.v = normalize(p1);                                   \
+        l0.s = sin(p2);                                         \
+        l0.c = cos(p2);                                         \
+        l0.t = 1. - l0.c;                                       \
+        p0.vx.x = l0.v.x * l0.v.x * l0.t + l0.c;                \
+        p0.vx.y = l0.v.x * l0.v.y * l0.t + l0.v.z * l0.s;       \
+        p0.vx.z = l0.v.x * l0.v.z * l0.t - l0.v.y * l0.s;       \
+        p0.vy.x = l0.v.y * l0.v.x * l0.t - l0.v.z * l0.s;       \
+        p0.vy.y = l0.v.y * l0.v.y * l0.t + l0.c;                \
+        p0.vy.z = l0.v.y * l0.v.z * l0.t + l0.v.x * l0.s;       \
+        p0.vz.x = l0.v.z * l0.v.x * l0.t + l0.v.y * l0.s;       \
+        p0.vz.y = l0.v.z * l0.v.y * l0.t - l0.v.x * l0.s;       \
+        p0.vz.z = l0.v.z * l0.v.z * l0.t + l0.c;                \
+    }
+/** \endcond */
+/// @{
+/// rotation transform specified by an xyz axis of
+/// rotation in a Vec3 param and a ccw radian angle specified by a scalar
+/// parameter
+MATH_DEFINE_BINARY_SET_VARIFORM_WITH_L(setToRotation, Mat3f, Vec3f, float,
+                                       MATH_MAT3_SET_TO_ROTATION_L0_F(),
+                                       MATH_MAT3_SET_TO_ROTATION());
+
+// Mat3f = Mat3f_rotate(Vec3f, float)
+MATH_DEFINE_BINARY_VARIFORM(Mat3f_rotate, Mat3f, Vec3f, float,
+                            { setToRotation(result, p0, p1); })
+/// @}
+
+
+// Vec3f = transform(Mat3f, Vec3f)
+/// @{
+/// transform a Vec3 (p1) by a Mat3 (p0).  use this if p1 represents a position or
+/// non-normal vector.
+MATH_DEFINE_BINARY_VARIFORM(transform, Vec3f, Mat3f, Vec3f,
+                            { result = p1 * p0; })
+MATH_DEFINE_BINARY_VARIFORM(transform, Vec3Dual3f, Mat3f, Vec3Dual3f,
+                            { result = p1 * p0; })
+/// @}
+
+// Vec3f = transformNormal(Mat3f, Vec3f)
+/// @{
+/// transform a Vec3 (p1) as a normal by a Mat3 (p0).  use this if Vec3 represents
+/// a normal.  we assume that Mat3 is already an inverse of the Mat3 used to
+/// transform non normals.  so all we do is multiply by the transpose.
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Mat3f, Vec3f,
+                            { result = p0 * p1; })
+MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Mat3f, Vec3Dual3f,
+                            { result = p0 * p1; })
+/// @}
+

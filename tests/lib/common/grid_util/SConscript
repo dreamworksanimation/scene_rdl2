@@ -1,0 +1,12 @@
+Import('env')
+# --------------------------------------------------------------------
+name       = 'common_grid_util'
+sources    = env.DWAGlob('*.cc')
+ref        = []
+components = [
+	   'common_grid_util'
+	   ]
+# --------------------------------------------------------------------
+env.DWAForceWarningAsError()
+
+ut = env.DWAPdevUnitTest(name, sources, ref, COMPONENTS=components, TIMEOUT=600)

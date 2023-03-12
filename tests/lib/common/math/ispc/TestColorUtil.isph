@@ -1,0 +1,20 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+
+#include <scene_rdl2/common/math/ispc/Color.isph>
+
+static void
+checkVal(uniform int &error, const varying Col3Dual3f &res, const varying Col3Dual3f &expRes) {
+    if (any(!isEqual(res.r, expRes.r)) || any(!isEqual(res.g, expRes.g)) || any(!isEqual(res.b, expRes.b))) {
+        ++error;
+    }
+}
+
+static void
+checkVal(uniform int &error, const varying Color &res, const varying Color &expRes) {
+    if (any(!isEqual(res.r, expRes.r)) || any(!isEqual(res.g, expRes.g)) || any(!isEqual(res.b, expRes.b))) {
+        ++error;
+    }
+}
+

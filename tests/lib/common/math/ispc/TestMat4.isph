@@ -1,0 +1,584 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathMat3.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Mat4.isph>
+#include <scene_rdl2/common/math/ispc/Vec3.isph>
+#include <scene_rdl2/common/math/ispc/Vec4.isph>
+
+//----------------------------------------------------------------------------
+// Mat4x_ctor(Vec4x, Vec4x, Vec4x)
+//----------------------------------------------------------------------------
+#define MAT4_CTOR4_TEST(VEC4, MAT4)                                     \
+    {                                                                   \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);          \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);          \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);          \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);          \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                           \
+        if (any(!isEqual(m.vx, vx)) || any(!isEqual(m.vy, vy)) ||       \
+            any(!isEqual(m.vz, vz)) || any(!isEqual(m.vw, vw))) {       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_CTOR4_TEST(Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = Mat4x + Mat4x
+//----------------------------------------------------------------------------
+#define MAT4_OP_TEST(OP, VEC4, MAT4)                                    \
+    {                                                                   \
+        VEC4 vx0 = VEC4##_ctor(pi OP 1, pi OP 2, pi OP 3, pi OP 4);     \
+        VEC4 vy0 = VEC4##_ctor(pi OP 5, pi OP 6, pi OP 7, pi OP 8);     \
+        VEC4 vz0 = VEC4##_ctor(pi OP 9, pi OP 0, pi OP 1, pi OP 2);     \
+        VEC4 vw0 = VEC4##_ctor(pi OP 3, pi OP 4, pi OP 5, pi OP 6);     \
+        VEC4 vx1 = VEC4##_ctor(pi OP 7, pi OP 8, pi OP 9, pi OP 0);     \
+        VEC4 vy1 = VEC4##_ctor(pi OP 1, pi OP 2, pi OP 3, pi OP 4);     \
+        VEC4 vz1 = VEC4##_ctor(pi OP 5, pi OP 6, pi OP 7, pi OP 8);     \
+        VEC4 vw1 = VEC4##_ctor(pi OP 9, pi OP 0, pi OP 1, pi OP 2);     \
+        MAT4 m0 = MAT4##_ctor(vx0, vy0, vz0, vw0);                      \
+        MAT4 m1 = MAT4##_ctor(vx1, vy1, vz1, vw1);                      \
+        MAT4 res = m0 OP m1;                                            \
+        if (any(!isEqual(res.vx, vx0 OP vx1)) ||                        \
+            any(!isEqual(res.vy, vy0 OP vy1)) ||                        \
+            any(!isEqual(res.vz, vz0 OP vz1)) ||                        \
+            any(!isEqual(res.vw, vw0 OP vw1))) {                        \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testAdd()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_OP_TEST(+, Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = Mat4x - Mat4x
+//----------------------------------------------------------------------------
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_OP_TEST(-, Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = scalar * Mat4x
+//----------------------------------------------------------------------------
+#define MAT4_SCALAR_MULT_MAT_TEST(FLOAT, VEC4, MAT4)            \
+    {                                                           \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);  \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);  \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);  \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);  \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                   \
+        FLOAT s = pi + 12;                                      \
+        MAT4 res = s * m;                                       \
+        if (any(!isEqual(res.vx, s * vx)) ||                    \
+            any(!isEqual(res.vy, s * vy)) ||                    \
+            any(!isEqual(res.vz, s * vz)) ||                    \
+            any(!isEqual(res.vw, s * vw))) {                    \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testScalarMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_SCALAR_MULT_MAT_TEST(float, Vec4f, Mat4f);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Mat4x = Mat4x * scalar
+//-----------------------------------------------------------------------------
+#define MAT4_MAT_MULT_SCALAR_TEST(FLOAT, VEC4, MAT4)            \
+    {                                                           \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);  \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);  \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);  \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);  \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                   \
+        FLOAT s = pi + 12;                                      \
+        MAT4 res = m * s;                                       \
+        if (any(!isEqual(res.vx, vx * s)) ||                    \
+            any(!isEqual(res.vy, vy * s)) ||                    \
+            any(!isEqual(res.vz, vz * s)) ||                    \
+            any(!isEqual(res.vw, vw * s))) {                    \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testMatMultScalar()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_MAT_MULT_SCALAR_TEST(float, Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Vec4x = Vec4x * Mat4x
+//----------------------------------------------------------------------------
+#define MAT4_VEC_MULT_MAT_TEST(VEC4, MAT4)                              \
+    {                                                                   \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);          \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);          \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);          \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);          \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                           \
+        VEC4 v = VEC4##_ctor(pi + 7, pi + 8, pi + 9, pi + 0);           \
+        VEC4 res = v * m;                                               \
+        if (any(!isEqual(res.x, dot(v, VEC4##_ctor(vx.x, vy.x, vz.x, vw.x)))) || \
+            any(!isEqual(res.y, dot(v, VEC4##_ctor(vx.y, vy.y, vz.y, vw.y)))) || \
+            any(!isEqual(res.z, dot(v, VEC4##_ctor(vx.z, vy.z, vz.z, vw.z)))) || \
+            any(!isEqual(res.w, dot(v, VEC4##_ctor(vx.w, vy.w, vz.w, vw.w))))) { \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testVecMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_VEC_MULT_MAT_TEST(Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Vec4x = Mat4x * Vec4x
+//----------------------------------------------------------------------------
+#define MAT4_MAT_MULT_VEC_TEST(VEC4, MAT4)                      \
+    {                                                           \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);  \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);  \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);  \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);  \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                   \
+        VEC4 v = VEC4##_ctor(pi + 7, pi + 8, pi + 9, pi + 0);   \
+        VEC4 res = m * v;                                       \
+        if (any(!isEqual(res.x, dot(vx, v))) ||                 \
+            any(!isEqual(res.y, dot(vy, v))) ||                 \
+            any(!isEqual(res.z, dot(vz, v))) ||                 \
+            any(!isEqual(res.w, dot(vw, v)))) {                 \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testMatMultVec()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_MAT_MULT_VEC_TEST(Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = Mat4x * Mat4x
+//----------------------------------------------------------------------------
+#define MAT4_MAT_MULT_MAT_TEST(VEC4, MAT4)                      \
+    {                                                           \
+        VEC4 vx0 = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4); \
+        VEC4 vy0 = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8); \
+        VEC4 vz0 = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2); \
+        VEC4 vw0 = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6); \
+        VEC4 vx1 = VEC4##_ctor(pi + 7, pi + 8, pi + 9, pi + 0); \
+        VEC4 vy1 = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4); \
+        VEC4 vz1 = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8); \
+        VEC4 vw1 = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2); \
+        MAT4 m0 = MAT4##_ctor(vx0, vy0, vz0, vw0);              \
+        MAT4 m1 = MAT4##_ctor(vx1, vy1, vz1, vw1);              \
+        VEC4 t = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);   \
+        MAT4 m01 = m0 * m1;                                     \
+        VEC4 res = t * m01;                                     \
+        VEC4 res2 = t * m0;                                     \
+        res2 = res2 * m1;                                       \
+        if (any(!isEqual(res.x, res2.x)) ||                     \
+            any(!isEqual(res.y, res2.y)) ||                     \
+            any(!isEqual(res.z, res2.z)) ||                     \
+            any(!isEqual(res.w, res2.w))) {                     \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testMatMultMat()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_MAT_MULT_MAT_TEST(Vec4f, Mat4f);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// isEqual(Mat4x, Mat4x);
+// isEqualFixedEps(Mat4x, Mat4x);
+//----------------------------------------------------------------------------
+#define MAT4_IS_EQUAL_TEST(VEC4, MAT4, IS_EQUAL)                \
+    {                                                           \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);  \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);  \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);  \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);  \
+        MAT4 m0 = MAT4##_ctor(vx, vy, vz, vw);                  \
+        MAT4 m1 = MAT4##_ctor(vx, vy, vz, vw);                  \
+        if (any(!IS_EQUAL(m0, m1))) {                           \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_IS_EQUAL_TEST(Vec4f, Mat4f, isEqual);
+
+    return error;
+}
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_IS_EQUAL_TEST(Vec4f, Mat4f, isEqualFixedEps);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// scalar = det(Mat4x)
+//----------------------------------------------------------------------------
+inline uniform int
+testDet()
+{
+    uniform int error = 0;
+    // tested via testInverse()
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Mat4x = transpose(Mat4x)
+//-----------------------------------------------------------------------------
+#define MAT4_TRANSPOSE_TEST(VEC4, MAT4, TRANSPOSE)              \
+    {                                                           \
+        VEC4 vx = VEC4##_ctor(pi + 1, pi + 2, pi + 3, pi + 4);  \
+        VEC4 vy = VEC4##_ctor(pi + 5, pi + 6, pi + 7, pi + 8);  \
+        VEC4 vz = VEC4##_ctor(pi + 9, pi + 0, pi + 1, pi + 2);  \
+        VEC4 vw = VEC4##_ctor(pi + 3, pi + 4, pi + 5, pi + 6);  \
+        MAT4 m = MAT4##_ctor(vx, vy, vz, vw);                   \
+        MAT4 mt = TRANSPOSE(m);                                 \
+        if (any(m.vx.x != mt.vx.x) ||                           \
+            any(m.vx.y != mt.vy.x) ||                           \
+            any(m.vx.z != mt.vz.x) ||                           \
+            any(m.vx.w != mt.vw.x) ||                           \
+                                                                \
+            any(m.vy.x != mt.vx.y) ||                           \
+            any(m.vy.y != mt.vy.y) ||                           \
+            any(m.vy.z != mt.vz.y) ||                           \
+            any(m.vy.w != mt.vw.y) ||                           \
+                                                                \
+            any(m.vz.x != mt.vx.z) ||                           \
+            any(m.vz.y != mt.vy.z) ||                           \
+            any(m.vz.z != mt.vz.z) ||                           \
+            any(m.vz.w != mt.vw.z) ||                           \
+                                                                \
+            any(m.vw.x != mt.vx.w) ||                           \
+            any(m.vw.y != mt.vy.w) ||                           \
+            any(m.vw.z != mt.vz.w) ||                           \
+            any(m.vw.w != mt.vw.w)) {                           \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testTranspose()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_TRANSPOSE_TEST(Vec4f, Mat4f, transpose);
+
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = adjoint(Mat4x)
+//----------------------------------------------------------------------------
+inline uniform int
+testAdjoint()
+{
+    uniform int error = 0;
+    // tested via the inverse() test
+    return error;
+}
+
+//----------------------------------------------------------------------------
+// Mat4x = inverse(Mat4x)
+//----------------------------------------------------------------------------
+#define MAT4_INVERSE_TEST(FLOAT, VEC3, MAT4, SCALE, ROTATE, TRANSLATE, INVERSE, IDENTITY) \
+    {                                                                   \
+        const VEC3 s = VEC3##_ctor(pi + 1, pi + 2, pi + 3);             \
+        const VEC3 rv = normalize(VEC3##_ctor(pi + 4, pi + 5, pi + 6)); \
+        const FLOAT rTheta = pi * PI / 6;                               \
+        const VEC3 t = VEC3##_ctor(pi + 7, pi + 8, pi + 9);             \
+        const MAT4 mat4 =                                               \
+            MAT4##_scale(s) * MAT4##_rotate(rv, rTheta) * MAT4##_translate(t); \
+        const MAT4 mat4Inv = INVERSE(mat4);                             \
+        const MAT4 res = mat4 * mat4Inv;                                \
+        const MAT4 identity = IDENTITY();                               \
+        if (any(!isEqual(res, identity))) {                             \
+            ++error;                                                    \
+        }                                                               \
+    }
+    
+
+inline uniform int
+testInverse()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_INVERSE_TEST(float, Vec3f, Mat4f, Mat4f_scale,
+                      Mat4f_rotate, Mat4f_translate, inverse,
+                      Mat4f_identity);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// setToIdentity(Mat4x)
+//-----------------------------------------------------------------------------
+inline uniform int
+testSetToIdentity()
+{
+    uniform int error = 0;
+    // tested via the inverse() test
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// setToScale(Mat4x, Vec3fx)
+//-----------------------------------------------------------------------------
+inline uniform int
+testSetToScale()
+{
+    uniform int error = 0;
+    // tested via the inverse(), transform() tests
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// setToRotation(Mat4x, Vec3x, x);
+//-----------------------------------------------------------------------------
+inline uniform int
+testSetToRotation()
+{
+    uniform int error = 0;
+
+    const Vec3f x = Vec3f_ctor(1.f, 0.f, 0.f);
+    const Vec3f y = Vec3f_ctor(0.f, 1.f, 0.f);
+    const Vec3f z = Vec3f_ctor(0.f, 0.f, 1.f);
+    const float theta = PI / 2;
+
+    Mat4f rx;
+    setToRotation(rx, x, theta);
+    Vec4f v = Vec4f_ctor(0.f, 0.f, -1.f, 1.f);
+    v = v * rx;
+    if (any(!isZero(v.x)) || any(!isEqual(v.y, 1.f)) ||
+        any(!isZero(v.z)) || any(!isEqual(v.w, 1.f))) {
+        ++error;
+    }
+
+    Mat4f ry;
+    setToRotation(ry, y, theta);
+    v = Vec4f_ctor(1.f, 0.f, 0.f, 1.f);
+    v = v * ry;
+    if (any(!isZero(v.x)) || any(!isZero(v.y)) ||
+        any(!isEqual(v.z, -1.f)) || any(!isEqual(v.w, 1.f))) {
+        ++error;
+    }
+
+    Mat4f rz;
+    setToRotation(rz, z, theta);
+    v = Vec4f_ctor(0.f, 1.f, 0.f, 1.f);
+    v = v * rz;
+    if (any(!isEqual(v.x, -1.f)) || any(!isZero(v.y)) ||
+        any(!isZero(v.z)) || any(!isEqual(v.w, 1.f))) {
+        ++error;
+    }
+
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Vec4x = transform(Mat4x, Vec4x)
+//-----------------------------------------------------------------------------
+#define MAT4_TRANSFORM_TEST(VEC3, VEC4, MAT4, TRANSFORM)        \
+    {                                                           \
+        MAT4 s;                                                 \
+        MAT4 t;                                                 \
+        const VEC3 sv = VEC3##_ctor(pi + 1, pi + 2, pi + 3);    \
+        const VEC3 st = VEC3##_ctor(pi + 4, pi + 5, pi + 6);    \
+        setToScale(s, sv);                                      \
+        setToTranslation(t, st);                                \
+        const MAT4 m = s * t;                                   \
+        const VEC4 p = VEC4##_ctor(pi + 7, pi + 8, pi + 9, 1);  \
+        const VEC4 pt = TRANSFORM(m, p);                        \
+        if (any(!isEqual(pt.x, sv.x * p.x + st.x)) ||           \
+            any(!isEqual(pt.y, sv.y * p.y + st.y)) ||           \
+            any(!isEqual(pt.z, sv.z * p.z + st.z)) ||           \
+            any(!isEqual(pt.w, 1))) {                           \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testTransform()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_TRANSFORM_TEST(Vec3f, Vec4f, Mat4f, transform);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Vec4x = transformNormal(Mat4x, Vec4x)
+//-----------------------------------------------------------------------------
+#define MAT4_TRANSFORM_NORMAL_TEST(VEC3, VEC4, MAT4, TRANSFORM_NORMAL)  \
+    {                                                                   \
+        MAT4 s;                                                         \
+        MAT4 t;                                                         \
+        const VEC3 sv = VEC3##_ctor(pi + 1, pi + 2, pi + 3);            \
+        const VEC3 st = VEC3##_ctor(pi + 4, pi + 5, pi + 6);            \
+        setToScale(s, sv);                                              \
+        setToTranslation(t, st);                                        \
+        const MAT4 m = transpose(s) * transpose(t);                     \
+        const VEC4 p = VEC4##_ctor(pi + 7, pi + 8, pi + 9, 1);          \
+        const VEC4 pt = TRANSFORM_NORMAL(m, p);                         \
+        if (any(!isEqual(pt.x, (st.x + p.x) * sv.x)) ||                 \
+            any(!isEqual(pt.y, (st.y + p.y) * sv.y)) ||                 \
+            any(!isEqual(pt.z, (st.z + p.z) * sv.z)) ||                 \
+            any(!isEqual(pt.w, 1))) {                                   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testTransformNormal()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_TRANSFORM_NORMAL_TEST(Vec3f, Vec4f, Mat4f, transformNormal);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Vec3x = transformH(Mat4x, Vec4x)
+//-----------------------------------------------------------------------------
+#define MAT4_TRANSFORMH_TEST(VEC3, VEC4, MAT4, TRANSFORMH)      \
+    {                                                           \
+        MAT4 s;                                                 \
+        MAT4 t;                                                 \
+        const VEC3 sv = VEC3##_ctor(pi + 1, pi + 2, pi + 3);    \
+        const VEC3 st = VEC3##_ctor(pi + 4, pi + 5, pi + 6);    \
+        setToScale(s, sv);                                      \
+        setToTranslation(t, st);                                \
+        const MAT4 m = s * t;                                   \
+        const VEC4 p = VEC4##_ctor(pi + 7, pi + 8, pi + 9, 2);  \
+        const VEC3 pt = TRANSFORMH(m, p);                       \
+        if (any(!isEqual(pt.x, (sv.x * p.x) / 2 + st.x)) ||     \
+            any(!isEqual(pt.y, (sv.y * p.y) / 2 + st.y)) ||     \
+            any(!isEqual(pt.z, (sv.z * p.z) / 2 + st.z))) {     \
+            ++error;                                            \
+        }                                                       \
+    }
+
+inline uniform int
+testTransformH()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    MAT4_TRANSFORMH_TEST(Vec3f, Vec4f, Mat4f, transformH);
+
+    return error;
+}
+
+//-----------------------------------------------------------------------------
+// Vec3x = transformPoint(Mat4x, Vec3x)
+//-----------------------------------------------------------------------------
+inline uniform int
+testTransformPoint()
+{
+    uniform int error = 0;
+
+    const Vec3f rotAxis = Vec3f_ctor(1., 1., -1.);
+    const float rotAngle = PI / 4.f;
+    const Vec3f trans = Vec3f_ctor(1., 2., 3.);
+    const Mat4f m = Mat4f_rotate(rotAxis, rotAngle) * Mat4f_translate(trans);
+
+    // primal
+    const Vec3f v = Vec3f_ctor(1., 1., 1.);
+    const Vec3f vM = transformPoint(m, v);
+    const Vec3f vTest = v * Mat3f_rotate(rotAxis, rotAngle) + trans;
+    if (any(!isEqual(vM, vTest))) {
+        ++error;
+    }
+
+    // dual
+    const Vec3Dual3f vDual = Vec3Dual3f_ctor(Dual3f_ctor(1.), Dual3f_ctor(1.), Dual3f_ctor(1.));
+    const Vec3Dual3f vDualM = transformPoint(m, vDual);
+    const Vec3Dual3f vDualTest = vDual * Mat3f_rotate(rotAxis, rotAngle) + trans;
+    if (any(!isEqual(vDualM, vDualTest))) {
+        ++error;
+    }
+
+    return error;
+}
+

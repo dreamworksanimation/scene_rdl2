@@ -1,0 +1,631 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file TestMathVec2.isph
+#pragma once
+
+#include <scene_rdl2/common/math/ispc/Vec2.isph>
+
+#define VAR varying
+#define UNI uniform
+
+//----------------------------------------------------------------------
+// Vec2x_ctor(x)
+// Vec2x_ctor(x, x)
+// Vec2x_ctor(x[])
+//----------------------------------------------------------------------
+#define VEC2_CTOR1_TEST(VURES, VUP0, P0)        \
+    {                                           \
+        const VUP0 float f0 = P0;               \
+        const VURES Vec2f v = Vec2f_ctor(f0);   \
+        if (any(v.x != f0) || any(v.y != f0)) { \
+            ++error;                            \
+        }                                       \
+    }
+
+#define VEC2_CTOR2_TEST(VURES, VUP0, VUP1, P0, P1)      \
+    {                                                   \
+        const VUP0 float f0 = P0;                       \
+        const VUP1 float f1 = P1;                       \
+        const VURES Vec2f v = Vec2f_ctor(f0, f1);       \
+        if (any(v.x != f0) || any(v.y != f1)) {         \
+            ++error;                                    \
+        }                                               \
+    }
+
+#define VEC2_CTOR_ARRAY_TEST(VURES, VUP, P0, P1)        \
+    {                                                   \
+        const VUP float f0[] = { P0, P1 };              \
+        const VURES Vec2f v = Vec2f_ctor(f0);           \
+        if (any(v.x != f0[0]) || any(v.y != f0[1])) {   \
+            ++error;                                    \
+        }                                               \
+    }
+
+inline uniform int
+testCtor()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_CTOR1_TEST(VAR, VAR, (pi));
+    VEC2_CTOR1_TEST(UNI, UNI, (1));
+
+    VEC2_CTOR2_TEST(VAR, VAR, VAR, (pi), (pi + 1));
+    VEC2_CTOR2_TEST(VAR, VAR, UNI, (pi), (1));
+    VEC2_CTOR2_TEST(VAR, UNI, VAR, (0), (pi + 1));
+    VEC2_CTOR2_TEST(UNI, UNI, UNI, (0), (1));
+
+    VEC2_CTOR_ARRAY_TEST(VAR, VAR, (pi), (pi + 1));
+    VEC2_CTOR_ARRAY_TEST(UNI, UNI, (0), (1));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec2x OP Vec2x (+, -, *, /)
+//----------------------------------------------------------------------
+#define VEC2_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y, OP)         \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        const VURES Vec2f v = v0 OP v1;                                 \
+        if (any(v.x != ((VUP0 float) (P0X) OP (VUP1 float) (P1X))) ||   \
+            any(v.y != ((VUP0 float) (P0Y) OP (VUP1 float) (P1Y))) ) {  \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+//----------------------------------------------------------------------
+// Vec2x = Vec2x + Vec2x
+//----------------------------------------------------------------------
+#define VEC2_PLUS_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y)   \
+    VEC2_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y, +)
+
+inline uniform int
+testPlus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_PLUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3));
+    VEC2_PLUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (2), (3));
+    VEC2_PLUS_TEST(VAR, UNI, VAR, (0), (1), (pi + 2), (pi + 3));
+    VEC2_PLUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec2x = Vec2x - Vec2x
+//----------------------------------------------------------------------
+#define VEC2_MINUS_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y)  \
+    VEC2_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y, -)
+
+inline uniform int
+testMinus()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_MINUS_TEST(VAR, VAR, VAR, (pi), (pi + 1), (pi + 2), (pi + 3));
+    VEC2_MINUS_TEST(VAR, VAR, UNI, (pi), (pi + 1), (2), (3));
+    VEC2_MINUS_TEST(VAR, UNI, VAR, (0), (1), (pi + 2), (pi + 3));
+    VEC2_MINUS_TEST(UNI, UNI, UNI, (0), (1), (2), (3));
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec2x = Scalar OP Vec2x (*, /)
+//----------------------------------------------------------------------
+#define VEC2_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, OP)    \
+    {                                                                   \
+        const VUP0 float f0 = (P0);                                     \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        const VURES Vec2f v = f0 OP v1;                                 \
+        if (any(v.x != ((VUP0 float) (P0) OP (VUP1 float) (P1X))) ||    \
+            any(v.y != ((VUP0 float) (P0) OP (VUP1 float) (P1Y))) ) {   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+// ----------------------------------------------------------------------
+// Vec2x = x * Vec2x
+// ---------------------------------------------------------------------
+#define VEC2_SCALAR_PRE_MULT_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y)      \
+    VEC2_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, *)
+
+
+inline uniform int
+testScalarPreMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_SCALAR_PRE_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3));
+    VEC2_SCALAR_PRE_MULT_TEST(VAR, VAR, UNI, (pi + 1), (2), (3));
+    VEC2_SCALAR_PRE_MULT_TEST(VAR, UNI, VAR, (1), (pi + 2), (pi + 3));
+    VEC2_SCALAR_PRE_MULT_TEST(UNI, UNI, UNI, (1), (2), (3));
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec2x = Vec2x OP Scalar (*, /)
+//----------------------------------------------------------------------
+#define VEC2_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1, OP)   \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 float f1 = (P1);                                     \
+        const VURES Vec2f v = v0 OP f1;                                 \
+        if (any(v.x != ((VUP0 float) (P0X) OP (VUP1 float) (P1))) ||    \
+            any(v.y != ((VUP0 float) (P0Y) OP (VUP1 float) (P1))) ) {   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+// ---------------------------------------------------------------------
+// Vec2x = Vec2x * x
+// ---------------------------------------------------------------------
+#define VEC2_SCALAR_POST_MULT_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1)     \
+    VEC2_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1, *)
+
+inline uniform int
+testScalarPostMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_SCALAR_POST_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3));
+    VEC2_SCALAR_POST_MULT_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (3));
+    VEC2_SCALAR_POST_MULT_TEST(VAR, UNI, VAR, (1), (2), (pi + 3));
+    VEC2_SCALAR_POST_MULT_TEST(UNI, UNI, UNI, (1), (2), (3));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = Vec2x * Vec2x
+// ---------------------------------------------------------------------
+#define VEC2_MULT_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y)   \
+    VEC2_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y, *)
+
+inline uniform int
+testMult()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_MULT_TEST(VAR, VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4));
+    VEC2_MULT_TEST(VAR, VAR, UNI, (pi + 1), (pi + 2), (3), (4));
+    VEC2_MULT_TEST(VAR, UNI, VAR, (1), (2), (pi + 3), (pi + 4));
+    VEC2_MULT_TEST(UNI, UNI, UNI, (1), (2), (3), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = x / Vec2x
+// ---------------------------------------------------------------------
+#define VEC2_SCALAR_PRE_DIV_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y)       \
+    VEC2_SCALAR_PRE_OP_TEST(VURES, VUP0, VUP1, P0, P1X, P1Y, /)
+
+inline uniform int
+testScalarPreDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_SCALAR_PRE_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 2), (pi * 4));
+    VEC2_SCALAR_PRE_DIV_TEST(VAR, VAR, UNI, (pi * 256), (2), (4));
+    VEC2_SCALAR_PRE_DIV_TEST(VAR, UNI, VAR, (256), (pi * 2), (pi * 4));
+    VEC2_SCALAR_PRE_DIV_TEST(UNI, UNI, UNI, (256), (2), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = Vec2x / x
+// ---------------------------------------------------------------------
+#define VEC2_SCALAR_POST_DIV_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1)      \
+    VEC2_SCALAR_POST_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1, /)
+
+inline uniform int
+testScalarPostDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_SCALAR_POST_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 128), (pi * 2));
+    VEC2_SCALAR_POST_DIV_TEST(VAR, VAR, UNI, (pi * 256), (pi * 128), (2));
+    VEC2_SCALAR_POST_DIV_TEST(VAR, UNI, VAR, (256), (128), (pi * 2));
+    VEC2_SCALAR_POST_DIV_TEST(UNI, UNI, UNI, (256), (128), (2));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = Vec2x / Vec2x
+// ---------------------------------------------------------------------
+#define VEC2_DIV_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y)    \
+    VEC2_OP_TEST(VURES, VUP0, VUP1, P0X, P0Y, P1X, P1Y, /)
+
+inline uniform int
+testDiv()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_DIV_TEST(VAR, VAR, VAR, (pi * 256), (pi * 128), (pi * 2), (pi * 4));
+    VEC2_DIV_TEST(VAR, VAR, UNI, (pi * 256), (pi * 128), (2), (4));
+    VEC2_DIV_TEST(VAR, UNI, VAR, (256), (128), (pi * 2), (pi * 4));
+    VEC2_DIV_TEST(UNI, UNI, UNI, (256), (128), (2), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqual(Vec2x, Vec2x)
+// ---------------------------------------------------------------------
+#define VEC2_IS_EQUAL_TEST(VUP0, VUP1, P0X, P0Y, P1X, P1Y, R0)          \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        if (any(isEqual(v0, v1) != R0)) {                               \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqual()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 1), (pi + 2), true);
+    VEC2_IS_EQUAL_TEST(VAR, UNI, (1), (2), (1), (2), true);
+    VEC2_IS_EQUAL_TEST(UNI, VAR, (1), (2), (1), (2), true);
+    VEC2_IS_EQUAL_TEST(UNI, UNI, (1), (2), (1), (2), true);
+
+    VEC2_IS_EQUAL_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 2), (pi + 1), false);
+    VEC2_IS_EQUAL_TEST(VAR, UNI, (pi + 3), (pi + 4), (1), (2), false);
+    VEC2_IS_EQUAL_TEST(UNI, VAR, (1), (2), (pi + 3), (pi + 4), false);
+    VEC2_IS_EQUAL_TEST(UNI, UNI, (1), (2), (2), (1), false);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isEqualFixedEps(Vec2x, Vec2x)
+// ---------------------------------------------------------------------
+#define VEC2_IS_EQUAL_FIXED_EPS_TEST(VUP0, VUP1, P0X, P0Y, P1X, P1Y, R0) \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        if (any(isEqualFixedEps(v0, v1) != R0)) {                       \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsEqualFixedEps()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 1), (pi + 2), true);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (1), (2), (1), (2), true);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (1), (2), true);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (1), (2), true);
+
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 2), (pi + 1), false);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(VAR, UNI, (pi + 3), (pi + 4), (1), (2), false);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(UNI, VAR, (1), (2), (pi + 3), (pi + 4), false);
+    VEC2_IS_EQUAL_FIXED_EPS_TEST(UNI, UNI, (1), (2), (2), (1), false);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isZero(Vec2x)
+// ---------------------------------------------------------------------
+#define VEC2_IS_ZERO_TEST(VUP0, P0X, P0Y, R0)                           \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        if (any(isZero(v0) != R0)) {                                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsZero()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_IS_ZERO_TEST(VAR, (pi + 1), (pi + 2), false);
+    VEC2_IS_ZERO_TEST(VAR, ((pi + 1) * 0.0f), ((pi + 2) * 0.0f), true);
+    VEC2_IS_ZERO_TEST(UNI, (0.1), (-0.1), false);
+    VEC2_IS_ZERO_TEST(UNI, (0.0000001), (-0.0000001), true);
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = dot(Vec2x, Vec2x) dot product
+// ---------------------------------------------------------------------
+#define VEC2_DOT_TEST(VUP0, VUP1, P0X, P0Y, P1X, P1Y, R0)               \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        if (any(dot(v0, v1) != R0)) {                                   \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testDot()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_DOT_TEST(VAR, VAR, (pi + 1), (pi + 2), (pi + 3), (pi + 4), (2 * pi * pi + 10 * pi + 11));
+    VEC2_DOT_TEST(VAR, UNI, (pi + 1), (pi + 2), (3), (4), (7 * pi + 11));
+    VEC2_DOT_TEST(UNI, VAR, (1), (2), (pi + 3), (pi + 4), (3 * pi + 11));
+    VEC2_DOT_TEST(UNI, UNI, (1), (2), (3), (4), (11));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = length(Vec2x) euclidean length
+// ---------------------------------------------------------------------
+#define VEC2_LENGTH_TEST(VUP0, P0X, P0Y, R0)                            \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 float r0 = (VUP0 float) sqrt((VUP0 float) (R0));     \
+        if (any(isEqual(length(v0), r0) == false)) {                    \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLength()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_LENGTH_TEST(VAR, (2 * pi), (3 * pi), (13 * pi * pi));
+    VEC2_LENGTH_TEST(UNI, (2), (3), (13));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// x = lengthSqr(Vec2x) euclidean length squared
+// ---------------------------------------------------------------------
+#define VEC2_LENGTH_SQR_TEST(VUP0, P0X, P0Y, R0)                        \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 float r0 = (VUP0 float) (R0);                        \
+        if (any(isEqual(lengthSqr(v0), r0) == false)) {                 \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLengthSqr()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_LENGTH_SQR_TEST(VAR, (2 * pi), (3 * pi), (13 * pi * pi));
+    VEC2_LENGTH_SQR_TEST(UNI, (2), (3), (13));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = normalize(Vec2x) - normalize a vector
+// ---------------------------------------------------------------------
+#define VEC2_NORMALIZE_TEST(VUP0, P0X, P0Y)                             \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 Vec2f nv0 = normalize(v0);                           \
+        if (any(isNormalized(nv0) == false)) {                          \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testNormalize()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex;
+
+    VEC2_NORMALIZE_TEST(VAR, (pi + 1), (pi + 2));
+    VEC2_NORMALIZE_TEST(UNI, (1), (2));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = abs(Vec2x)
+// ---------------------------------------------------------------------
+#define VEC2_ABS_TEST(VUP0, P0X, P0Y, R0X, R0Y)                         \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 Vec2f r0 = Vec2f_ctor((VUP0 float) (R0X), (VUP0 float) (R0Y)); \
+        const VUP0 Vec2f absV0 = abs(v0);                               \
+        if (any(isEqual(absV0, r0) == false)) {                         \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testAbs()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex;
+
+    VEC2_ABS_TEST(VAR, (pi + 1), (pi + 2), (pi + 1), (pi + 2));
+    VEC2_ABS_TEST(VAR, (-pi - 1), (pi + 2), (pi + 1) ,(pi + 2));
+    VEC2_ABS_TEST(VAR, (pi + 1), (-pi - 2), (pi + 1), (pi + 2));
+    VEC2_ABS_TEST(VAR, (-pi - 1), (-pi - 2), (pi + 1), (pi + 2));
+    VEC2_ABS_TEST(UNI, (1), (2), (1), (2));
+    VEC2_ABS_TEST(UNI, (-1), (2), (1) ,(2));
+    VEC2_ABS_TEST(UNI, (1), (-2), (1), (2));
+    VEC2_ABS_TEST(UNI, (-1), (-2), (1), (2));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = neg(Vec2x) : -v
+// ---------------------------------------------------------------------
+#define VEC2_NEG_TEST(VUP0, P0X, P0Y)                                   \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 Vec2f negV0 = neg(v0);                               \
+        if (any(!isEqual(negV0.x, -v0.x)) ||                            \
+            any(!isEqual(negV0.y, -v0.y))) {                            \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testNeg()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex + 1;
+
+    VEC2_NEG_TEST(VAR, (pi * 2), (pi * 4));
+    VEC2_NEG_TEST(UNI, (2), (4));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// Vec2x = rcp(Vec2x) : 1 / v
+// ---------------------------------------------------------------------
+#define VEC2_RCP_TEST(VUP0, P0X, P0Y, R0X, R0Y)                         \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP0 Vec2f r0 = Vec2f_ctor((VUP0 float) (R0X), (VUP0 float) (R0Y)); \
+        const VUP0 Vec2f rcpV0 = rcp(v0);                               \
+        if (any(!isEqual(rcpV0, r0))) {                                 \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testRcp()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex + 1;
+
+    VEC2_RCP_TEST(VAR, (pi * 2), (pi * 4), (1. / (2. * pi)), (1. / (4. * pi)));
+    VEC2_RCP_TEST(UNI, (2), (4), (.5), (.25));
+
+    return error;
+}
+
+// ---------------------------------------------------------------------
+// bool = isNormalized(Vec2) : is Vec2 a unit vector?
+// ---------------------------------------------------------------------
+#define VEC2_IS_NORMALIZED_TEST(VUP0, P0X, P0Y, R0)                     \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        if (any(isNormalized(v0) != R0)) {                              \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testIsNormalized()
+{
+    uniform int error = 0;
+    const int varying pi = programIndex;
+
+    VEC2_IS_NORMALIZED_TEST(VAR, (pi + 1), (pi + 2), false);
+    VEC2_IS_NORMALIZED_TEST(VAR, (.707106781), (.707106781), true);
+    VEC2_IS_NORMALIZED_TEST(UNI, (0), (1), true);
+    VEC2_IS_NORMALIZED_TEST(UNI, (1), (1), false);
+
+    return error;
+}
+
+//----------------------------------------------------------------------
+// Vec2x = lerp(Vec2x, Vec2x, x)
+//----------------------------------------------------------------------
+#define VEC2_LERP_TEST(VURES, VUP0, VUP1, VUP2, P0X, P0Y, P1X, P1Y, P2, R0X, R0Y) \
+    {                                                                   \
+        const VUP0 Vec2f v0 = Vec2f_ctor((VUP0 float) (P0X), (VUP0 float) (P0Y)); \
+        const VUP1 Vec2f v1 = Vec2f_ctor((VUP1 float) (P1X), (VUP1 float) (P1Y)); \
+        const VUP2 float f = (VUP2 float) (P2);                         \
+        const VURES Vec2f res = lerp(v0, v1, f);                        \
+        if (any(!isEqual(res.x, (VURES float) (R0X))) ||                \
+            any(!isEqual(res.y, (VURES float) (R0Y)))) {                \
+            ++error;                                                    \
+        }                                                               \
+    }
+
+inline uniform int
+testLerp()
+{
+    uniform int error = 0;
+    const varying int pi = programIndex + 1;
+
+    VEC2_LERP_TEST(VAR, VAR, VAR, VAR,
+                   (pi), (2*pi),
+                   (pi + 1), (2*pi + 1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (pi + 1)),
+                   ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (2*pi + 1)));
+    VEC2_LERP_TEST(VAR, VAR, VAR, UNI,
+                   (pi), (2*pi),
+                   (pi + 1), (2*pi + 1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (pi) + (1. / 64.) * (pi + 1)),
+                   ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (2*pi + 1)));
+    VEC2_LERP_TEST(VAR, VAR, UNI, VAR,
+                   (pi), (2*pi),
+                   (1), (1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (pi) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (2*pi) + (pi / 64.) * (1)));
+    VEC2_LERP_TEST(VAR, VAR, UNI, UNI,
+                   (pi), (2*pi),
+                   (1), (1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * pi + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (2*pi) + (1. / 64.) * (1)));
+    VEC2_LERP_TEST(VAR, UNI, VAR, VAR,
+                   (1), (2),
+                   (pi + 1), (2*pi + 1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (1) + (pi / 64.) * (pi + 1)),
+                   ((1. - (pi / 64.)) * (2) + (pi / 64.) * (2*pi + 1)));
+    VEC2_LERP_TEST(VAR, UNI, VAR, UNI,
+                   (1), (2),
+                   (pi + 1), (2*pi + 1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (1) + (1. / 64.) * (pi + 1)),
+                   ((1. - (1. / 64.)) * (2) + (1. / 64.) * (2*pi + 1)));
+    VEC2_LERP_TEST(VAR, UNI, UNI, VAR,
+                   (1), (2),
+                   (1), (1),
+                   (pi / 64.),
+                   ((1. - (pi / 64.)) * (1) + (pi / 64.) * (1)),
+                   ((1. - (pi / 64.)) * (2) + (pi / 64.) * (1)));
+    VEC2_LERP_TEST(UNI, UNI, UNI, UNI,
+                   (1), (2),
+                   (1), (1),
+                   (1. / 64.),
+                   ((1. - (1. / 64.)) * (1) + (1. / 64.) * (1)),
+                   ((1. - (1. / 64.)) * (2) + (1. / 64.) * (1)))
+
+        return error;
+}
+
+

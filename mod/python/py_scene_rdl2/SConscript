@@ -1,0 +1,47 @@
+Import('env')
+
+from os import environ
+
+components = [
+   'scene_rdl2',
+   'boost_python_mt',
+   'boost_date_time_mt',
+   'boost_chrono_mt',
+]
+
+env.DWAUseComponents(components)
+env.AppendUnique(CPPDEFINES=['BOOST_BIND_GLOBAL_PLACEHOLDERS'])
+if int(environ.get('REZ_PYTHON_MAJOR_VERSION', '2')) == 3:
+    env.AppendUnique(CPPDEFINES=['IS_PY3'])
+
+#---------------------------------------
+# scene_rdl2 python module; a directory named 'scene_rdl2' containing:
+#     - compiled module (__scene_rdl2__.so)
+#     - __init__.py to load the compiled module
+#
+
+py_scene_rdl2_sources = env.DWAGlob('py_scene_rdl2*.cc')
+
+# Don't use tbbmalloc in the Python bindings because it makes them crash
+crash_libs = ['tbbmalloc_proxy', 'tbbmalloc']
+existing_libs = env["LIBS"]
+new_libs = [i for i in existing_libs if i not in crash_libs]
+env.Replace(LIBS=new_libs)
+
+# Be sure to set the runpath to libscene_rdl2 correctly
+env.Prepend(RPATH=[env.Literal("\\$$ORIGIN/../../../../lib")])
+
+# Okay now we can build it
+pythonModule = env.DWAPythonExtensionModule(
+    "scene_rdl2",
+    cSources=py_scene_rdl2_sources,
+    pyxSources=None,
+    COMPONENTS=components,
+    LIBNAME="__scene_rdl2__.so"
+)
+pythonLib = pythonModule.mod
+
+env.DWAInstallPythonModuleFiles(
+    "scene_rdl2",
+    [pythonLib, "__init__.py"]
+)

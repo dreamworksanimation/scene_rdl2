@@ -1,0 +1,522 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+/// @file Col3.isph
+/// @brief
+/// defines the 3-channel rgb Col3 types and methods.
+#pragma once
+
+#include "Constants.isph"
+#include "Dual.isph"
+#include "Math.isph"
+#include "Variform.isph"
+
+//---------------------------------------------------------------------
+// Types
+//---------------------------------------------------------------------
+
+#define MATH_DECLARE_COL3(TYPE, NAME)           \
+    struct NAME                                 \
+    {                                           \
+        TYPE r;                                 \
+        TYPE g;                                 \
+        TYPE b;                                 \
+    };
+
+/// @struct Col3f
+/// @brief a 3 channel, single precision rgb color
+MATH_DECLARE_COL3(float,  Col3f);
+/// @struct Col3Dual3f
+/// @brief a 3 channel color of rgb dual3f
+MATH_DECLARE_COL3(Dual3f, Col3Dual3f)
+
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
+
+// Col3f c = Col3f_ctor(f);
+// Col3Dual3f c = Col3f_ctor(d3f);
+/** \cond */
+#define MATH_COL3_CTOR_1()                      \
+    {                                           \
+        result.r = p0;                          \
+        result.g = p0;                          \
+        result.b = p0;                          \
+    }
+/** \endcond */
+/** @{
+ * construct a Col3 from a single number.
+ */
+MATH_DEFINE_UNARY_VARIFORM(Col3f_ctor, Col3f, float, MATH_COL3_CTOR_1())
+MATH_DEFINE_UNARY_VARIFORM(Col3Dual3f_ctor, Col3Dual3f, Dual3f, MATH_COL3_CTOR_1())
+/**@}*/
+
+// Col3f c = Col3f_ctor(f, f, f);
+// Col3Dual3f c = Col3Dual3f_ctor(d3f, d3f, d3f);
+/** \cond */
+#define MATH_COL3_CTOR_3()                      \
+    {                                           \
+        result.r = p0;                          \
+        result.g = p1;                          \
+        result.b = p2;                          \
+    }
+/** \endcond */
+/** @{
+ * construct a Col3 from 3 numbers
+ */
+MATH_DEFINE_TERNARY_VARIFORM(Col3f_ctor, Col3f, float, float, float, MATH_COL3_CTOR_3())
+MATH_DEFINE_TERNARY_VARIFORM(Col3Dual3f_ctor, Col3Dual3f, Dual3f, Dual3f, Dual3f,
+                             MATH_COL3_CTOR_3())
+/**@}*/
+
+// Col3f = Col3f_ctor(float a[]);
+// Col3Dual3f = Col3Dual3f_ctor(Dual3f a[]);
+/** \cond */
+#define MATH_COL3_CTOR_ARRAY()                  \
+    {                                           \
+        result.r = p0[0];                       \
+        result.g = p0[1];                       \
+        result.b = p0[2];                       \
+    }
+/** \endcond */
+/** @{
+ * construct a Col3 from an array
+ */
+MATH_DEFINE_UNARY_ARRAY_VARIFORM(Col3f_ctor, Col3f, float, MATH_COL3_CTOR_ARRAY())
+MATH_DEFINE_UNARY_ARRAY_VARIFORM(Col3Dual3f_ctor, Col3Dual3f, Dual3f, MATH_COL3_CTOR_ARRAY())
+/**@}*/
+
+//----------------------------------------------------------------------
+// unary operations
+//----------------------------------------------------------------------
+
+// bool b = isBlack(Col3);
+/** \cond */
+#define MATH_COL3_IS_BLACK(FTYPE)                       \
+    {                                                   \
+        result = isEqual(p0.r, (uniform FTYPE) 0.) &&   \
+            isEqual(p0.g, (uniform FTYPE) 0.) &&        \
+            isEqual(p0.b, (uniform FTYPE) 0.);          \
+    }
+#define MATH_COL3DUAL_IS_BLACK(FTYPE)                           \
+    {                                                           \
+        result = isEqual(eval(p0.r), (uniform FTYPE) 0.) &&     \
+            isEqual(eval(p0.g), (uniform FTYPE) 0.) &&          \
+            isEqual(eval(p0.b), (uniform FTYPE) 0.);            \
+    }
+/** \endcond */
+/** @{
+ * Determine is a given color is black
+ */
+MATH_DEFINE_UNARY_VARIFORM(isBlack, bool, Col3f, MATH_COL3_IS_BLACK(float));
+MATH_DEFINE_UNARY_VARIFORM(isBlack, bool, Col3Dual3f, MATH_COL3DUAL_IS_BLACK(float));
+/** @}
+ */
+
+ // bool b = isWhite(Col3);
+/** \cond */
+#define MATH_COL3_IS_WHITE(FTYPE)                       \
+    {                                                   \
+        result = isEqual(p0.r, (uniform FTYPE) 1.) &&   \
+            isEqual(p0.g, (uniform FTYPE) 1.) &&        \
+            isEqual(p0.b, (uniform FTYPE) 1.);          \
+    }
+#define MATH_COL3DUAL_IS_WHITE(FTYPE)                           \
+    {                                                           \
+        result = isEqual(eval(p0.r), (uniform FTYPE) 1.) &&     \
+            isEqual(eval(p0.g), (uniform FTYPE) 1.) &&          \
+            isEqual(eval(p0.b), (uniform FTYPE) 1.);            \
+    }
+/** \endcond */
+/** @{
+ * Determine is a given color is black
+ */
+MATH_DEFINE_UNARY_VARIFORM(isWhite, bool, Col3f, MATH_COL3_IS_WHITE(float));
+MATH_DEFINE_UNARY_VARIFORM(isWhite, bool, Col3Dual3f, MATH_COL3DUAL_IS_WHITE(float));
+/** @}
+ */
+
+// ---------------------------------------------------------------------------
+// Binary Operators
+// ---------------------------------------------------------------------------
+
+// Col3f = float - Col3f;
+// Col3Dual3f = Dual3f - Col3Dual3f;
+// Col3Dual3f = float - Col3Dual3f;
+/** \cond */
+#define MATH_COL3_S_PRE_MINUS()                 \
+    {                                           \
+        result.r = p0 - p1.r;                   \
+        result.g = p0 - p1.g;                   \
+        result.b = p0 - p1.b;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar subtraction (scalar - Col3)
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, float, Col3f, MATH_COL3_S_PRE_MINUS())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3Dual3f, Dual3f, Col3Dual3f, MATH_COL3_S_PRE_MINUS())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3Dual3f, float, Col3Dual3f, { result = Dual3f_ctor(p0) - p1; })
+/// @}
+
+// Col3f = Col3f - float;
+// Col3Dual3f = Col3Dual3f - Dual3f;
+/** \cond */
+#define MATH_COL3_S_POST_MINUS()                \
+    {                                           \
+        result.r = p0.r - p1;                   \
+        result.g = p0.g - p1;                   \
+        result.b = p0.b - p1;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar subtraction (Col3d - scalar)
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, Col3f, float, MATH_COL3_S_POST_MINUS())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3Dual3f, Col3Dual3f, Dual3f, MATH_COL3_S_POST_MINUS())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3Dual3f, Col3Dual3f, float, { result = p0 - Dual3f_ctor(p1); })
+/// @}
+
+
+// Col3f = Col3f - Col3f;
+// Col3Dual3f = Col3Dual3f - Col3Dual3f;
+/** \cond */
+#define MATH_COL3_MINUS()                       \
+    {                                           \
+        result.r = p0.r - p1.r;                 \
+        result.g = p0.g - p1.g;                 \
+        result.b = p0.b - p1.b;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise subtraction of 2 colors
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, Col3f, Col3f, MATH_COL3_MINUS())
+MATH_DEFINE_BINARY_VARIFORM(operator-, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_MINUS())
+
+// Col3f = float + Col3f;
+// Col3Dual3f = Dual3f + Col3Dual3f;
+// Col3Dual3f = float + Col3Dual3f;
+/** \cond */
+#define MATH_COL3_S_PRE_PLUS()                  \
+    {                                           \
+        result.r = p0 + p1.r;                   \
+        result.g = p0 + p1.g;                   \
+        result.b = p0 + p1.b;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar addition (scalar + Col3)
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, float, Col3f, MATH_COL3_S_PRE_PLUS())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3Dual3f, Dual3f, Col3Dual3f, MATH_COL3_S_PRE_PLUS())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3Dual3f, float, Col3Dual3f, { result = Dual3f_ctor(p0) + p1; })
+/// @}
+
+// Col3f = Col3f + float;
+// Col3Dual3f = Col3Dual3f + Dual3f;
+/** \cond */
+#define MATH_COL3_S_POST_PLUS()                 \
+    {                                           \
+        result.r = p0.r + p1;                   \
+        result.g = p0.g + p1;                   \
+        result.b = p0.b + p1;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar addition (Col3d + scalar)
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, Col3f, float, MATH_COL3_S_POST_PLUS())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3Dual3f, Col3Dual3f, Dual3f, MATH_COL3_S_POST_PLUS())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3Dual3f, Col3Dual3f, float, { result = p0 + Dual3f_ctor(p1); })
+/// @}
+
+
+// Col3f = Col3f + Col3f;
+// Col3Dual3f = Col3Dual3f + Col3Dual3f;
+/** \cond */
+#define MATH_COL3_PLUS()                        \
+    {                                           \
+        result.r = p0.r + p1.r;                 \
+        result.g = p0.g + p1.g;                 \
+        result.b = p0.b + p1.b;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise addition of 2 colors
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, Col3f, Col3f, MATH_COL3_PLUS())
+MATH_DEFINE_BINARY_VARIFORM(operator+, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_PLUS())
+
+// Col3f = float * Col3f;
+// Col3Dual3f = Dual3f * Col3Dual3f;
+// Col3Dual3f = float * Col3Dual3f;
+/** \cond */
+#define MATH_COL3_S_PRE_MULT()                  \
+    {                                           \
+        result.r = p0 * p1.r;                   \
+        result.g = p0 * p1.g;                   \
+        result.b = p0 * p1.b;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar multiplication (scalar * Col3)
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, float, Col3f, MATH_COL3_S_PRE_MULT())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3Dual3f, Dual3f, Col3Dual3f, MATH_COL3_S_PRE_MULT())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3Dual3f, float, Col3Dual3f, { result = Dual3f_ctor(p0) * p1; })
+/// @}
+
+// Col3f = Col3f * float;
+// Col3Dual3f = Col3Dual3f * Dual3f;
+/** \cond */
+#define MATH_COL3_S_POST_MULT()                 \
+    {                                           \
+        result.r = p0.r * p1;                   \
+        result.g = p0.g * p1;                   \
+        result.b = p0.b * p1;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar multiplication (Col3d * scalar)
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, Col3f, float, MATH_COL3_S_POST_MULT())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3Dual3f, Col3Dual3f, Dual3f, MATH_COL3_S_POST_MULT())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3Dual3f, Col3Dual3f, float, { result = p0 * Dual3f_ctor(p1); })
+/// @}
+
+
+// Col3f = Col3f * Col3f;
+// Col3Dual3f = Col3Dual3f * Col3Dual3f;
+/** \cond */
+#define MATH_COL3_MULT()                        \
+    {                                           \
+        result.r = p0.r * p1.r;                 \
+        result.g = p0.g * p1.g;                 \
+        result.b = p0.b * p1.b;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise multiplication of 2 colors
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, Col3f, Col3f, MATH_COL3_MULT())
+MATH_DEFINE_BINARY_VARIFORM(operator*, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_MULT())
+
+// Col3f = float / Col3f;
+// Col3Dual3f = Dual3f / Col3Dual3f;
+// Col3Dual3f = float / Col3Dual3f;
+/** \cond */
+#define MATH_COL3_S_PRE_DIV()                   \
+    {                                           \
+        result.r = p0 / p1.r;                   \
+        result.g = p0 / p1.g;                   \
+        result.b = p0 / p1.b;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar division (scalar / Col3)
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, float, Col3f, MATH_COL3_S_PRE_DIV())
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3Dual3f, Dual3f, Col3Dual3f, MATH_COL3_S_PRE_DIV())
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3Dual3f, float, Col3Dual3f, { result = Dual3f_ctor(p0) * p1; })
+/// @}
+
+// Col3f = Col3f / float;
+// Col3Dual3f = Col3Dual3f / Dual3f;
+/** \cond */
+#define MATH_COL3_S_POST_DIV()                  \
+    {                                           \
+        result.r = p0.r / p1;                   \
+        result.g = p0.g / p1;                   \
+        result.b = p0.b / p1;                   \
+    }
+/** \endcond */
+/// @{
+/// scalar multiplication (Col3d * scalar)
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, Col3f, float, MATH_COL3_S_POST_DIV())
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3Dual3f, Col3Dual3f, Dual3f, MATH_COL3_S_POST_DIV())
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3Dual3f, Col3Dual3f, float, { result = p0 * Dual3f_ctor(p1); })
+/// @}
+
+
+// Col3f = Col3f / Col3f;
+// Col3Dual3f = Col3Dual3f / Col3Dual3f;
+/** \cond */
+#define MATH_COL3_DIV()                         \
+    {                                           \
+        result.r = p0.r / p1.r;                 \
+        result.g = p0.g / p1.g;                 \
+        result.b = p0.b / p1.b;                 \
+    }
+/** \endcond */
+/// @{
+/// component-wise division of 2 colors
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, Col3f, Col3f, MATH_COL3_DIV())
+MATH_DEFINE_BINARY_VARIFORM(operator/, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_DIV())
+
+/// @}
+
+// ---------------------------------------------------------------------------
+// Ternary Operations
+// ---------------------------------------------------------------------------
+
+// bool = isEqual(c1, c2, tol)
+/** \cond */
+#define MATH_COL3_IS_EQUAL()                    \
+    {                                           \
+        result = isEqual(p0.r, p1.r, p2) &&     \
+            isEqual(p0.g, p1.g, p2) &&          \
+            isEqual(p0.b, p1.b, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Col3s (p1, and p2) equal to within a specified tolerance (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Col3f, Col3f, float, MATH_COL3_IS_EQUAL())
+MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Col3Dual3f, Col3Dual3f, float, MATH_COL3_IS_EQUAL())
+/// @}
+/// @{
+/// are two Col3s equal to within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Col3f, Col3f,
+                            { result = isEqual(p0, p1, sEpsilon); })
+MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Col3Dual3f, Col3Dual3f,
+                            { result = isEqual(p0, p1, (uniform float) sEpsilon); })
+/// @}
+
+// bool = isEqualFixedEps(c1, c2, tol)
+/** \cond */
+#define MATH_COL3_IS_EQUAL_FIXED_EPS()                  \
+    {                                                   \
+        result = isEqualFixedEps(p0.r, p1.r, p2) &&     \
+            isEqualFixedEps(p0.g, p1.g, p2) &&          \
+            isEqualFixedEps(p0.b, p1.b, p2);            \
+    }
+/** \endcond */
+/// @{
+/// are two Col3s (p1, and p2) equal to within a specified tolerance (p2)
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Col3f, Col3f, float,
+                             MATH_COL3_IS_EQUAL_FIXED_EPS())
+MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Col3Dual3f, Col3Dual3f, float,
+                             MATH_COL3_IS_EQUAL_FIXED_EPS())
+/// @}
+/// @{
+/// are two Col3s equal to within the default (sEpsilon) tolerance?
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Col3f, Col3f,
+                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
+MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Col3Dual3f, Col3Dual3f,
+                            { result = isEqualFixedEps(p0, p1, (uniform float) sEpsilon); })
+/// @}
+
+// Col3 c = clamp(c, low, high);
+/** \cond */
+#define MATH_COL3_CLAMP()                       \
+    {                                           \
+        result.r = clamp(p0.r, p1, p2);         \
+        result.g = clamp(p0.g, p1, p2);         \
+        result.b = clamp(p0.b, p1, p2);         \
+    }
+/** \endcond */
+/// @{
+/// clamp a Col3 between low (p1) and high (p2)
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3f, Col3f, float, float,
+                             MATH_COL3_CLAMP())
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3Dual3f, Col3Dual3f, Dual3f, Dual3f,
+                             MATH_COL3_CLAMP())
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3Dual3f, Col3Dual3f, float, Dual3f,
+                             MATH_COL3_CLAMP())
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3Dual3f, Col3Dual3f, Dual3f, float,
+                             MATH_COL3_CLAMP())
+MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3Dual3f, Col3Dual3f, float, float,
+                             MATH_COL3_CLAMP())
+/// @}
+
+// Col3f
+/// @{
+/// lerp two Col3 (p0, p1) by a value (p2)
+MATH_DEFINE_TERNARY_VARIFORM(lerp, Col3f, Col3f, Col3f, float, MATH_LERP())
+MATH_DEFINE_TERNARY_VARIFORM(lerp, Col3Dual3f, Col3Dual3f, Col3Dual3f, Dual3f, MATH_LERP())
+MATH_DEFINE_TERNARY_VARIFORM(lerp, Col3Dual3f, Col3Dual3f, Col3Dual3f, float,
+                             { result = lerp(p0, p1, Dual3f_ctor(p2)); })
+
+// Col3f
+/// @{
+/// bilerp four Col3 (p0, p1, p2, p3) by two values (p4, p5)
+MATH_DEFINE_SENARY_VARIFORM(bilerp, Col3f, Col3f, Col3f, Col3f, Col3f, float, float, MATH_BILERP())
+
+// Col3f = min(Col3f, Col3f)
+/** \cond */
+#define MATH_COL3_MIN()                         \
+    {                                           \
+        result.r = min(p0.r, p1.r);             \
+        result.g = min(p0.g, p1.g);             \
+        result.b = min(p0.b, p1.b);             \
+    }
+/** \endcond */
+/// @{
+/// compute the component-wise min of 2 col3
+MATH_DEFINE_BINARY_VARIFORM(min, Col3f, Col3f, Col3f, MATH_COL3_MIN())
+MATH_DEFINE_BINARY_VARIFORM(min, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_MIN())
+/// @}
+
+// Col3f = max(Col3f, Col3f)
+/** \cond */
+#define MATH_COL3_MAX()                         \
+    {                                           \
+        result.r = max(p0.r, p1.r);             \
+        result.g = max(p0.g, p1.g);             \
+        result.b = max(p0.b, p1.b);             \
+    }
+/** \endcond */
+/// @{
+/// compute the component-wise max of 2 col3
+MATH_DEFINE_BINARY_VARIFORM(max, Col3f, Col3f, Col3f, MATH_COL3_MAX())
+MATH_DEFINE_BINARY_VARIFORM(max, Col3Dual3f, Col3Dual3f, Col3Dual3f, MATH_COL3_MAX())
+/// @}
+
+// Col3f = rcp(Col3f)
+/** \cond */
+#define MATH_COL3_RCP()                         \
+    {                                           \
+        result.r = rcp(p0.r);                   \
+        result.g = rcp(p0.g);                   \
+        result.b = rcp(p0.b);                   \
+    }
+/** \endcond */
+/// @{
+/// compute the reciprocal of a Col3
+MATH_DEFINE_UNARY_VARIFORM(rcp, Col3f, Col3f, MATH_COL3_RCP())
+MATH_DEFINE_UNARY_VARIFORM(rcp, Col3Dual3f, Col3Dual3f, MATH_COL3_RCP())
+/// @}
+
+// Col3f = sqrt(Col3f)
+/** \cond */
+#define MATH_COL3_SQRT()                        \
+    {                                           \
+        result.r = sqrt(p0.r);                  \
+        result.g = sqrt(p0.g);                  \
+        result.b = sqrt(p0.b);                  \
+    }
+/** \endcond */
+/// @{
+/// compute the component-wise sqrt of a Col3
+MATH_DEFINE_UNARY_VARIFORM(sqrt, Col3f, Col3f, MATH_COL3_SQRT())
+MATH_DEFINE_UNARY_VARIFORM(sqrt, Col3Dual3f, Col3Dual3f, MATH_COL3_SQRT())
+
+// Col3f = log(Col3f)
+/** \cond */
+#define MATH_COL3_LOG()                        \
+    {                                          \
+        result.r = log(p0.r);                  \
+        result.g = log(p0.g);                  \
+        result.b = log(p0.b);                  \
+    }
+/** \endcond */
+/// @{
+/// compute the component-wise sqrt of a Col3
+MATH_DEFINE_UNARY_VARIFORM(log, Col3f, Col3f, MATH_COL3_LOG())
+MATH_DEFINE_UNARY_VARIFORM(log, Col3Dual3f, Col3Dual3f, MATH_COL3_LOG())
+
+/// @}
+
+// float = luminance(Col3f)
+/** \cond */
+#define MATH_COL3_LUMINANCE()                              \
+    {                                                      \
+        result = 0.299f*p0.r + 0.587f*p0.g + 0.114f*p0.b;  \
+    }
+/** \endcond */
+/// @{
+/// compute the luminance of a Col3
+MATH_DEFINE_UNARY_VARIFORM(luminance, float, Col3f, MATH_COL3_LUMINANCE())
+MATH_DEFINE_UNARY_VARIFORM(luminance, Dual3f, Col3Dual3f, MATH_COL3_LUMINANCE())
+/// @}
+
