@@ -10,8 +10,8 @@ jobs:
     - name: Report to Chat Room
       shell: bash
       env:
-        CHATROOM: https://chat.googleapis.com/v1/spaces/AAAAhg7dAzc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=tVVxZYo0NEOoHAoOtPIfugt7-CM_CMS2pHaaOGVOT3Y%3D
-        MESSAGE: A CI chatroom message test using github no secrets.
+        CHATROOM: ${{ secrets.TRIGGER_RATS_CHATROOM }}
+        MESSAGE: A RATS chatroom message test using github with a secret chatroom.
       run: |
         echo "CHATROOM is ${CHATROOM}"
-        curl -X POST -H 'Content-Type: application/json' ${CHATROOM} -d '{"text": "'"${MESSAGE}"'"}'
+        curl -X POST -H 'Content-Type: application/json' --url ${CHATROOM} -d '{"text": "'"${MESSAGE}"'"}'
