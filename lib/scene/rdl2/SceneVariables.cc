@@ -1153,6 +1153,27 @@ SceneVariables::getLayer() const
     return NULL;
 }
 
+SceneObject*
+SceneVariables::getCamera() const
+{
+    auto cameraSceneObj = get(sCamera);
+    if (cameraSceneObj) {
+        return cameraSceneObj;
+    }
+
+    // Grab the first camera we find
+    const SceneContext* sceneContext = getSceneClass().getSceneContext();
+    for (auto iter = sceneContext->beginSceneObject(); iter != sceneContext->endSceneObject(); ++iter) {
+        rdl2::SceneObject* obj = iter->second;
+        if (obj->isA<rdl2::Camera>()) {
+            return obj;
+        }
+    }
+
+    // Couldn't find a camera
+    return NULL;
+}
+
 const SceneObject*
 SceneVariables::getExrHeaderAttributes() const
 {

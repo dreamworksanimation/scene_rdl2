@@ -108,6 +108,10 @@ public:
     /// if no layer could be found.
     SceneObject* getLayer() const;
 
+    /// Retrieves the active RDL camera object we're rendering from. Returns NULL
+    /// if no camera could be found.
+    SceneObject* getCamera() const;
+
     /// Retrieves metadata for image output. Returns NULL if there is no metadata.
     const SceneObject* getExrHeaderAttributes() const;
 
