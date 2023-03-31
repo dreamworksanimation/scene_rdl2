@@ -412,6 +412,9 @@ public:
 
     // Geometry validation
     static AttributeKey<Bool> sValidateGeometry;
+
+    // capture multiple layers of presence for cryptomatte
+    static AttributeKey<Bool> sCryptomatteMultiPresence;
 };
 
 } // namespace rdl2

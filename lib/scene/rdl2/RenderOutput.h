@@ -271,6 +271,14 @@ public:
     int getCryptomatteDepth() const;
     int getCryptomatteNumLayers() const;
 
+    // Cryptomatte output settings
+    inline bool getCryptomatteOutputPositions() const;
+    inline bool getCryptomatteOutputNormals() const;
+    inline bool getCryptomatteOutputBeauty() const;
+    inline bool getCryptomatteSupportResumeRender() const;
+    inline int getCryptomatteNumExtraChannels() const;
+    inline bool cryptomatteHasExtraOutput() const;
+
     /// Returns the camera to use for this output, or nullptr if not specified.
     const Camera* getCamera() const;
 
@@ -300,6 +308,10 @@ private:
     static AttributeKey<String> sAttrCheckpointMultiVersionFileName;
     static AttributeKey<String> sAttrResumeFileName;
     static AttributeKey<Int> sAttrCryptomatteDepth;
+    static AttributeKey<Bool> sAttrCryptomatteOutputPositions;
+    static AttributeKey<Bool> sAttrCryptomatteOutputNormals;
+    static AttributeKey<Bool> sAttrCryptomatteOutputBeauty;
+    static AttributeKey<Bool> sAttrCryptomatteSupportResumeRender;
     static AttributeKey<SceneObject*> sCamera;
     static AttributeKey<SceneObject*> sAttrDisplayFilter;
 };
@@ -444,6 +456,34 @@ RenderOutput::getResumeFileName() const
 {
     return get(sAttrResumeFileName);
 }
+
+bool RenderOutput::getCryptomatteOutputPositions() const
+{ 
+    return get(sAttrCryptomatteOutputPositions);
+}
+bool RenderOutput::getCryptomatteOutputNormals() const
+{ 
+    return get(sAttrCryptomatteOutputNormals);
+}
+bool RenderOutput::getCryptomatteOutputBeauty() const
+{ 
+    return get(sAttrCryptomatteOutputBeauty);
+}
+bool RenderOutput::getCryptomatteSupportResumeRender() const
+{ 
+    return get(sAttrCryptomatteSupportResumeRender);
+}
+int RenderOutput::getCryptomatteNumExtraChannels() const
+{ 
+    int total = 0;
+    if (getCryptomatteOutputPositions())       total += 4;
+    if (getCryptomatteOutputNormals())         total += 4;
+    if (getCryptomatteOutputBeauty())          total += 4;
+    if (getCryptomatteSupportResumeRender())   total += 2;
+    return total;
+}
+// should we output any additional cryptomatte layers (besides the standard id/weight)?
+bool RenderOutput::cryptomatteHasExtraOutput() const { return getCryptomatteNumExtraChannels() != 0; }
 
 } // namespace rdl2
 } // namespace scene_rdl2

@@ -36,6 +36,10 @@ AttributeKey<String> RenderOutput::sAttrCheckpointFileName;
 AttributeKey<String> RenderOutput::sAttrCheckpointMultiVersionFileName;
 AttributeKey<String> RenderOutput::sAttrResumeFileName;
 AttributeKey<Int> RenderOutput::sAttrCryptomatteDepth;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputPositions;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputNormals;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputBeauty;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteSupportResumeRender;
 AttributeKey<SceneObject*> RenderOutput::sCamera;
 AttributeKey<SceneObject *> RenderOutput::sAttrDisplayFilter;
 
@@ -377,7 +381,28 @@ RenderOutput::declare(SceneClass &sceneClass)
 
     // "cryptomatte depth"
     sAttrCryptomatteDepth = sceneClass.declareAttribute<Int>("cryptomatte_depth", 6);
-    sceneClass.setMetadata(sAttrCryptomatteDepth, SceneClass::sComment, "Number of cryptomatte (id,coverage) data sets to output");
+    sceneClass.setMetadata(sAttrCryptomatteDepth, SceneClass::sComment, 
+        "Number of cryptomatte (id,coverage) data sets to output");
+
+    // "cryptomatte output positions"
+    sAttrCryptomatteOutputPositions = sceneClass.declareAttribute<Bool>("cryptomatte_output_positions", false);
+    sceneClass.setMetadata(sAttrCryptomatteOutputPositions, SceneClass::sComment, 
+        "Whether to output position data per cryptomatte id");
+
+    // "output cryptomatte normals"
+    sAttrCryptomatteOutputNormals = sceneClass.declareAttribute<Bool>("cryptomatte_output_normals", false);
+    sceneClass.setMetadata(sAttrCryptomatteOutputNormals, SceneClass::sComment, 
+        "Whether to output shading normal data per cryptomatte id");
+
+    // "output cryptomatte beauty"
+    sAttrCryptomatteOutputBeauty = sceneClass.declareAttribute<Bool>("cryptomatte_output_beauty", false);
+    sceneClass.setMetadata(sAttrCryptomatteOutputBeauty, SceneClass::sComment, 
+        "Whether to output beauty data per cryptomatte id");
+
+    // "cryptomatte support resume render"
+    sAttrCryptomatteSupportResumeRender = sceneClass.declareAttribute<Bool>("cryptomatte_support_resume_render", false);
+    sceneClass.setMetadata(sAttrCryptomatteSupportResumeRender, SceneClass::sComment, 
+        "Whether to add additional cryptomatte layers to support checkpoint/resume rendering");
 
     sCamera = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
     sceneClass.setMetadata(sCamera, SceneClass::sComment, "Camera to use for this output.  "

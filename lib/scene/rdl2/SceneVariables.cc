@@ -131,6 +131,7 @@ AttributeKey<Bool> SceneVariables::sEnablePresenceShadows;
 AttributeKey<Bool> SceneVariables::sLightsVisibleInCameraKey;
 AttributeKey<Bool> SceneVariables::sPropagateVisibilityBounceType;
 AttributeKey<Int>  SceneVariables::sShadowTerminatorFix;
+AttributeKey<Bool> SceneVariables::sCryptomatteMultiPresence;
 
 AttributeKey<Int>    SceneVariables::sThreads;
 AttributeKey<Int>    SceneVariables::sMachineId;
@@ -898,6 +899,11 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sValidateGeometry, "label", "validate geometry");
     sceneClass.setMetadata(sValidateGeometry, SceneClass::sComment, "Checks geometry for bad data");
 
+    // capture multiple layers of presence data for cryptomatte
+    sCryptomatteMultiPresence = sceneClass.declareAttribute<Bool>("cryptomatte_multi_presence", false);
+    sceneClass.setMetadata(sCryptomatteMultiPresence, SceneClass::sComment, "Whether to count presence bounces as "
+                                                                            "separate cryptomatte samples");
+
     // Grouping the attributes for Torch - the order of
     // the attributes should be the same as how they are defined.
     sceneClass.setGroup("Frame", sMinFrameKey);
@@ -999,6 +1005,7 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Global Toggles", sLightsVisibleInCameraKey);
     sceneClass.setGroup("Global Toggles", sPropagateVisibilityBounceType);
     sceneClass.setGroup("Global Toggles", sShadowTerminatorFix);
+    sceneClass.setGroup("Global Toggles", sCryptomatteMultiPresence);
 
     sceneClass.setGroup("Driver", sThreads);
     sceneClass.setGroup("Driver", sMachineId);
