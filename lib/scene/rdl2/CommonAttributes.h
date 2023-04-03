@@ -19,7 +19,7 @@
     sceneClass.setMetadata(attrTessellationRate, "label", "tessellation_rate");\
     sceneClass.setMetadata(attrTessellationRate, "comment",                    \
         "Number of segments to split curve spans into");                       \
-    sceneClass.setGroup("Curve", attrTessellationRate);
+    sceneClass.setGroup("Curves", attrTessellationRate);
 
 #define DECLARE_COMMON_MESH_ATTRIBUTES                                         \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrMeshResolution;                        \
@@ -39,23 +39,26 @@
         "every edge on input face will be uniformly tessellated to "           \
         "\"mesh resolution\". Otherwise renderer will adaptively tessellate "  \
         "mesh based on camera information");                                   \
+    sceneClass.setGroup("Mesh", attrMeshResolution);                           \
     attrAdaptiveError =                                                        \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("adaptive_error", 0.0f,       \
         { "adaptive error" });                                                 \
     sceneClass.setMetadata(attrAdaptiveError, "label", "adaptive error");      \
     sceneClass.setMetadata(attrAdaptiveError, "comment",                       \
-        "the maximum allowable difference in pixels for subdivison mesh "      \
+        "The maximum allowable difference in pixels for subdivison mesh "      \
         "adaptive tessellation (each final tessellated edge "                  \
         "won't be longer than n pixels if adaptive error is set to n)."        \
         "A value of 0 disables adaptive tessellation, reverting to "           \
         "uniform tessellation, which sometimes is more stable in animation."   \
         "Adaptive tessellation is not supported for instances.");              \
+    sceneClass.setGroup("Mesh", attrAdaptiveError);                            \
     attrSmoothNormal =                                                         \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("smooth_normal", true);        \
     sceneClass.setMetadata(attrSmoothNormal, "display_name", "smooth normal"); \
     sceneClass.setMetadata(attrSmoothNormal, "comment",                        \
-        "generate smooth shading normal when rendering PolygonMesh "           \
-        "and the mesh doesn't provide shading normal itself");
+        "Generates smooth shading normals on a PolygonMesh "       \
+        "when the mesh doesn't provide shading normals");                 \
+    sceneClass.setGroup("Mesh", attrSmoothNormal);
 
 #define DECLARE_COMMON_MOTION_BLUR_ATTRIBUTES                                  \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrUseRotationMotionBlur;                  \
@@ -64,15 +67,15 @@
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int>  attrPrimitiveAttributeFrame;
 
 #define DEFINE_COMMON_MOTION_BLUR_ATTRIBUTES                                                                                    \
-    attrUseRotationMotionBlur = sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>(                                                        \
+    attrUseRotationMotionBlur = sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>(                                            \
         "use_rotation_motion_blur", false, {"use_rotation_motion_blur"});                                                       \
     sceneClass.setMetadata(attrUseRotationMotionBlur, "label",                                                                  \
         "use rotation motion blur");                                                                                            \
     sceneClass.setMetadata(attrUseRotationMotionBlur, "comment",                                                                \
-        "if \"xform\" is time varying and motion blur is turned on, "                                                           \
-        "Turning on this toggle can generate better rotation trail. "                                                           \
-        "Known limitation: turning on this toggle will disable "                                                                \
-        "adaptive tessellation");                                                                                               \
+        "If \"xform\" is time varying and motion blur is enabled, "                                                           \
+        "enabling this feature can produce a curved rotation trail.  "                                                      \
+        "Enabling this feature will disable adaptive tessellation for this mesh");                                   \
+    sceneClass.setGroup("Motion Blur", attrUseRotationMotionBlur);                                                              \
     attrMotionBlurType =                                                                                                        \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("motion_blur_type", (int)scene_rdl2::rdl2::MotionBlurType::BEST,                             \
                                                scene_rdl2::rdl2::FLAGS_ENUMERABLE, scene_rdl2::rdl2::INTERFACE_GENERIC, {"motion blur type"});          \
@@ -91,13 +94,15 @@
         "\"acceleration\" will blur using the supplied vertex positions, velocities and accelerations.\n"                       \
         "\"hermite\" will use supplied pair of positions and pair of velocities to interpolate along a cubic Hermite curve.\n"  \
         "\"best\" will use choose the method which provides the highest quality given the available data.\n");                  \
+    sceneClass.setGroup("Motion Blur", attrMotionBlurType);                                                                     \
     attrCurvedMotionBlurSampleCount =                                                                                           \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("curved_motion_blur_sample_count", 10, { "curved motion blur sample count" });   \
     sceneClass.setMetadata(attrCurvedMotionBlurSampleCount, "label", "curved motion blur sample count");                        \
     sceneClass.setMetadata(attrCurvedMotionBlurSampleCount, "comment", "Number of time samples generated along each curve "     \
         "when using curved motion blur");                                                                                       \
-    attrPrimitiveAttributeFrame = sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("primitive_attribute_frame", 2,                        \
-            scene_rdl2::rdl2::FLAGS_ENUMERABLE, scene_rdl2::rdl2::INTERFACE_GENERIC);                                                                   \
+    sceneClass.setGroup("Motion Blur", attrCurvedMotionBlurSampleCount);                                                        \
+    attrPrimitiveAttributeFrame = sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("primitive_attribute_frame", 2,            \
+            scene_rdl2::rdl2::FLAGS_ENUMERABLE, scene_rdl2::rdl2::INTERFACE_GENERIC);                                           \
     sceneClass.setMetadata(attrPrimitiveAttributeFrame, "label", "primitive attribute frame");                                  \
     sceneClass.setMetadata(attrPrimitiveAttributeFrame, "comment",                                                              \
         "Which frame(s) do we take the primitive attributes from?\n"                                                            \
@@ -106,43 +111,49 @@
         "\t2 : both motion steps");                                                                                             \
     sceneClass.setEnumValue(attrPrimitiveAttributeFrame, 0, "first motion step");                                               \
     sceneClass.setEnumValue(attrPrimitiveAttributeFrame, 1, "second motion step");                                              \
-    sceneClass.setEnumValue(attrPrimitiveAttributeFrame, 2, "both motion steps");
+    sceneClass.setEnumValue(attrPrimitiveAttributeFrame, 2, "both motion steps");                                               \
+    sceneClass.setGroup("Motion Blur", attrPrimitiveAttributeFrame);
 
 #define DECLARE_COMMON_EVALUATION_FRAME_ATTRIBUTES           \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool>   attrUseEvaluationFrame; \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float>  attrEvaluationFrame;
 
-#define DEFINE_COMMON_EVALUATION_FRAME_ATTRIBUTES                                                                   \
-    attrUseEvaluationFrame =                                                                                        \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("use_evaluation_frame", false, { "use evaluation frame" });         \
-    sceneClass.setMetadata(attrUseEvaluationFrame, "label", "use evaluation frame");                                \
-    sceneClass.setMetadata(attrUseEvaluationFrame, "comment",                                                       \
-        "uses \"evaluation frame\" instead of SceneVariables frame\n");                                             \
-                                                                                                                    \
-    attrEvaluationFrame =                                                                                           \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("evaluation_frame", 1, { "evaluation frame" });                    \
-    sceneClass.setMetadata(attrEvaluationFrame, "label", "evaluation frame");                                       \
-    sceneClass.setMetadata(attrEvaluationFrame, "comment",                                                          \
-        "evaluate geometry at specified frame instead of SceneVariables frame\n");                                  \
-    sceneClass.setMetadata(attrEvaluationFrame, "enable if", "OrderedDict([(u'use_evaluation_frame', u'true')])");
+#define DEFINE_COMMON_EVALUATION_FRAME_ATTRIBUTES                                                                       \
+    attrUseEvaluationFrame =                                                                                            \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("use_evaluation_frame", false, { "use evaluation frame" }); \
+    sceneClass.setMetadata(attrUseEvaluationFrame, "label", "use evaluation frame");                                    \
+    sceneClass.setMetadata(attrUseEvaluationFrame, "comment",                                                           \
+        "Uses \"evaluation frame\" instead of SceneVariables frame");                                                   \
+    sceneClass.setGroup("Time", attrUseEvaluationFrame);                                                                \
+                                                                                                                        \
+    attrEvaluationFrame =                                                                                               \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("evaluation_frame", 1, { "evaluation frame" });            \
+    sceneClass.setMetadata(attrEvaluationFrame, "label", "evaluation frame");                                           \
+    sceneClass.setMetadata(attrEvaluationFrame, "comment",                                                              \
+        "Evaluates geometry at the specified frame instead of SceneVariables frame");                                   \
+    sceneClass.setMetadata(attrEvaluationFrame, "enable if", "OrderedDict([(u'use_evaluation_frame', u'true')])");      \
+    sceneClass.setGroup("Time", attrEvaluationFrame);
 
-#define DECLARE_COMMON_USER_DATA_ATTRIBUTES                                  \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::StringVector> attrPartList;                     \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::SceneObjectVector> attrPrimitiveAttributes;     \
+#define DECLARE_COMMON_USER_DATA_ATTRIBUTES                                                             \
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::StringVector> attrPartList;                        \
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::SceneObjectVector> attrPrimitiveAttributes;        \
 
-#define DEFINE_COMMON_USER_DATA_ATTRIBUTES                                                  \
-    attrPartList =                                                                          \
+#define DEFINE_COMMON_USER_DATA_ATTRIBUTES                                                              \
+    attrPartList =                                                                                      \
         sceneClass.declareAttribute<scene_rdl2::rdl2::StringVector>("part_list", {}, { "part list" });  \
-    sceneClass.setMetadata(attrPartList, "label", "part list");                             \
-    sceneClass.setMetadata(attrPartList, "comment", "Ordered list of part names");          \
-                                                                                            \
-    attrPrimitiveAttributes =                                                               \
+    sceneClass.setMetadata(attrPartList, "label", "part list");                                         \
+    sceneClass.setMetadata(attrPartList, "comment", "List of part names.   The length of the\n" \
+            "list should match the length of any \"part\" rate primitive attribute");                   \
+    sceneClass.setGroup("User Data", attrPartList);                                                     \
+                                                                                                        \
+    attrPrimitiveAttributes =                                                                           \
         sceneClass.declareAttribute<scene_rdl2::rdl2::SceneObjectVector>(                               \
-        "primitive_attributes", scene_rdl2::rdl2::SceneObjectVector(), scene_rdl2::rdl2::FLAGS_NONE,                \
+        "primitive_attributes", scene_rdl2::rdl2::SceneObjectVector(), scene_rdl2::rdl2::FLAGS_NONE,    \
         scene_rdl2::rdl2::INTERFACE_USERDATA, { "primitive attributes" });                              \
-    sceneClass.setMetadata(attrPrimitiveAttributes, "label", "primitive attributes");       \
-    sceneClass.setMetadata(attrPrimitiveAttributes, "comment",                              \
-        "A list of UserData to specify arbitrary primitive attributes");
+    sceneClass.setMetadata(attrPrimitiveAttributes, "label", "primitive attributes");                   \
+    sceneClass.setMetadata(attrPrimitiveAttributes, "comment",                                          \
+        "A list of UserData scene objects specifying arbitrary primitive attributes");                  \
+    sceneClass.setGroup("User Data", attrPrimitiveAttributes);                                          \
 
 #define DECLARE_COMMON_MOTIONGUIDE_ATTRIBUTES                                               \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool>   attrApplyMotionGuides;                                 \

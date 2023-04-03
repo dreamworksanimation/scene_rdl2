@@ -54,6 +54,7 @@ Geometry::declare(SceneClass& sceneClass)
 
     sLabel = sceneClass.declareAttribute<String>("label", "");
     sceneClass.setMetadata(sLabel, SceneClass::sComment, "label used in material aov expresssions");
+    sceneClass.setGroup("Labels", sLabel);
 
     sReferenceGeometries = sceneClass.declareAttribute<SceneObjectVector>(
         "references", SceneObjectVector(),
@@ -75,56 +76,67 @@ Geometry::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sSideTypeKey, MESH_DEFAULT_SIDED, "use mesh sidedness");
     sceneClass.setMetadata(sSideTypeKey, SceneClass::sComment,
         "set single sidedness of the mesh, will affect the visibility of the mesh based on normal direction");
+    sceneClass.setGroup("Geometry", sSideTypeKey);
 
     sReverseNormals = sceneClass.declareAttribute<Bool>("reverse_normals", false, { "reverse normals" });
     sceneClass.setMetadata(sReverseNormals, "label", "reverse normals");
     sceneClass.setMetadata(sReverseNormals, "comment",
         "enable to reverse the normals in the geometry");
+    sceneClass.setGroup("Geometry", sReverseNormals);
 
     sVisibleCamera = sceneClass.declareAttribute<Bool>("visible_in_camera", true, { "visible in camera" });
     sceneClass.setMetadata(sVisibleCamera, "label", "visible in camera");
     sceneClass.setMetadata(sVisibleCamera, SceneClass::sComment,
         "whether the geometry is visible to camera rays");
+    sceneClass.setGroup("Visibility", sVisibleCamera);
 
     sVisibleShadow = sceneClass.declareAttribute<Bool>("visible_shadow", true, { "visible shadow" });
     sceneClass.setMetadata(sVisibleShadow, "label", "visible shadow");
     sceneClass.setMetadata(sVisibleShadow, SceneClass::sComment,
         "whether the geometry casts shadows");
+    sceneClass.setGroup("Visibility", sVisibleShadow);
 
     sVisibleDiffuseReflection = sceneClass.declareAttribute<Bool>("visible_diffuse_reflection", true, { "visible diffuse reflection" });
     sceneClass.setMetadata(sVisibleDiffuseReflection, "label", "visible diffuse reflection");
     sceneClass.setMetadata(sVisibleDiffuseReflection, SceneClass::sComment,
         "whether the geometry is visible in diffuse reflection");
+    sceneClass.setGroup("Visibility", sVisibleDiffuseReflection);
 
     sVisibleDiffuseTransmission = sceneClass.declareAttribute<Bool>("visible_diffuse_transmission", true, { "visible diffuse transmission" });
     sceneClass.setMetadata(sVisibleDiffuseTransmission, "label", "visible diffuse transmission");
     sceneClass.setMetadata(sVisibleDiffuseTransmission, SceneClass::sComment,
         "whether the geometry is visible in diffuse transmission");
+    sceneClass.setGroup("Visibility", sVisibleDiffuseTransmission);
 
     sVisibleGlossyReflection = sceneClass.declareAttribute<Bool>("visible_glossy_reflection", true, { "visible glossy reflection" });
     sceneClass.setMetadata(sVisibleGlossyReflection, "label", "visible glossy reflection");
     sceneClass.setMetadata(sVisibleGlossyReflection, SceneClass::sComment,
         "whether the geometry is visible in glossy reflection.");
+    sceneClass.setGroup("Visibility", sVisibleGlossyReflection);
 
     sVisibleGlossyTransmission = sceneClass.declareAttribute<Bool>("visible_glossy_transmission", true, { "visible glossy transmission" });
     sceneClass.setMetadata(sVisibleGlossyTransmission, "label", "visible glossy transmission");
     sceneClass.setMetadata(sVisibleGlossyTransmission, SceneClass::sComment,
         "whether the geometry is visible in glossy transmission (refraction).");
+    sceneClass.setGroup("Visibility", sVisibleGlossyTransmission);
 
     sVisibleMirrorReflection = sceneClass.declareAttribute<Bool>("visible_mirror_reflection", true, { "visible mirror reflection" });
     sceneClass.setMetadata(sVisibleMirrorReflection, "label", "visible mirror reflection");
     sceneClass.setMetadata(sVisibleMirrorReflection, SceneClass::sComment,
         "whether the geometry is visible in miror reflection.");
+    sceneClass.setGroup("Visibility", sVisibleMirrorReflection);
 
     sVisibleMirrorTransmission = sceneClass.declareAttribute<Bool>("visible_mirror_transmission", true, { "visible mirror transmission" });
     sceneClass.setMetadata(sVisibleMirrorTransmission, "label", "visible mirror transmission");
     sceneClass.setMetadata(sVisibleMirrorTransmission, SceneClass::sComment,
         "whether the geometry is visible in miror transmission (refraction).");
+    sceneClass.setGroup("Visibility", sVisibleMirrorTransmission);
 
     sVisiblePhase = sceneClass.declareAttribute<Bool>("visible_volume", true, { "visible volume" });
     sceneClass.setMetadata(sVisiblePhase, "label", "visible volume");
     sceneClass.setMetadata(sVisiblePhase, "comment",
         "whether the geometry is visible in indirect volume rays");
+    sceneClass.setGroup("Visibility", sVisiblePhase);
 
     sRayEpsilon = sceneClass.declareAttribute<Float>("ray_epsilon", Float(0.0f),
         FLAGS_CAN_SKIP_GEOM_RELOAD, INTERFACE_GENERIC, {"ray epsilon"});
@@ -134,6 +146,7 @@ Geometry::declare(SceneClass& sceneClass)
         "intersection point will be ignored.  Instead, it is considered part of "
         "the current intersection's geometry.  If zero, an automatically calculated "
         "epsilon will be used.");
+    sceneClass.setGroup("Ray Tracing", sRayEpsilon);
 
     sShadowRayEpsilon = sceneClass.declareAttribute<Float>("shadow_ray_epsilon", Float(0.0f),
         FLAGS_CAN_SKIP_GEOM_RELOAD, INTERFACE_GENERIC);
@@ -142,12 +155,14 @@ Geometry::declare(SceneClass& sceneClass)
         "When a shadow ray is fired, anything within this distance of the "
         "intersection point will be ignored.  If this value is less than \"ray_epsilon\", "
         "then it has no additional effect.");
+    sceneClass.setGroup("Ray Tracing", sShadowRayEpsilon);
 
     sShadowReceiverLabel = sceneClass.declareAttribute<String>("shadow_receiver_label", "", {"shadow receiver label"});
     sceneClass.setMetadata(sShadowReceiverLabel, SceneClass::sComment,
         "Label used to associate Geometry objects into sets. Then, using the "
         "[\"shadow_exclusion_mappings\"] attribute, shadows from specified geometry "
         "parts can be suppressed from casting onto specified sets.");
+    sceneClass.setGroup("Labels", sShadowReceiverLabel);
 
     sShadowExclusionMappings = sceneClass.declareAttribute<String>("shadow_exclusion_mappings", "",
                                                                    {"shadow exclusion mappings"});
@@ -164,6 +179,9 @@ Geometry::declare(SceneClass& sceneClass)
         "this geometry.");
 
     sDicingCamera = sceneClass.declareAttribute<SceneObject*>("dicing_camera", nullptr);
+    sceneClass.setMetadata(sDicingCamera, SceneClass::sComment,
+        "Alternate camera that is used for adaptive tessellation.  This is useful if you want adaptive tessellation to "
+        "behave consistently in a sequence, regardless of what the main camera is doing");
 
     return interface | INTERFACE_GEOMETRY;
 }
