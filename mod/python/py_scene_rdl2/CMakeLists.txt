@@ -1,8 +1,7 @@
 # Copyright 2023 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_path(GET PROJECT_SOURCE_DIR FILENAME package_name)
-set(component __${package_name}__)
+set(component __${PACKAGE_NAME}__)
 
 find_package(Python COMPONENTS Interpreter Development)
 find_package(Boost REQUIRED
@@ -64,7 +63,7 @@ target_link_libraries(${component}
         Boost::python
         Boost::date_time
         Boost::chrono
-        ${PROJECT_NAME}::${package_name}
+        ${PROJECT_NAME}::${PACKAGE_NAME}
         ${Python_LIBRARIES}
 )
 if(${Python_VERSION_MAJOR} VERSION_GREATER_EQUAL 3) 
@@ -93,7 +92,7 @@ SceneRdl2_cxx_compile_options(${component})
 SceneRdl2_link_options(${component})
 
 set(python_install_dir
-    python/lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/${package_name})
+    python/lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/${PACKAGE_NAME})
 
 install(TARGETS ${component} DESTINATION ${python_install_dir})
 
