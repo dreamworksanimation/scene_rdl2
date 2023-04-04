@@ -1,7 +1,6 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
-
 #include <scene_rdl2/common/platform/Platform.h>
 
 #include "SceneVariables.h"
@@ -180,7 +179,11 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sFrameKey = sceneClass.declareAttribute<Float>("frame", 0.0f);
 
-    sCamera = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
+    sCamera       = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
+    sceneClass.setMetadata(sCamera,
+        SceneClass::sComment,
+        "This specifies the camera object used for rendering. If no camera is specified in the scene variables, MoonRay "
+        "will render using the first camera object encountered.");
     sDicingCamera = sceneClass.declareAttribute<SceneObject*>("dicing_camera", FLAGS_NONE, INTERFACE_CAMERA);
 
     sLayer = sceneClass.declareAttribute<SceneObject*>("layer", FLAGS_NONE, INTERFACE_LAYER);
@@ -254,9 +257,9 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sMinAdaptiveSamples, "label", "min adaptive samples");
     sceneClass.setMetadata(sMinAdaptiveSamples,
         SceneClass::sComment,
-        "When adaptive sampling is turned on, it's possible that a tile may be mis-classified as having converged "
-        "before it has actually converged. This manifests itself as square 8x8 artifacts in the final image. The "
-        "higher this value, the less the chance of this happening.");
+        "This is the minimum number of samples taken per pixel before enabling adaptive sampling. A larger number of "
+        "samples may prevent the adaptive sampler from prematurely identifying an area as converged but may incur a "
+        "longer running time.");
 
     sMaxAdaptiveSamples = sceneClass.declareAttribute<Int>("max_adaptive_samples", Int(4096), {"max adaptive samples"});
     sceneClass.setMetadata(sMaxAdaptiveSamples, "label", "max adaptive samples");
@@ -336,24 +339,32 @@ SceneVariables::declare(SceneClass& sceneClass)
     sRussianRouletteThreshold =
         sceneClass.declareAttribute<Float>("russian_roulette_threshold", Float(0.0375), {"russian roulette threshold"});
     sceneClass.setMetadata(sRussianRouletteThreshold, "label", "russian roulette threshold");
+    sceneClass.setMetadata(sRussianRouletteThreshold,
+        SceneClass::sComment,
+        "The Russian roulette threshold specifies the point at which point Russian roulette is evaluated for direct "
+        "light sampling and BSDF continuation. The unit is luminance of the radiance.");
 
     sTransparencyThreshold =
         sceneClass.declareAttribute<Float>("transparency_threshold", Float(1.0), {"transparency threshold"});
     sceneClass.setMetadata(sTransparencyThreshold, "label", "transparency threshold");
     sceneClass.setMetadata(sTransparencyThreshold,
         SceneClass::sComment,
-        "Defines at which point the accumulated opacity can be considered as opaque, skipping generation of new "
-        "transparency rays.");
+        "The transparency threshold defines the point at which the accumulated opacity can be considered opaque, "
+        "skipping the generation of new transparency rays.");
 
     sPresenceThreshold = sceneClass.declareAttribute<Float>("presence_threshold", Float(0.999), {"presence threshold"});
     sceneClass.setMetadata(sPresenceThreshold, "label", "presence threshold");
     sceneClass.setMetadata(sPresenceThreshold,
         SceneClass::sComment,
-        "Defines at which point the accumulated presence can be considered as opaque, skipping generation of presence "
-        "continuation rays.");
+        "The presence threshold defines the point at which the accumulated presence can be considered opaque, skipping "
+        "the generation of presence continuation rays.");
 
     sLockFrameNoise = sceneClass.declareAttribute<Bool>("lock_frame_noise", false, {"lock frame noise"});
     sceneClass.setMetadata(sLockFrameNoise, "label", "lock frame noise");
+    sceneClass.setMetadata(sLockFrameNoise,
+        SceneClass::sComment,
+        "By default, the random number generators are seeded by considering the frame number. However, if "
+        "lock_frame_noise is true, the same seed values are used for each frame, which is typically undesirable.");
 
     sVolumeQuality = sceneClass.declareAttribute<Float>("volume_quality", Float(0.5f), {"volume quality"});
     sceneClass.setMetadata(sVolumeQuality, "label", "volume quality");
@@ -382,8 +393,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sVolumeOpacityThreshold, "label", "volume opacity threshold");
     sceneClass.setMetadata(sVolumeOpacityThreshold,
         SceneClass::sComment,
-        "As a ray travels through volume regions, it will accumulate the amount of opacity. When the value exceeds "
-        "volume opacity threshold the renderer will stop the further volume integration along this ray.");
+        "As a ray travels through volumes, it will accumulate opacity. When the value exceeds the volume opacity "
+        "threshold, the renderer will stop further volume integration along this ray.");
 
     sVolumeOverlapMode =
         sceneClass.declareAttribute<Int>("volume_overlap_mode", Int(VolumeOverlapMode::SUM), rdl2::FLAGS_ENUMERABLE);
@@ -438,8 +449,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sSampleClampingValue, "label", "sample clamping value");
     sceneClass.setMetadata(sSampleClampingValue,
         SceneClass::sComment,
-        "Clamp sample radiance values to this maximum value (the feature is disabled if the value is 0.0). Using this "
-        "technique reduces fireflies, but is biased.");
+            "Clamp sample radiance values to this maximum value (the feature is disabled if the value is 0.0). Using "
+            "this technique reduces fireflies, but is biased.");
 
     sSampleClampingDepth = sceneClass.declareAttribute<Int>("sample_clamping_depth", Int(1), {"sample clamping depth"});
     sceneClass.setMetadata(sSampleClampingDepth, "label", "sample clamping depth");
@@ -555,44 +566,47 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointInterval, "label", "checkpoint interval");
     sceneClass.setMetadata(sCheckpointInterval,
         SceneClass::sComment,
-        "Length of time, in minutes, between checkpoint file writes. Time must be greater or equal to 0.1");
+        "This setting specifies the time interval, in minutes, between checkpoint file writes. The interval must be "
+        "equal to or greater than 0.1 minutes.");
 
     sCheckpointQualitySteps =
         sceneClass.declareAttribute<Int>("checkpoint_quality_steps", Int(2), {"checkpoint quality steps"});
     sceneClass.setMetadata(sCheckpointQualitySteps, "label", "checkpoint quality steps");
     sceneClass.setMetadata(sCheckpointQualitySteps,
         SceneClass::sComment,
-        "Steps of quality, internal sampling iteration count, between checkpoint file writes. Value should be equal or "
-        "bigger than 1. Uniform sampling case, this steps number is equivalent as each pixel's pixel sampling steps. "
-        "If you set quality steps=2, checkpoint file is created at every timing of each pixel's sample count exceeds "
-        "at 2, 4, 6, 8, 10, ... Adaptive sampling case, this steps number is equivalent as internal adaptive sampling "
-        "iteration steps. Recommended number is 1~3 range. You can use more than 4 but bigger number always require "
-        "longer rendering time. If you set 2, checkpoint file is created after finish every 2 adaptive sampling "
-        "iteration execution.");
+        "This setting specifies the number of quality steps, which refers to the internal sampling iteration count "
+        "between checkpoint file writes. The value must be equal to or greater than 1. In the case of uniform "
+        "sampling, this number of steps is equivalent to the pixel sampling steps for each pixel. For example, if you "
+        "set quality steps to 2, a checkpoint file will be created every time each pixel's sample count exceeds 2, 4, "
+        "6, 8, 10, and so on. In the case of adaptive sampling, this number of steps is equivalent to the internal "
+        "adaptive sampling iteration steps. A recommended number falls within the range of 1 to 3. For example, if you "
+        "set the value to 2, a checkpoint file will be created after finishing every 2 adaptive sampling passes. A "
+        "larger value will conduct more rendering passes before writing a file.");
 
     sCheckpointTimeCap =
         sceneClass.declareAttribute<Float>("checkpoint_time_cap", Float(0.0f), {"checkpoint time cap"});
     sceneClass.setMetadata(sCheckpointTimeCap, "label", "checkpoint time cap");
     sceneClass.setMetadata(sCheckpointTimeCap,
         SceneClass::sComment,
-        "When total render process time exceeds this value, in minutes, the render will finish after the next "
-        "checkpoint write. Disabled time cap feature when set to 0.");
+        "This setting determines when the render will finish based on the total render process time in minutes. If the "
+        "value is exceeded, the render will finish after the next checkpoint write. If the value is set to 0, the time "
+        "cap feature is disabled.");
 
     sCheckpointSampleCap = sceneClass.declareAttribute<Int>("checkpoint_sample_cap", Int(0), {"checkpoint sample cap"});
     sceneClass.setMetadata(sCheckpointSampleCap, "label", "checkpoint sample cap");
     sceneClass.setMetadata(sCheckpointSampleCap,
         SceneClass::sComment,
-        "When total pixel sample count exceeds this value at every pixel (If you set 1024, each pixel exceeds 1024, "
-        "then try to finish), the render will finish after the next checkpoint write. Disabled sample cap feature when "
-        "set to 0.");
+        "This setting causes the render to finish based on the total pixel sample count. For example, if the value is "
+        "1024, the render will end after the next checkpoint write when each pixel exceeds 1024 samples. If the value "
+        "is set to 0, the sample cap feature is disabled.");
 
     sCheckpointOverwrite = sceneClass.declareAttribute<Bool>("checkpoint_overwrite", true, {"checkpoint overwrite"});
     sceneClass.setMetadata(sCheckpointOverwrite, "label", "checkpoint overwrite");
     sceneClass.setMetadata(sCheckpointOverwrite,
         SceneClass::sComment,
-        "If true, the last checkpoint file is overwritten when writing out the checkpoint file. If false, the "
-        "checkpoint filename is appended with the total number of samples, resulting in the retention of all "
-        "checkpoint files.");
+        "When set to true, the last checkpoint file will be overwritten when writing out the new checkpoint file. If "
+        "set to false, the checkpoint filename will be appended with the total number of samples, which will result in "
+        "the retention of all checkpoint files.");
 
     sCheckpointMode = sceneClass.declareAttribute<Int>("checkpoint_mode",
         Int(0),
@@ -602,7 +616,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointMode, "label", "checkpoint mode");
     sceneClass.setMetadata(sCheckpointMode,
         SceneClass::sComment,
-        "Select whether checkpoint images are written depending on time elapsed or on quality reached.");
+        "This setting allows you to choose whether checkpoint images are written based on time elapsed or on quality "
+        "reached.");
     sceneClass.setEnumValue(sCheckpointMode, 0, "time");
     sceneClass.setEnumValue(sCheckpointMode, 1, "quality");
 
@@ -611,50 +626,50 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointStartSPP, "label", "checkpoint start sample");
     sceneClass.setMetadata(sCheckpointStartSPP,
         SceneClass::sComment,
-        "Specify samples per pixel (SPP) number. Checkpoint file is created when all pixel's SPP are same or bigger "
-        "than this number. Until then, checkpoint file is not created.");
+        "This setting specifies the samples per pixel (SPP). A checkpoint file is created when all pixels' SPP are "
+        "greater than or equal to this number. A checkpoint file is created once this criterion is met.");
 
     sCheckpointBgWrite = sceneClass.declareAttribute<Bool>("checkpoint_bg_write", true, {"checkpoint bg write"});
     sceneClass.setMetadata(sCheckpointBgWrite, "label", "checkpoint bg write");
     sceneClass.setMetadata(sCheckpointBgWrite,
         SceneClass::sComment,
-        "If true, the checkpoint file write is written in a background thread that runs in parallel with the MCRT "
-        "threads. Otherwise, all MCRT threads wait while the checkpoint file is written.");
+        "When set to true, checkpoint file writes occur in a background thread that runs concurrently with the MCRT "
+        "threads. Otherwise, all MCRT threads must wait while the checkpoint file is written.");
 
     sCheckpointPostScript =
         sceneClass.declareAttribute<String>("checkpoint_post_script", "", {"checkpoint post script"});
     sceneClass.setMetadata(sCheckpointPostScript, "label", "checkpoint post script");
     sceneClass.setMetadata(sCheckpointPostScript,
         SceneClass::sComment,
-        "This defines the file name of a Lua script executed after every checkpoint file has been written, which is "
-        "run in parallel with the ongoing MCRT threads. See further documentation for MoonRay-provided Lua variables "
-        "accessible within the script.");
+        "This setting specifies the filename of a Lua script that will be executed after every checkpoint file is "
+        "written. The script will run concurrently with the ongoing MCRT threads. For more information, refer to the "
+        "documentation for MoonRay-provided Lua variables accessible within the script.");
 
     sCheckpointTotalFiles =
         sceneClass.declareAttribute<Int>("checkpoint_total_files", Int(0), {"checkpoint total files"});
     sceneClass.setMetadata(sCheckpointTotalFiles, "label", "checkpoint total files");
     sceneClass.setMetadata(sCheckpointTotalFiles,
         SceneClass::sComment,
-        "Specify total number of checkpoint files for quality based checkpoint mode.This variable is a substitute "
-        "parameter of checkpoint_quality_steps.If this value is 0 (= default), the checkpoint generation interval is "
-        "controlled by checkpoint_quality_steps variable. If this value is 1 or bigger, checkpoint generation interval "
-        "is calculated based on this value and the renderer tries to generate a user defined number of checkpoint "
-        "files automatically.This option respects the checkpoint_start_sample variable.In some cases, the renderer "
-        "might not create the requested checkpoint_total_files due to current limitation of internal implementation or "
-        "user specified bigger than 1 for checkpoint_start_sample variable. However even in that case, the renderer "
-        "tries to create the closest number of total checkpoint files which user defined number as "
-        "checkpoint_total_files.");
+        "This variable specifies the total number of checkpoint files for the quality-based checkpoint mode. It serves "
+        "as a substitute parameter for checkpoint_quality_steps. If the value is set to 0 (the default), the interval "
+        "at which checkpoints are generated is controlled by the checkpoint_quality_steps variable. If the value is "
+        "set to 1 or higher, the renderer will attempt to automatically generate a user-defined number of checkpoint "
+        "files based on this value. This option takes into account the checkpoint_start_sample variable.\n\nIn some "
+        "cases, the renderer may be unable to create the requested number of checkpoint_total_files due to limitations "
+        "in the internal implementation or because the user has specified a value greater than 1 for the "
+        "checkpoint_start_sample variable. However, in these cases, the renderer will attempt to generate the closest "
+        "possible number of checkpoint files to the user-defined value.");
 
     sCheckpointMaxBgCache =
         sceneClass.declareAttribute<Int>("checkpoint_max_bgcache", Int(2), {"checkpoint max bgcache"});
     sceneClass.setMetadata(sCheckpointMaxBgCache, "label", "checkpoint max bgcache");
     sceneClass.setMetadata(sCheckpointMaxBgCache,
         SceneClass::sComment,
-        "Specify the maximum number of queued checkpoint images that the checkpoint-writing background thread can "
-        "handle. The value of checkpoint_max_bgcache must be greater than or equal to 1. Once this number is exceeded, "
-        "the MCRT threads are suspended while background images are written to create room in the queue. A larger "
-        "number can robustly support background writing even with short checkpoint intervals at the expense of memory. "
-        "A value of 2 is best for most cases.");
+        "This setting specifies the maximum number of queued checkpoint images the checkpoint-writing background "
+        "thread can handle. The value of checkpoint_max_bgcache must be greater than or equal to 1. If the number of "
+        "queued checkpoint images exceeds this limit, MCRT threads will be temporarily suspended while background "
+        "images are written to make room in the queue. A larger value can support background writing even with short "
+        "checkpoint intervals, but it may require more memory. A value of 2 is recommended for most cases.");
 
     sCheckpointMaxSnapshotOverhead = sceneClass.declareAttribute<Float>("checkpoint_max_snapshot_overhead",
         Float(0.0f),
@@ -662,9 +677,10 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointMaxSnapshotOverhead, "label", "checkpoint max snapshot overhead");
     sceneClass.setMetadata(sCheckpointMaxSnapshotOverhead,
         SceneClass::sComment,
-        "Specify max fraction of snapshot overhead threshold for extra snapshot action regarding unexpected "
-        "interruption by SIGINT. This value is fraction. If this value is ZERO or negative, no extra snapshot action "
-        "is executed and no checkpoint file is generated when SIGINT is received.");
+        "This setting specifies the maximum fraction of the snapshot overhead threshold for an extra snapshot action "
+        "in the event of an unexpected interruption by SIGINT. The value is expressed as a fraction. If the value is "
+        "set to zero or a negative number, no extra snapshot action will be executed, and no checkpoint file will be "
+        "generated if SIGINT is received.");
 
     sCheckpointSnapshotInterval = sceneClass.declareAttribute<Float>("checkpoint_snapshot_interval",
         Float(0.0f),
@@ -672,8 +688,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointSnapshotInterval, "label", "checkpoint snapshot interval");
     sceneClass.setMetadata(sCheckpointSnapshotInterval,
         SceneClass::sComment,
-        "Interval of time in minutes, about snapshot refreshment regarding interruption by SIGINT. Unit is minute. If "
-        "this value is ZERO or negative, checkpoint_max_snapshot_overhead parameter is used instead.");
+        "This setting specifies the time interval, in minutes, allowed for a snapshot when a SIGINT is encountered. If "
+        "the value is 0 or negative, the checkpoint_max_snapshot_overhead parameter is used instead.");
 
     // Resume render
     sResumableOutput = sceneClass.declareAttribute<Bool>("resumable_output", false, {"resumable output"});
@@ -1132,7 +1148,7 @@ SceneVariables::getNumMachines() const
     int numMachines = get(sNumMachines);
 
     if (numMachines > 1) {
-        return numMachines ;
+        return numMachines;
     }
 
     // Not set, single machine only.
@@ -1274,4 +1290,3 @@ SceneVariables::getTmpDir() const
 
 } // namespace rdl2
 } // namespace scene_rdl2
-
