@@ -271,7 +271,7 @@
                                                               scene_rdl2::rdl2::FLAGS_FILENAME);                      \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "display_name", "local motion blur points file");           \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "label", "local motion blur points file");                  \
-    sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "enable if", "('use_local_motion_blur', 'true')");          \
+    sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "disable when", "{ use_local_motion_blur == 0}");              \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "comment",                                                  \
             "File containing points defining regions of motion blur modulation");                                     \
                                                                                                                       \
@@ -279,7 +279,7 @@
         sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("local_motion_blur_strength_multiplier", 1.0f);          \
     sceneClass.setMetadata(attrLocalMotionBlurStrengthMult, "display_name", "local motion blur strength multiplier"); \
     sceneClass.setMetadata(attrLocalMotionBlurStrengthMult, "label", "local motion blur strength multiplier");        \
-    sceneClass.setMetadata(attrLocalMotionBlurStrengthMult, "enable if", "('use_local_motion_blur', 'true')");        \
+    sceneClass.setMetadata(attrLocalMotionBlurStrengthMult, "disable when", "{ use_local_motion_blur == 0}");         \
     sceneClass.setMetadata(attrLocalMotionBlurStrengthMult, "comment",                                                \
         "Global strength multiplier for local motion blur application");                                              \
                                                                                                                       \
@@ -287,6 +287,6 @@
         sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("local_motion_blur_radius_multiplier", 1.0f);            \
     sceneClass.setMetadata(attrLocalMotionBlurRadiusMult, "display_name", "local motion blur radius multiplier");     \
     sceneClass.setMetadata(attrLocalMotionBlurRadiusMult, "label", "local motion blur radius multiplier");            \
-    sceneClass.setMetadata(attrLocalMotionBlurRadiusMult, "enable if", "('use_local_motion_blur', 'true')");          \
+    sceneClass.setMetadata(attrLocalMotionBlurRadiusMult, "disable when", "{ use_local_motion_blur == 0}");           \
     sceneClass.setMetadata(attrLocalMotionBlurRadiusMult, "comment",                                                  \
         "Global radius multiplier for \"radius\" and \"inner_radius\" point file attributes");
