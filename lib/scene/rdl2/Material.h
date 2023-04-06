@@ -32,6 +32,7 @@ public:
     static AttributeKey<SceneObject *> sExtraAovsKey;
     static AttributeKey<String> sLabel;
     static AttributeKey<Int> sPriority;
+    static AttributeKey<Bool> sInvisibleRefractiveCryptomatte;
 
     Material(const SceneClass& sceneClass, const std::string& name);
     virtual ~Material();
@@ -82,6 +83,11 @@ public:
     finline int priority() const
     {
         return get(sPriority);
+    }
+
+    finline bool invisibleRefractiveCryptomatte() const
+    {
+        return get(sInvisibleRefractiveCryptomatte);
     }
 
     // Unfortunately, this member has been made public to allow

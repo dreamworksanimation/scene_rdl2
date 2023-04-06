@@ -15,6 +15,7 @@ namespace rdl2 {
 AttributeKey<SceneObject *> Material::sExtraAovsKey;
 AttributeKey<String> Material::sLabel;
 AttributeKey<Int> Material::sPriority;
+AttributeKey<Bool> Material::sInvisibleRefractiveCryptomatte;
 
 Material::Material(const SceneClass& sceneClass, const std::string& name) :
     Parent(sceneClass, name),
@@ -61,6 +62,9 @@ Material::declare(SceneClass& sceneClass)
         "with higher numbers (lower priority).  To enable automatic removal of "
         "self-overlapping geometry, a non-zero priority must be set on the "
         "geometry's material.");
+
+    sInvisibleRefractiveCryptomatte = sceneClass.declareAttribute<Bool>(
+            "invisible_refractive_cryptomatte", false, {"invisible refractive cryptomatte"});
 
     return interface | INTERFACE_MATERIAL;
 }
