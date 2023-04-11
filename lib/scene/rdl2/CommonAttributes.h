@@ -11,15 +11,25 @@
  */
 
 #define DECLARE_COMMON_CURVES_ATTRIBUTES                                       \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int> attrTessellationRate;
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int> attrTessellationRate;\
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int> attrCurvesSubType;
 
-#define DEFINE_COMMON_CURVES_ATTRIBUTES                                        \
-    attrTessellationRate =                                                     \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("tessellation_rate", 4);        \
-    sceneClass.setMetadata(attrTessellationRate, "label", "tessellation_rate");\
-    sceneClass.setMetadata(attrTessellationRate, "comment",                    \
-        "Number of segments to split curve spans into");                       \
-    sceneClass.setGroup("Curves", attrTessellationRate);
+#define DEFINE_COMMON_CURVES_ATTRIBUTES                                                                             \
+    attrTessellationRate =                                                                                          \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("tessellation_rate", 4);                                 \
+    sceneClass.setMetadata(attrTessellationRate, "label", "tessellation_rate");                                     \
+    sceneClass.setMetadata(attrTessellationRate, "comment",                                                         \
+        "Number of segments to split curve spans into");                                                            \
+    sceneClass.setGroup("Curve", attrTessellationRate);                                                             \
+                                                                                                                    \
+    attrCurvesSubType =                                                                                             \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("curves_subtype", 0, scene_rdl2::rdl2::FLAGS_ENUMERABLE); \
+    sceneClass.setMetadata(attrCurvesSubType, "label", "curves subtype");                                            \
+    sceneClass.setEnumValue(attrCurvesSubType, 0, "ray_facing");                                                    \
+    sceneClass.setEnumValue(attrCurvesSubType, 1, "round");                                                         \
+    sceneClass.setEnumValue(attrCurvesSubType, 2, "normal_oriented");                                               \
+    sceneClass.setMetadata (attrCurvesSubType, "comment",                                                           \
+        "Selects the style the curves are rendered");
 
 #define DECLARE_COMMON_MESH_ATTRIBUTES                                         \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrMeshResolution;                        \
