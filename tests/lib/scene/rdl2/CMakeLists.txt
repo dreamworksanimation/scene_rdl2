@@ -49,7 +49,7 @@ SceneRdl2_link_options(${target})
 include(MoonrayDso)
 
 function(make_test_dso name)
-    moonray_dso_simple(${name} SKIP_INSTALL SOURCE_DIR ${name} DEPENDENCIES SceneRdl2::scene_rdl2)
+    moonray_dso_simple(${name} SKIP_INSTALL TEST_DSO SOURCE_DIR ${name} DEPENDENCIES SceneRdl2::scene_rdl2)
 endfunction()
 
 make_test_dso(BadObject)
