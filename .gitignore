@@ -8,6 +8,7 @@
 .*.swp
 /build*
 /install
+/Testing
 cppcheck_results.xml
 
 cmd/client_apps/Android/gen/

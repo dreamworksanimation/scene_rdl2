@@ -88,6 +88,13 @@ private_build_requires = [
     'ispc-1.14.1.x',
 ]
 
+commandstr = lambda i: "cd build/"+os.path.join(*variants[i])+"; ctest -j $(nproc)"
+testentry = lambda i: ("variant%d" % i,
+                       { "command": commandstr(i),
+                         "requires": ["cmake-3.23"] + variants[i] } )
+testlist = [testentry(i) for i in range(len(variants))]
+tests = dict(testlist)
+
 if build_system is 'cmake':
     def commands():
         prependenv('CMAKE_MODULE_PATH', '{root}/lib64/cmake')

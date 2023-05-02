@@ -62,7 +62,12 @@ find_program(LUA_BIN_LUA
 # ================================================
 # Set the RPATH for binaries in the install tree
 # ================================================
-set(CMAKE_INSTALL_RPATH $ORIGIN $ORIGIN/../lib64)
+if (NOT "" STREQUAL "$ENV{REZ_ICC_ROOT}")
+    set(COMPILER_LIBRARY_DIR "$ENV{REZ_ICC_ROOT}/lib")
+endif()
+
+set(CMAKE_BUILD_RPATH ${COMPILER_LIBRARY_DIR})
+set(CMAKE_INSTALL_RPATH $ORIGIN $ORIGIN/../lib64 ${COMPILER_LIBRARY_DIR})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # if OPT_LEVEL is set use its value to override the CMAKE_BUILD_TYPE because the
