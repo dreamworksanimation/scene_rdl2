@@ -300,14 +300,16 @@ public:
 
     math::Color extinct(moonray::shading::TLState *tls,
                         const moonray::shading::State &state,
-                        const math::Color& density) const override
+                        const math::Color& density,
+                        float rayVolumeDepth) const override
     {
         return math::sBlack;
     }
 
     math::Color albedo(moonray::shading::TLState *tls,
                        const moonray::shading::State &state,
-                       const math::Color& density) const override
+                       const math::Color& density,
+                       float rayVolumeDepth) const override
     {
         return math::sBlack;
     }

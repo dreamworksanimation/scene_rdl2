@@ -41,11 +41,13 @@ public:
 
     virtual math::Color extinct(moonray::shading::TLState *tls,
                                 const moonray::shading::State &state,
-                                const math::Color& density) const = 0;
+                                const math::Color& density,
+                                float rayVolumeDepth) const = 0;
 
     virtual math::Color albedo(moonray::shading::TLState *tls,
                                const moonray::shading::State &state,
-                               const math::Color& density) const = 0;
+                               const math::Color& density,
+                               float rayVolumeDepth) const = 0;
 
     virtual math::Color emission(moonray::shading::TLState *tls,
                                  const moonray::shading::State &state,
