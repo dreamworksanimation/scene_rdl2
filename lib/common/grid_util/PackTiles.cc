@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "PackTiles.h"
 #include "PackActiveTiles.h"
 
@@ -22,6 +19,8 @@
 #include <iomanip>
 #include <openssl/sha.h>
 
+//#define DEBUG_MODE
+
 #ifdef __INTEL_COMPILER
 // We don't need any include for half float instructions
 #else // else __INTEL_COMPILER
@@ -33,6 +32,10 @@
 // Low precision encoding related directive. 
 // use sRGB conversion if LOWPRECISION_8BIT_GAMMA22 is commented out.
 #define LOWPRECISION_8BIT_GAMMA22 // lowprecision float to 8bit with gamma 2.2 conversion
+
+#ifdef DEBUG_MODE
+static bool gDebugMode = false;
+#endif // end DEBUG_MODE
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -91,6 +94,20 @@ public:
     static size_t
     encode(const ActivePixels &activePixels,      // should be constructed by original w, h
            const RenderBuffer &renderBufferTiled, // tile aligned reso : normalized color
+           std::string &output,
+           const PrecisionMode precisionMode, // precision which is used in this encoding operation
+           const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
+           const FinePassPrecision finePassPrecision,     // minimum fine pass precision
+           const bool withSha1Hash = false,
+           const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
+
+    // for McrtMergeComputation : for feedback logic between merge and mcrt computation
+    // RGBA + numSample : float * 4 + u_int
+    template <bool renderBufferOdd>
+    static size_t
+    encode(const ActivePixels& activePixels,      // should be constructed by original w, h
+           const RenderBuffer& renderBufferTiled, // tile aligned resolution : normalized color
+           const NumSampleBuffer& numSampleBufferTiled, // numSample data for renderBuffer
            std::string &output,
            const PrecisionMode precisionMode, // precision which is used in this encoding operation
            const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
@@ -716,6 +733,10 @@ protected:
                            ActivePixels &activePixels,
                            unsigned char *sha1HashDigest,
                            F deqTilePixelBlockFunc) {
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() start\n";
+#       endif // end DEBUG_MODE
+
         //------------------------------
         //
         // read SHA1 hash
@@ -726,11 +747,19 @@ protected:
         memcpy(static_cast<void *>(dstHash), static_cast<const void *>(currAddr), HASH_SIZE);
         currAddr += HASH_SIZE;
 
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passA\n";
+#       endif // end DEBUG_MODE
+
         //------------------------------
         //
         // data decode
         //
         VContainerDeq vContainerDeq(static_cast<const void *>(currAddr), dataSize - HASH_SIZE);
+
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passB\n";
+#       endif // end DEBUG_MODE
 
         unsigned formatVersion;
         unsigned activeTileTotal, activePixelTotal;
@@ -752,6 +781,10 @@ protected:
             return false;    // unknown format version or memory issue
         }
 
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passC\n";
+#       endif // end DEBUG_MODE
+
         try {
             activePixels.init(width, height);
         }
@@ -760,9 +793,17 @@ protected:
         }
         activePixels.reset();       // we need reset activePixels information
 
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passD\n";
+#       endif // end DEBUG_MODE
+
         if (!deqTileMaskBlock(vContainerDeq, formatVersion, activeTileTotal, activePixels)) {
             return true;       // decode tileMaskBlock returns no-data condition
         }
+
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passE\n";
+#       endif // end DEBUG_MODE
 
         if (!deqTilePixelBlockFunc(currDataType, defaultValue, precisionMode, closestFilterStatus,
                                    coarsePassPrecision, finePassPrecision,
@@ -770,9 +811,16 @@ protected:
             return false;
         }
 
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() finish\n";
+#       endif // end DEBUG_MODE
+
         return true;
     }
 
+    // This API is used under McrtFbSender context.
+    // Output value is normalized using weight when doNormalizedMode = true.
+    // Output with numSample.
     template <typename B, typename UC8, typename H16, typename F32>
     static void enqTilePixelBlockValSample(VContainerEnq &vContainerEnq,
                                            const PrecisionMode precisionMode,
@@ -829,6 +877,9 @@ protected:
         }
     }
 
+    // This API is used under McrtFbSender context.
+    // Output value is normalized using weight when doNormalizedMode = true.
+    // Output without numSample.
     template <typename B, typename UC8, typename H16, typename F32>
     static void enqTilePixelBlockVal(VContainerEnq &vContainerEnq,
                                      const PrecisionMode precisionMode,
@@ -878,6 +929,61 @@ protected:
                                       weightBufferTiled.getData() + pixelOffset;
                                   enqTileVal(mask, src, srcWeight, doNormalizeMode, vContainerEnq,
                                              funcFullPrecision);
+                              });
+            break;
+        default :
+            break;
+        }
+    }
+
+    template <typename B, typename UC8, typename H16, typename F32>
+    static void enqTilePixelBlockValSampleNormalizedSrc(VContainerEnq &vContainerEnq,
+                                                        const PrecisionMode precisionMode,
+                                                        const ActivePixels& activePixels,
+                                                        const B& bufferTiled,
+                                                        const NumSampleBuffer& numSampleBufferTiled,
+                                                        UC8 funcLowPrecision,
+                                                        H16 funcHalfPrecision,
+                                                        F32 funcFullPrecision) {
+        // precisionMode should be better if branched here instead of inside activeTileCrawler
+        switch (precisionMode) {
+        case PackTiles::PrecisionMode::UC8 :
+            //
+            // 8bit precision
+            //
+            activeTileCrawler(activePixels,
+                              [&](uint64_t mask, unsigned pixelOffset) {
+                                  const auto* __restrict src = bufferTiled.getData() + pixelOffset;
+                                  const unsigned int* __restrict srcNumSample =
+                                      numSampleBufferTiled.getData() + pixelOffset;
+                                  enqTileValSampleNormalizedSrc(mask, src, srcNumSample,
+                                                                vContainerEnq, funcLowPrecision);
+                              });
+            break;
+        case PackTiles::PrecisionMode::H16 :
+            //
+            // 16bit half float precision
+            //
+            activeTileCrawler(activePixels,
+                              [&](uint64_t mask, unsigned pixelOffset) {
+                                  const auto* __restrict src = bufferTiled.getData() + pixelOffset;
+                                  const unsigned int* __restrict srcNumSample =
+                                      numSampleBufferTiled.getData() + pixelOffset;
+                                  enqTileValSampleNormalizedSrc(mask, src, srcNumSample,
+                                                                vContainerEnq, funcHalfPrecision);
+                              });
+            break;
+        case PackTiles::PrecisionMode::F32 :
+            //
+            // 32bit full float precision
+            //
+            activeTileCrawler(activePixels,
+                              [&](uint64_t mask, unsigned pixelOffset) {
+                                  const auto* __restrict src = bufferTiled.getData() + pixelOffset;
+                                  const unsigned int* __restrict srcNumSample =
+                                      numSampleBufferTiled.getData() + pixelOffset;
+                                  enqTileValSampleNormalizedSrc(mask, src, srcNumSample,
+                                                                vContainerEnq, funcFullPrecision);
                               });
             break;
         default :
@@ -943,12 +1049,19 @@ protected:
     // If you set storeNumSampleData = false, numSample information is decoded but not stored into
     // numSampleBufferTiled.
     {
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() start\n";
+#       endif // end DEBUG_MODE
+
         // precisionMode should be better if branched here instead of inside activeTileCrawler
         switch (precisionMode) {
         case PackTiles::PrecisionMode::UC8 :
             //
             // 8bit precision
             //
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() UC8 before activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             activeTileCrawler(activePixels,
                               [&](uint64_t mask, unsigned pixelOffset) { // func
                               auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
@@ -959,11 +1072,17 @@ protected:
                               deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
                                                funcLowPrecision);
                               });
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() UC8 after activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             break;
         case PackTiles::PrecisionMode::H16 :
             //
             // 16bit half precision
             //
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() H16 before activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             activeTileCrawler(activePixels,
                               [&](uint64_t mask, unsigned pixelOffset) { // func
                               auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
@@ -974,11 +1093,17 @@ protected:
                               deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
                                                funcHalfPrecision);
                               });
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() H16 after activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             break;
         case PackTiles::PrecisionMode::F32 :
             //
             // 32bit full float precision
             //
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() F32 before activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             activeTileCrawler(activePixels,
                               [&](uint64_t mask, unsigned pixelOffset) { // func
                                   auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
@@ -989,10 +1114,16 @@ protected:
                                   deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
                                                    funcFullPrecision);
                               });
+#           ifdef DEBUG_MODE
+            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() F32 after activeTileCrawler\n";
+#           endif // end DEBUG_MODE
             break;
         default :
             break;
         }
+#       ifdef DEBUG_MODE
+        if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() finish\n";
+#       endif // end DEBUG_MODE
     }
 
     template <typename B, typename UC8, typename H16, typename F32>
@@ -1061,6 +1192,9 @@ protected:
         }
     }
 
+    // This API is used under McrtFbSender context.
+    // Output value is normalized using weight when doNormalizedMode = true.
+    // Output with numSample.
     // enqTile : Value + numSample
     template <typename T, typename F>
     static void enqTileValSample(uint64_t mask,
@@ -1076,7 +1210,7 @@ protected:
                                    T currV;
                                    unsigned int numSample = 0;
                                    if (currWeight > 0.0f) {
-                                       numSample = 1; // test for now
+                                       numSample = static_cast<unsigned>(currWeight);
                                        currV = src[offset] / currWeight; // do normalization
                                    } else {
                                        std::memset(static_cast<void *>(&currV), 0x0, sizeof(T));
@@ -1089,7 +1223,9 @@ protected:
                                    T currV;
                                    unsigned int numSample = 0;
                                    if (srcWeight[offset] > 0.0f) {
-                                       numSample = 1; // test for now
+                                       // This is a special case, this data can not normalized like
+                                       // closestFilter value. In this case, we set numSample = 1.
+                                       numSample = 1;
                                        currV = src[offset]; // non normalized value
                                    } else {
                                        std::memset(static_cast<void *>(&currV), 0x0, sizeof(T));
@@ -1099,6 +1235,9 @@ protected:
         }
     }
 
+    // This API is used under McrtFbSender context.
+    // Output value is normalized using weight when doNormalizedMode = true.
+    // Output without numSample.
     // enqTile : Value
     template <typename T, typename F>
     static void enqTileVal(uint64_t mask,
@@ -1133,21 +1272,36 @@ protected:
         }
     }
 
+    // enqTile : Value + numSample
+    template <typename T, typename F>
+    static void enqTileValSampleNormalizedSrc(uint64_t mask,
+                                              const T *__restrict src, // normalized
+                                              const unsigned int* __restrict srcNumSample,
+                                              VContainerEnq &vContainerEnq,
+                                              F enqfunc) {
+        activePixelCrawler(mask,
+                           [&](unsigned offset) {
+                               unsigned int numSample = srcNumSample[offset];
+                               T currV;
+                               if (numSample > 0) {
+                                   currV = src[offset];
+                               } else {
+                                   std::memset(static_cast<void *>(&currV), 0x0, sizeof(T));
+                               }
+                               enqfunc(currV, numSample); // enqueue value and numSample
+                           });
+    }
+
     // enqTile : Value
     template <typename T, typename F>
     static void enqTileValNormalizedSrc(uint64_t mask,
                                         const T *__restrict src, // normalized
                                         VContainerEnq &vContainerEnq,
                                         F enqfunc) {
-        for (unsigned offset = 0; offset < 64; ++offset) {
-            if (!mask) break;       // early exit
-            if (mask & static_cast<uint64_t>(0x1)) {
-                // found active pixel
-                enqfunc(*src);
-            }
-            mask >>= 1;
-            src ++;
-        }
+        activePixelCrawler(mask,
+                           [&](unsigned offset) {
+                               enqfunc(src[offset]);
+                           });
     }
 
     // deqTile : Value + numSample
@@ -1425,6 +1579,63 @@ PackTilesImpl::encode(const ActivePixels &activePixels,
 
 // static function
 template <bool renderBufferOdd>
+size_t
+PackTilesImpl::encode(const ActivePixels& activePixels,
+                      const RenderBuffer& renderBufferTiled, // normalized color
+                      const NumSampleBuffer& numSampleBufferTiled, // numSample data for renderBuffer
+                      std::string &output,
+                      const PrecisionMode precisionMode, // precision which is used in this encoding operation
+                      const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
+                      const FinePassPrecision finePassPrecision, // minimum fine pass precision
+                      const bool withSha1Hash,
+                      const EnqFormatVer enqFormatVer)
+//
+// for McrtMergeComputation : RenderBuffer (beauty/alpha), RenderBufferOdd (beautyAux/alphaAux)
+//
+// Creates RGBA + numSample : float * 4 + u_int
+//
+// Beauty + numSample version of previous encode() function for Fb data (i.e. inside merge computation)
+//
+// activePixels : should include original w, h and tile aligned w, h
+// renderBufferTiled : tile aligned resolution : normalized color
+// numSampleBufferTiled : tile aligned resolution : numSample data for renderBuffer
+//
+{
+    return encodeMain(enqFormatVer,
+                      ((renderBufferOdd) ?
+                       DataType::BEAUTYODD_WITH_NUMSAMPLE : DataType::BEAUTY_WITH_NUMSAMPLE),
+                      0.0f,     // defaultValue
+                      precisionMode,
+                      false,    // closestFilterStatus = false
+                      coarsePassPrecision,
+                      finePassPrecision,
+                      activePixels,
+                      output,
+                      withSha1Hash,
+                      [&](VContainerEnq &vContainerEnq) { // enqTilePixelBlockFunc
+                          enqTilePixelBlockValSampleNormalizedSrc
+                          (vContainerEnq,
+                           precisionMode,
+                           activePixels,
+                           renderBufferTiled,
+                           numSampleBufferTiled,
+                           [&](const RenderColor &v, unsigned int numSample) { // lowPrecision
+                              enqLowPrecisionVec4f(vContainerEnq, v);
+                              vContainerEnq.enqVLUInt(numSample);
+                           },
+                           [&](const RenderColor &v, unsigned int numSample) { // halfPrecision
+                              enqHalfPrecisionVec4f(vContainerEnq, v);
+                              vContainerEnq.enqVLUInt(numSample);
+                           },
+                           [&](const RenderColor &v, unsigned int numSample) { // fullPrecision
+                               vContainerEnq.enqVec4f(v);
+                              vContainerEnq.enqVLUInt(numSample);
+                           });
+                      });
+}
+
+// static function
+template <bool renderBufferOdd>
 bool
 PackTilesImpl::decode(const void *addr,
                       const size_t dataSize,
@@ -1465,6 +1676,9 @@ PackTilesImpl::decode(const void *addr,
                           CoarsePassPrecision currCoarsePassPrecision,
                           FinePassPrecision currFinePassPrecision,
                           VContainerDeq &vContainerDeq) -> bool { // deqTilePixelBlockFunc
+#                         ifdef DEBUG_MODE
+                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc start\n";
+#                         endif // end DEBUG_MODE
 
                           coarsePassPrecision = currCoarsePassPrecision;
                           finePassPrecision = currFinePassPrecision;
@@ -1481,6 +1695,11 @@ PackTilesImpl::decode(const void *addr,
                           unsigned alignedWidth = activePixels.getAlignedWidth();
                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
+#                         ifdef DEBUG_MODE
+                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc passA\n";
+#                         endif // end DEBUG_MODE
+
+
                           if (normalizedRenderBufferTiled.getWidth() != alignedWidth ||
                               normalizedRenderBufferTiled.getHeight() != alignedHeight) {
                               // resize and clear if size is changed
@@ -1495,6 +1714,10 @@ PackTilesImpl::decode(const void *addr,
                                   numSampleBufferTiled.clear();
                               }
                           }
+
+#                         ifdef DEBUG_MODE
+                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc passB\n";
+#                         endif // end DEBUG_MODE
 
                           deqTilePixelBlockValSample
                               (vContainerDeq,
@@ -1515,6 +1738,11 @@ PackTilesImpl::decode(const void *addr,
                                    v = vContainerDeq.deqVec4f();
                                    numSample = vContainerDeq.deqVLUInt();
                                });
+
+#                         ifdef DEBUG_MODE
+                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc finish\n";
+#                         endif // end DEBUG_MODE
+
                           return true;
                       });
 }
@@ -4242,6 +4470,34 @@ PackTiles::encode(const bool renderBufferOdd,
                                             withSha1Hash, enqFormatVer);
     }
 }
+                  
+// for McrtMergeComputation : for feedabck logic between merge and mcrt computation
+// RGBA + numSample : float * 4 + u_int
+// static function
+size_t
+PackTiles::encode(const bool renderBufferOdd,
+                  const ActivePixels& activePixels,      // constructed by original w, h
+                  const RenderBuffer& renderBufferTiled, // tile aligned reso : normalized color
+                  const NumSampleBuffer& numSampleBufferTiled, // numSample data for renderBuffer
+                  std::string &output,
+                  const PrecisionMode precisionMode, // current precision mode
+                  const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
+                  const FinePassPrecision finePassPrecision, // minimum fine pass precision
+                  const bool withSha1Hash,
+                  const EnqFormatVer enqFormatVer)
+{
+    if (renderBufferOdd) {
+        return PackTilesImpl::encode<true>(activePixels, renderBufferTiled, numSampleBufferTiled,
+                                           output,
+                                           precisionMode, coarsePassPrecision, finePassPrecision,
+                                           withSha1Hash, enqFormatVer);
+    } else {
+        return PackTilesImpl::encode<false>(activePixels, renderBufferTiled, numSampleBufferTiled,
+                                            output,
+                                            precisionMode, coarsePassPrecision, finePassPrecision,
+                                            withSha1Hash, enqFormatVer);
+    }
+}
 
 // RGBA + numSample : float * 4 + u_int
 // static function
@@ -4707,6 +4963,14 @@ PackTiles::decodeActivePixels(VContainerDeq &vContainerDeq, ActivePixels &active
     return PackTilesImpl::decodeActivePixels(vContainerDeq, activePixels);
 }
 
+// static function
+void
+PackTiles::debugMode(bool flag)
+{
+#   ifdef DEBUG_MODE
+    gDebugMode = flag;
+#   endif // end DEBUG_MODE
+}
+
 } // namespace grid_util
 } // namespace scene_rdl2
-

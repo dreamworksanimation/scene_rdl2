@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include <scene_rdl2/scene/rdl2/ValueContainerDeq.h>
@@ -18,6 +15,7 @@ public:
     using rdl2::ValueContainerDeq::deqBool;
     using rdl2::ValueContainerDeq::deqFloat12;
     using rdl2::ValueContainerDeq::deqString;
+    using rdl2::ValueContainerDeq::deqByteData;
     using rdl2::ValueContainerDeq::deqVector;    // template
     using rdl2::ValueContainerDeq::deqVLInt;
     using rdl2::ValueContainerDeq::deqVLUInt;
@@ -61,4 +59,3 @@ private:
 
 } // namespace cache
 } // namespace scene_rdl2
-

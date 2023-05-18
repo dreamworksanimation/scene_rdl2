@@ -10,68 +10,81 @@ namespace scene_rdl2 {
 namespace grid_util {
 
 void
-Fb::accumulateRenderBuffer(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                           const Fb &src)
+Fb::accumulateRenderBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl,
+                           const Fb& src)
 {
-    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
-            accumulateRenderBufferOneTile(src, tileId);            
+    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
+            accumulateRenderBufferOneTile(src, tileId);
+
+            /* for debug
+            if (!partialMergeTilesTbl) {
+                verifyAccumulateNumSampleTile(tileId, src, "X X X X X");
+            }
+            */
         });
+
+    /* for debug
+    if (!partialMergeTilesTbl) {
+        std::cerr << ">> Fb_accumulate.cc accumulateRenderBuffer() runtime verify start\n";
+        verifyAccumulateNumSample(src, "Y Y Y Y Y");
+    }
+    */
 }
 
 void
-Fb::accumulatePixelInfo(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                        const Fb &src)
+Fb::accumulatePixelInfo(const PartialMergeTilesTbl* partialMergeTilesTbl,
+                        const Fb& src)
 {
     if (!src.getPixelInfoStatus()) return;
     setupPixelInfo(partialMergeTilesTbl, src.getPixelInfoName());
 
-    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
             accumulatePixelInfoOneTile(src, tileId);                
         });
 } 
 
 void
-Fb::accumulateHeatMap(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                      const Fb &src)
+Fb::accumulateHeatMap(const PartialMergeTilesTbl* partialMergeTilesTbl,
+                      const Fb& src)
 {
     if (!src.getHeatMapStatus()) return;
     setupHeatMap(partialMergeTilesTbl, src.getHeatMapName());
 
-    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
             accumulateHeatMapOneTile(src, tileId);
         });
 }
 
 void
-Fb::accumulateWeightBuffer(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src)
+Fb::accumulateWeightBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src)
 {
     if (!src.getWeightBufferStatus()) return;
     setupWeightBuffer(partialMergeTilesTbl, src.getWeightBufferName());
 
-    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
             accumulateWeightBufferOneTile(src, tileId);
         });
 }
 
 void
-Fb::accumulateRenderBufferOdd(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src)
+Fb::accumulateRenderBufferOdd(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src)
 {
     if (!src.getRenderBufferOddStatus()) return;
     setupRenderBufferOdd(partialMergeTilesTbl);
 
-    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
             accumulateRenderBufferOddOneTile(src, tileId);
         });
 }
 
 void
-Fb::accumulateRenderOutput(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                           const Fb &srcFb)
+Fb::accumulateRenderOutput(const PartialMergeTilesTbl* partialMergeTilesTbl,
+                           const Fb& srcFb)
 // This function is used on progmcrt_merge computation
 {
     if (!srcFb.getRenderOutputStatus()) return;
 
-    accumulateAllActiveAov(srcFb, [&](const FbAovShPtr &srcFbAov, FbAovShPtr &dstFbAov) {
+    operatorOnAllActiveAov(srcFb, [&](const FbAovShPtr& srcFbAov, FbAovShPtr& dstFbAov) {
             // activeAovFunc
             if (srcFbAov->getReferenceType() == FbReferenceType::UNDEF) {
                 // Non-Reference type buffer
@@ -92,24 +105,25 @@ Fb::accumulateRenderOutput(const PartialMergeTilesTbl *partialMergeTilesTbl,
                 // setup closestFilter condition
                 dstFbAov->setClosestFilterStatus(srcFbAov->getClosestFilterStatus());
 
+                // We always update numSampleData here regardless of storeNumSampleData condition.
                 switch (srcFbAov->getFormat()) {
                 case VariablePixelBuffer::FLOAT :
-                    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+                    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
                             accumulateFloat1AovOneTile(dstFbAov, srcFbAov, tileId);
                         });
                     break;
                 case VariablePixelBuffer::FLOAT2 :
-                    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+                    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
                             accumulateFloat2AovOneTile(dstFbAov, srcFbAov, tileId);
                         });
                     break;
                 case VariablePixelBuffer::FLOAT3 :
-                    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+                    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
                             accumulateFloat3AovOneTile(dstFbAov, srcFbAov, tileId);
                         });
                     break;
                 case VariablePixelBuffer::FLOAT4 :
-                    accumulatePartialTiles(partialMergeTilesTbl, [&](int tileId) {
+                    operatorOnPartialTiles(partialMergeTilesTbl, [&](int tileId) {
                             accumulateFloat4AovOneTile(dstFbAov, srcFbAov, tileId);
                         });
                     break;
@@ -127,14 +141,14 @@ Fb::accumulateRenderOutput(const PartialMergeTilesTbl *partialMergeTilesTbl,
 
 void
 Fb::accumulateAllFbs(const int numMachines,
-                     const std::vector<char> &received,
-                     const std::vector<grid_util::Fb> &srcFbs)
+                     const std::vector<char>& received,
+                     const std::vector<grid_util::Fb>& srcFbs)
 //
 // Test function for tile base MT task distribution. Still work in progress.
 // This function is used on progmcrt_merge computation
 //
 {
-    auto bufferSetupFunc = [&](unsigned bufferId, const Fb &src) {
+    auto bufferSetupFunc = [&](unsigned bufferId, const Fb& src) {
         switch (bufferId) {
         case 0 : {
             if (src.getPixelInfoStatus()) setupPixelInfo(nullptr, src.getPixelInfoName());
@@ -150,9 +164,9 @@ Fb::accumulateAllFbs(const int numMachines,
         } break;
         case 4 : {
             if (src.getRenderOutputStatus()) {
-                accumulateAllActiveAov
+                operatorOnAllActiveAov
                     (src,
-                     [&](const FbAovShPtr &srcFbAov, FbAovShPtr &dstFbAov) {
+                     [&](const FbAovShPtr& srcFbAov, FbAovShPtr& dstFbAov) {
                         if (srcFbAov->getReferenceType() == FbReferenceType::UNDEF) {
                             // Non-Reference type buffer
                             // We have to update fbAov information and accumulate data based on
@@ -188,7 +202,7 @@ Fb::accumulateAllFbs(const int numMachines,
     // (not for every tile of each machineId).
     for (int machineId = 0; machineId < numMachines; ++machineId) {
         if (!received[machineId]) continue;        
-        const Fb &src = srcFbs[machineId];
+        const Fb& src = srcFbs[machineId];
 
 #       ifdef SINGLE_THREAD
         for (unsigned int bufferId = 0; bufferId < 5; ++bufferId) {
@@ -201,11 +215,11 @@ Fb::accumulateAllFbs(const int numMachines,
     }
 
     // merge all buffers
-    accumulatePartialTiles(nullptr, [&](int tileId) {
+    operatorOnPartialTiles(nullptr, [&](int tileId) {
             for (int machineId = 0; machineId < numMachines; ++machineId) {
                 if (!received[machineId]) continue;
 
-                const Fb &src = srcFbs[machineId];
+                const Fb& src = srcFbs[machineId];
 
                 accumulateRenderBufferOneTile(src, tileId);
                 if (src.getPixelInfoStatus()) accumulatePixelInfoOneTile(src, tileId);
@@ -213,7 +227,7 @@ Fb::accumulateAllFbs(const int numMachines,
                 if (src.getWeightBufferStatus()) accumulateWeightBufferOneTile(src, tileId);
                 if (src.getRenderBufferOddStatus()) accumulateRenderBufferOddOneTile(src, tileId);
                 if (src.getRenderOutputStatus()) {
-                    accumulateAllActiveAov(src, [&](const FbAovShPtr &srcFbAov, FbAovShPtr &dstFbAov) {
+                    operatorOnAllActiveAov(src, [&](const FbAovShPtr& srcFbAov, FbAovShPtr& dstFbAov) {
                             if (srcFbAov->getReferenceType() != FbReferenceType::UNDEF) return;
 
                             switch (srcFbAov->getFormat()) {
@@ -240,152 +254,22 @@ Fb::accumulateAllFbs(const int numMachines,
 
 //---------------------------------------------------------------------------------------------------------------
 
-#ifdef SINGLE_THREAD
-template <typename F>
-void
-Fb::accumulatePartialTiles(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                           F accumTileFunc) const
-{
-    if (!partialMergeTilesTbl) {
-        // If partialMergeTilesTbl is empty, we accumulate all the tiles.
-        for (int tileId = 0; tileId < static_cast<int>(getTotalTiles()); ++tileId) {
-            accumTileFunc(tileId);
-        }
-    } else {
-        // Only accumulate tile which specified by partialMergeTilesTbl
-        for (int tileId = 0; tileId < static_cast<int>(getTotalTiles()); ++tileId) {
-            if ((*partialMergeTilesTbl)[tileId]) {
-                accumTileFunc(tileId);
-            }
-        }
-    }
-}
-#else // else SINGLE_THREAD
-template <typename F>
-void
-Fb::accumulatePartialTiles(const PartialMergeTilesTbl *partialMergeTilesTbl,
-                           F accumTileFunc) const
-{
-    if (!partialMergeTilesTbl) {
-        // If partialMergeTilesTbl is empty, we accumulate all the tiles.
-        if (!getTotalTiles()) return;
-        // Based on several different grain size test (2,4,16,32,64,128,256,512,1024,2048,4096)
-        // and found 64 is somehow reasonable for 1K or more resolution image in this parallel_for loop
-        tbb::blocked_range<size_t> range(0, getTotalTiles(), 64);
-        tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &tileRange) {
-                for (size_t tileId = tileRange.begin(); tileId < tileRange.end(); ++tileId) {
-                    accumTileFunc(tileId);
-                }
-            });
-    } else {
-        // Only accumulate tile which specified by partialMergeTilesTbl
-        std::vector<unsigned> partialMergeTilesId;
-        for (size_t tileId = 0; tileId < partialMergeTilesTbl->size(); ++tileId) {
-            if ((*partialMergeTilesTbl)[tileId]) {
-                partialMergeTilesId.push_back(tileId);
-            }
-        }
-        if (!partialMergeTilesId.size()) return;
-
-        // Based on several different grain size test (2,4,16,32,64,128,256,512,1024,2048,4096)
-        // and found 16 is somehow reasonable for 1K or more resolution image in this parallel_for loop
-        tbb::blocked_range<size_t> range(0, partialMergeTilesId.size(), 16);
-        tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &idRange) {
-                for (size_t id = idRange.begin(); id < idRange.end(); ++id) {
-                    accumTileFunc(partialMergeTilesId[id]);
-                }
-            });
-    }
-}
-#endif // end !SINGLE_THREAD
-
-#ifdef SINGLE_THREAD
-template <typename F>
-void
-Fb::accumulateAllActiveAov(const Fb &srcFb, F activeAovFunc)
-{
-    for (const auto &itr : srcFb.mRenderOutput) {
-        const FbAovShPtr &srcFbAov = itr.second;
-        if (!srcFbAov->getStatus()) continue; // skip non active aov
-        // real data AOV buffer or Reference type
-        const std::string &aovName = srcFbAov->getAovName();
-
-        FbAovShPtr &dstFbAov = getAov(aovName);
-        activeAovFunc(srcFbAov, dstFbAov);
-        mRenderOutputStatus = true;
-    }
-}
-#else // else SINGLE_THREAD
-template <typename F>
-void
-Fb::accumulateAllActiveAov(const Fb &srcFb, F activeAovFunc)
-{
-    std::vector<std::string> activeAovNameArray;
-    for (const auto &itr : srcFb.mRenderOutput) {
-        const FbAovShPtr &srcFbAov = itr.second;
-        if (!srcFbAov->getStatus()) continue; // skip non active aov
-        // real data AOV buffer or Reference type
-        activeAovNameArray.push_back(srcFbAov->getAovName());
-    }
-    if (!activeAovNameArray.size()) return;
-
-    tbb::blocked_range<size_t> range(0, activeAovNameArray.size());
-    tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &r) {
-            for (size_t activeAovNameId = r.begin(); activeAovNameId < r.end(); ++activeAovNameId) {
-                const std::string &aovName = activeAovNameArray[activeAovNameId];
-                if (!srcFb.findAov(aovName)) {
-                    std::ostringstream ostr;
-                    ostr << ">> ============ Fb.h findAov failed. aovName:>" << aovName << "<";
-                    logging::Logger::error(ostr.str());
-                    continue;
-                }
-                const FbAovShPtr &srcFbAov = srcFb.mRenderOutput.at(aovName);
-
-                FbAovShPtr dstFbAov = getAov(aovName);
-                activeAovFunc(srcFbAov, dstFbAov);
-                mRenderOutputStatus = true;
-            }
-        });
-}
-#endif // end !SINGLE_THREAD
-
-template <typename F>
-void
-Fb::accumulateActiveOneTile(ActivePixels &dstActivePixels,
-                            const ActivePixels &srcActivePixels,
-                            const int tileId,
-                            F accumTileFunc) const
-{
-    int pixOffset = tileId << 6;
-
-    uint64_t srcMask = srcActivePixels.getTileMask(tileId);
-    if (srcMask) {
-        uint64_t dstMask = dstActivePixels.getTileMask(tileId);
-        dstMask |= srcMask; // update destination activePixels mask
-        dstActivePixels.setTileMask(tileId, dstMask);
-
-        accumTileFunc(srcMask, pixOffset);
-    }
-}
-
 template <typename T>
 void
-Fb::accumulateTile(T *dstFirstValOfTile,
-                   unsigned int *dstFirstNumSampleTotalOfTile,
+Fb::accumulateTile(T* dstFirstValOfTile,
+                   unsigned int* dstFirstNumSampleTotalOfTile,
                    uint64_t srcMask,
-                   const T *srcFirstValOfTile,
-                   const unsigned int *srcFirstNumSampleTotalOfTile) const
+                   const T* srcFirstValOfTile,
+                   const unsigned int* srcFirstNumSampleTotalOfTile) const
 {
-    T ave;
-    for (unsigned int pixId = 0; pixId < sPixelsPerTile; ++pixId) {
-        if (!srcMask) break;    // early exit
-        if (srcMask & static_cast<uint64_t>(0x1)) {
-            T &currDstVal = dstFirstValOfTile[pixId];
-            unsigned int &currDstNumSampleTotal = dstFirstNumSampleTotalOfTile[pixId];
-            const T &currSrcVal = srcFirstValOfTile[pixId];
-            const unsigned int &currSrcNumSampleTotal = srcFirstNumSampleTotalOfTile[pixId];
+    operatorOnActivePixOfTile(srcMask, [&](unsigned pixId) {
+            T& currDstVal = dstFirstValOfTile[pixId];
+            unsigned int& currDstNumSampleTotal = dstFirstNumSampleTotalOfTile[pixId];
+            const T& currSrcVal = srcFirstValOfTile[pixId];
+            const unsigned int& currSrcNumSampleTotal = srcFirstNumSampleTotalOfTile[pixId];
 
             unsigned int totalSample = currDstNumSampleTotal + currSrcNumSampleTotal;
+            T ave;
             if (totalSample > 0) {
                 ave =
                     (currDstVal * static_cast<float>(currDstNumSampleTotal) +
@@ -398,32 +282,27 @@ Fb::accumulateTile(T *dstFirstValOfTile,
 
             currDstVal = ave;
             currDstNumSampleTotal = totalSample;
-        }
-        srcMask >>= 1;
-    }
+        });
 }
 
 template <typename T>
 void
-Fb::accumulateTileClosestFilter(T *dstFirstValOfTile,
-                                unsigned int *dstFirstNumSampleTotalOfTile,
+Fb::accumulateTileClosestFilter(T* dstFirstValOfTile,
+                                unsigned int* dstFirstNumSampleTotalOfTile,
                                 uint64_t srcMask,
-                                const T *srcFirstValOfTile,
-                                const unsigned int *srcFirstNumSampleTotalOfTile) const
+                                const T* srcFirstValOfTile,
+                                const unsigned int* srcFirstNumSampleTotalOfTile) const
 //
 // special accumulateTile function for the case of using closestFilter
 //
 {
     unsigned int depthId = T::N - 1; // depth value is last component
     
-    for (unsigned int pixId = 0; pixId < sPixelsPerTile; ++pixId) {
-        if (!srcMask) break;    // early exit
-        if (srcMask & static_cast<uint64_t>(0x1)) {
-            T &currDstVal = dstFirstValOfTile[pixId];
-            unsigned int &currDstNumSampleTotal = dstFirstNumSampleTotalOfTile[pixId];
-
-            const T &currSrcVal = srcFirstValOfTile[pixId];
-            const unsigned int &currSrcNumSampleTotal = srcFirstNumSampleTotalOfTile[pixId];
+    operatorOnActivePixOfTile(srcMask, [&](unsigned pixId) { // operatePixFunc
+            T& currDstVal = dstFirstValOfTile[pixId];
+            unsigned int& currDstNumSampleTotal = dstFirstNumSampleTotalOfTile[pixId];
+            const T& currSrcVal = srcFirstValOfTile[pixId];
+            const unsigned int& currSrcNumSampleTotal = srcFirstNumSampleTotalOfTile[pixId];
 
             unsigned int totalSample = currDstNumSampleTotal + currSrcNumSampleTotal;
             if (totalSample > 0) {
@@ -437,17 +316,15 @@ Fb::accumulateTileClosestFilter(T *dstFirstValOfTile,
                 }
                 currDstNumSampleTotal = totalSample;
             }
-        }
-        srcMask >>= 1;
-    }
+        });
 }
 
 //---------------------------------------------------------------------------------------------------------------
 
 void
-Fb::accumulateRenderBufferOneTile(const Fb &src, const int tileId)
+Fb::accumulateRenderBufferOneTile(const Fb& src, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (mActivePixels,
          src.mActivePixels,
          tileId,
@@ -461,9 +338,9 @@ Fb::accumulateRenderBufferOneTile(const Fb &src, const int tileId)
 }
 
 void
-Fb::accumulatePixelInfoOneTile(const Fb &src, const int tileId)
+Fb::accumulatePixelInfoOneTile(const Fb& src, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (mActivePixelsPixelInfo,
          src.mActivePixelsPixelInfo,
          tileId,
@@ -475,9 +352,9 @@ Fb::accumulatePixelInfoOneTile(const Fb &src, const int tileId)
 }
 
 void
-Fb::accumulateHeatMapOneTile(const Fb &src, const int tileId)
+Fb::accumulateHeatMapOneTile(const Fb& src, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (mActivePixelsHeatMap,
          src.mActivePixelsHeatMap,
          tileId,
@@ -491,9 +368,9 @@ Fb::accumulateHeatMapOneTile(const Fb &src, const int tileId)
 }
 
 void
-Fb::accumulateWeightBufferOneTile(const Fb &src, const int tileId)
+Fb::accumulateWeightBufferOneTile(const Fb& src, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (mActivePixelsWeightBuffer,
          src.mActivePixelsWeightBuffer,
          tileId,
@@ -505,9 +382,9 @@ Fb::accumulateWeightBufferOneTile(const Fb &src, const int tileId)
 }
 
 void
-Fb::accumulateRenderBufferOddOneTile(const Fb &src, const int tileId)
+Fb::accumulateRenderBufferOddOneTile(const Fb& src, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (mActivePixelsRenderBufferOdd,
          src.mActivePixelsRenderBufferOdd,
          tileId,
@@ -521,9 +398,9 @@ Fb::accumulateRenderBufferOddOneTile(const Fb &src, const int tileId)
 }
 
 void
-Fb::accumulateFloat1AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov, const int tileId)
+Fb::accumulateFloat1AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (dstFbAov->getActivePixels(),
          srcFbAov->getActivePixels(),
          tileId,
@@ -537,9 +414,9 @@ Fb::accumulateFloat1AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov,
 }
 
 void
-Fb::accumulateFloat2AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov, const int tileId)
+Fb::accumulateFloat2AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (dstFbAov->getActivePixels(),
          srcFbAov->getActivePixels(),
          tileId,
@@ -563,9 +440,9 @@ Fb::accumulateFloat2AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov,
 }
 
 void
-Fb::accumulateFloat3AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov, const int tileId)
+Fb::accumulateFloat3AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (dstFbAov->getActivePixels(),
          srcFbAov->getActivePixels(),
          tileId,
@@ -589,9 +466,9 @@ Fb::accumulateFloat3AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov,
 }
 
 void
-Fb::accumulateFloat4AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov, const int tileId)
+Fb::accumulateFloat4AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId)
 {
-    accumulateActiveOneTile
+    operatorOnActiveOneTile
         (dstFbAov->getActivePixels(),
          srcFbAov->getActivePixels(),
          tileId,
@@ -615,41 +492,74 @@ Fb::accumulateFloat4AovOneTile(FbAovShPtr &dstFbAov, const FbAovShPtr &srcFbAov,
 }
 
 void
-Fb::accumulatePixelInfoTile(PixelInfo *dstFirstPixelInfoOfTile,
+Fb::accumulatePixelInfoTile(PixelInfo* dstFirstPixelInfoOfTile,
                             uint64_t srcMask,
-                            const PixelInfo *srcFirstPixelInfoOfTile) const
+                            const PixelInfo* srcFirstPixelInfoOfTile) const
 {
-    for (unsigned int pixId = 0; pixId < sPixelsPerTile; ++pixId) {
-        if (!srcMask) break;    // early exit
-        if (srcMask & static_cast<uint64_t>(0x1)) {
-            PixelInfo &currDstPixelInfo = dstFirstPixelInfoOfTile[pixId];
-            const PixelInfo &currSrcPixelInfo = srcFirstPixelInfoOfTile[pixId];
+    operatorOnActivePixOfTile(srcMask, [&](unsigned pixId) {
+            PixelInfo& currDstPixelInfo = dstFirstPixelInfoOfTile[pixId];
+            const PixelInfo& currSrcPixelInfo = srcFirstPixelInfoOfTile[pixId];
 
             if (currDstPixelInfo.depth > currSrcPixelInfo.depth) {
                 currDstPixelInfo.depth = currSrcPixelInfo.depth;
             }
-        }
-        srcMask >>= 1;
-    }
+        });
 }
 
 void
-Fb::accumulateWeightBufferTile(float *dstFirstPixelInfoOfTile,
+Fb::accumulateWeightBufferTile(float* dstFirstPixelInfoOfTile,
                                uint64_t srcMask,
-                               const float *srcFirstPixelInfoOfTile) const
+                               const float* srcFirstPixelInfoOfTile) const
 {
-    for (unsigned int pixId = 0; pixId < sPixelsPerTile; ++pixId) {
-        if (!srcMask) break;    // early exit
-        if (srcMask & static_cast<uint64_t>(0x1)) {
-            float &currDstPixelInfo = dstFirstPixelInfoOfTile[pixId];
-            const float &currSrcPixelInfo = srcFirstPixelInfoOfTile[pixId];
+    operatorOnActivePixOfTile(srcMask, [&](unsigned pixId) {
+            float& currDstPixelInfo = dstFirstPixelInfoOfTile[pixId];
+            const float& currSrcPixelInfo = srcFirstPixelInfoOfTile[pixId];
 
             currDstPixelInfo += currSrcPixelInfo;
-        }
-        srcMask >>= 1;
-    }
+        });
+}
+
+bool
+Fb::verifyAccumulateNumSampleTile(uint64_t srcMask,
+                                  const unsigned int* srcFirstNumSampleTotalOfTile,
+                                  const unsigned int* dstFirstNumSampleTotalOfTile,
+                                  const std::string& msg) const
+{
+    bool resultFlag = true;
+    operatorOnActivePixOfTile(srcMask, [&](unsigned pixId) {
+            unsigned int srcNumSample = srcFirstNumSampleTotalOfTile[pixId];
+            unsigned int dstNumSample = dstFirstNumSampleTotalOfTile[pixId];
+            if (dstNumSample < srcNumSample) {
+                std::cerr << ">> Fb_accumulate.cc accumulateTile() RUNTIME numSample verify failed."
+                          << " localPixId:" << pixId
+                          << " srcNumSample:" << srcNumSample
+                          << " dstNumSample:" << dstNumSample
+                          << ' ' << msg << '\n';
+                resultFlag = false;
+            }
+        });
+    return resultFlag;
 }
     
+bool
+Fb::verifyAccumulateNumSampleTile(int tileId, const Fb& src, const std::string& msg) const
+{
+    uint64_t srcMask = mActivePixels.getTileMask(tileId);
+    int pixOffset = tileId << 6;
+    const unsigned int* srcFirstNumSampleTotalOfTile = src.mNumSampleBufferTiled.getData() + pixOffset;
+    const unsigned int* dstFirstNumSampleTotalOfTile = mNumSampleBufferTiled.getData() + pixOffset;
+    return verifyAccumulateNumSampleTile(srcMask, srcFirstNumSampleTotalOfTile, dstFirstNumSampleTotalOfTile, msg);
+}
+
+bool
+Fb::verifyAccumulateNumSample(const Fb& src, const std::string& msg) const
+{
+    for (int tileId = 0; tileId < static_cast<int>(getTotalTiles()); ++tileId) {
+        if (!verifyAccumulateNumSampleTile(tileId, src, msg)) return false;
+    }
+    return true;
+}
+
 } // namespace grid_util
 } // namespace scene_rdl2
 

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include "ValueContainerUtil.h"
@@ -182,6 +179,8 @@ public:
 
     std::string show(const std::string &hd) const;
     std::string hexDump(const std::string &hd, const std::string &titleMsg, const size_t size) const;
+
+    std::string showDebug() const;
 
     void debugDump(const std::string &hd, const std::string &title) const;
 
@@ -641,4 +640,3 @@ ValueContainerEnq::saveSizeT(void *ptr, const size_t t) const
 
 } // namespace rdl2
 } // namespace scene_rdl2
-

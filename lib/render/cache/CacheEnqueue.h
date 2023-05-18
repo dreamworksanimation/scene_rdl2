@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
@@ -42,6 +39,7 @@ public:
     const std::vector<unsigned> &getPrimitiveTypeCounter() const { return mPrimitiveTypeCounter; }
 
     std::string show() const;
+    std::string showDebug() const;
 
 private:
     bool mRuntimeVerify; // not used yet.
@@ -51,4 +49,3 @@ private:
 
 } // namespace cache
 } // namespace scene_rdl2
-

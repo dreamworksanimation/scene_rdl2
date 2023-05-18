@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -134,6 +131,20 @@ public:
            const RenderBuffer &renderBufferTiled, // tile aligned reso : normalized color
            std::string &output,
            const PrecisionMode precisionMode,             // current precision mode
+           const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
+           const FinePassPrecision finePassPrecision,     // minimum fine pass precision
+           const bool withSha1Hash = false,
+           const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
+
+    // for McrtMergeComputation : for feedback logic between merge and mcrt computation
+    // RGBA + numSample : float * 4 + u_int
+    static size_t
+    encode(const bool renderBufferOdd,
+           const ActivePixels& activePixels, // constructed by original w, h
+           const RenderBuffer& renderBufferTiled, // tile aligned reso : normalized color
+           const NumSampleBuffer& numSampleBufferTiled, // numSample data for renderbuffer
+           std::string& output,
+           const PrecisionMode precisionMode, // current precision mode
            const CoarsePassPrecision coarsePassPrecision, // minimum coarse pass precision
            const FinePassPrecision finePassPrecision,     // minimum fine pass precision
            const bool withSha1Hash = false,
@@ -366,8 +377,9 @@ public:
 
     static void encodeActivePixels(const ActivePixels &activePixels, VContainerEnq &vContainerEnq);
     static void decodeActivePixels(VContainerDeq &vContainerDeq, ActivePixels &activePixels);
+
+    static void debugMode(bool flag);
 }; // PackTiles
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

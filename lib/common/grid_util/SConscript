@@ -39,6 +39,7 @@ publicHeaders = [
               'PackTilesPassPrecision.h',
               'PackTilesTest.h',
               'Parser.h',
+	      'ProgressiveFrameBufferName.h',
               'RenderPrepStats.h',
               'RunLenBitTable.h',
               'Sha1Util.h',

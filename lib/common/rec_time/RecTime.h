@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include <sstream>
@@ -27,7 +24,7 @@ public:
     inline void start() { mStartTime = getCurrentMicroSec(); }
     inline float end() const { return (float)(getCurrentMicroSec() - mStartTime) * 0.000001f; } // return sec
 
-    inline long long getCurrentMicroSec() const {
+    static long long getCurrentMicroSec() {
         struct timeval tv;
         gettimeofday(&tv, 0x0);
         long long cTime = (long long)tv.tv_sec * 1000 * 1000 + (long long)tv.tv_usec;
@@ -89,5 +86,3 @@ protected:
 
 } // namespace rec_time
 } // namespace scene_rdl2
-
-

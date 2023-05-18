@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include <cmath> // log10(), round()
@@ -89,6 +86,14 @@ addIndent(const std::string &str, const int indentTotal = 1)
 }
 
 //---------------------------------------------------------------------------------------------------------------
+
+inline
+int
+getNumberOfDigits(size_t n)
+// returns number of digits in decimal representation of n
+{
+    return (!n) ? 1 : static_cast<int>(std::log10(static_cast<float>(n)) + 1.0f);
+}
 
 inline
 int
@@ -245,4 +250,3 @@ rmLastNL(const std::string& inStr)
 
 } // namespace str_util
 } // namespace scene_rdl2
-

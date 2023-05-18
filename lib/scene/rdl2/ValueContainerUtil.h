@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include "Types.h"
@@ -56,6 +53,7 @@ public:
 
     static inline ValueType rdlType2ValueType(AttributeType rdlType);    
 
+    static std::string hexDump(const std::string& titleMsg, const void* buff, const size_t size);
     static std::string hexDump(const std::string &hd, const std::string &titleMsg, const void *buff, const size_t size);
 
     // 32bit unsigned int              0 ~ 4,294,967,295 -> 1byte ~ 5byte
@@ -391,4 +389,3 @@ ValueContainerUtil::isAlignedSize(const size_t byte, const size_t align)
 
 } // namespace rdl2
 } // namespace scene_rdl2
-

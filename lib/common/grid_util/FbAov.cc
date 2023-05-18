@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "FbAov.h"
 #include "FbUtils.h"
 
@@ -251,6 +248,9 @@ FbAov::showInfo() const
          << "mClosestFilterStatus:" << str_util::boolStr(mClosestFilterStatus) << '\n'
          << "mCoarsePassPrecision:" << showCoarsePassPrecision(mCoarsePassPrecision) << '\n'
          << "mFinePassPrecision:" << showFinePassPrecision(mFinePassPrecision) << '\n'
+         << "getFormat():" << showVariablePixelBufferFormat(getFormat()) << '\n'
+         << "getWidth():" << getWidth() << '\n'
+         << "getHeight():" << getHeight() << '\n'
          << "getNumChan():" << getNumChan();
     return ostr.str();
 }
@@ -1520,6 +1520,17 @@ FbAov::computePositionMinMax(const T *tiledBufferStartAddr, unsigned calcCompone
         });
 }
 
+const char*
+FbAov::showVariablePixelBufferFormat(VariablePixelBuffer::Format format) const
+{
+    switch (format) {
+    case VariablePixelBuffer::FLOAT : return "FLOAT";
+    case VariablePixelBuffer::FLOAT2 : return "FLOAT2";
+    case VariablePixelBuffer::FLOAT3 : return "FLOAT3";
+    case VariablePixelBuffer::FLOAT4 : return "FLOAT4";
+    default : return "?";
+    }
+}
+
 } // namespace grid_util
 } // namespace scene_rdl2
-

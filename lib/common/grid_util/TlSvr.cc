@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TlSvr.h"
 #include "LiteralUtil.h"
 #include "SockUtil.h"
@@ -338,12 +335,13 @@ TlSvr::socketBindAndListen(INFOMSG_CALLBACK infoMsgCallBack,
         ::close(mBaseSock);
         if (errMsgCallBack) {
             errMsgCallBack(str_util::stringCat(msgHead,
-                                               " ::bind() socket failed. baseSock:",
-                                               std::to_string(mBaseSock),
+                                               " ::bind() socket failed. port:",
+                                               std::to_string(mPort),
                                                " errno:",
                                                std::to_string(errno),
-                                               " ",
-                                               strerror(errno)));
+                                               " (",
+                                               strerror(errno),
+                                               ")"));
         }
         mBaseSock = -1;
         return false;
@@ -507,4 +505,3 @@ TlSvr::socketCheck(ERRMSG_CALLBACK errMsgCallBack)
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

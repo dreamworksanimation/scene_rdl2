@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "ValueContainerUtil.h"
 
 #include <string>
@@ -57,6 +54,13 @@ ValueContainerUtil::valueType2Str(ValueType valueType)
     case ValueType::SCENE_OBJECT_INDEXABLE : return std::string("SCENE_OBJECT_INDEXABLE");
     default :                                return std::string("UNKNOWN");
     }
+}
+
+// static function
+std::string
+ValueContainerUtil::hexDump(const std::string &titleMsg, const void *buff, const size_t size)
+{
+    return hexDump("", titleMsg, buff, size);
 }
 
 // static function
@@ -138,4 +142,3 @@ ValueContainerUtil::hexDump(const std::string &hd, const std::string &titleMsg, 
 
 } // namespace rdl2
 } // namespace scene_rdl2
-

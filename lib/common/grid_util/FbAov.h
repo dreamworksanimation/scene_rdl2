@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -225,6 +222,8 @@ protected:
     template <typename T> void computePositionMinMax(const T *tiledBufferStartAddr,
                                                      unsigned calcComponentTotal,
                                                      T &min, T &max) const;
+
+    const char* showVariablePixelBufferFormat(VariablePixelBuffer::Format format) const;
 }; // FbAov
 
 finline void
@@ -294,4 +293,3 @@ FbAov::resetBufferTiled(const PartialMergeTilesTbl *partialMergeTilesTbl)
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

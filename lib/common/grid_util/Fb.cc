@@ -1,13 +1,9 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "Fb.h"
 #include "PackTiles.h"
 
 #include <iomanip>
-
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -58,17 +54,17 @@ Fb::garbageCollectUnusedBuffers()
 //------------------------------------------------------------------------------
 
 std::string
-Fb::show(const std::string &hd) const
+Fb::show() const
 {
     std::ostringstream ostr;
-    ostr << hd << "Fb {\n"; {
-        ostr << hd << "  mAlignedWidth:" << mAlignedWidth << '\n';
-        ostr << hd << "  mAlignedHeight:" << mAlignedHeight << '\n';
+    ostr << "Fb {\n"; {
+        ostr << "  mAlignedWidth:" << mAlignedWidth << '\n';
+        ostr << "  mAlignedHeight:" << mAlignedHeight << '\n';
 
-        ostr << mActivePixels.show(hd + "  ") << '\n';
-        ostr << showRenderBuffer(hd + "  ") << '\n';
+        ostr << mActivePixels.show("  ") << '\n';
+        ostr << showRenderBuffer("  ") << '\n';
     }
-    ostr << hd << "}";
+    ostr << "}";
     return ostr.str();
 }
 
@@ -209,6 +205,180 @@ Fb::showRenderBufferTile(const std::string &hd,
     return ostr.str();
 }
 
+//------------------------------------------------------------------------------------------
+
+void
+Fb::parserConfigure()
+{
+    parserConfigureActivePixels();
+    parserConfigureNumSampleBuffer();
+
+    mParser.description("fb command");
+    mParser.opt("showSizeInfo", "", "show size related information",
+                [&](Arg& arg) -> bool { return arg.msg(showSizeInfo() + '\n'); });
+    mParser.opt("saveBeautyPPM", "<filename>", "save beauty buffer as PPM file",
+                [&](Arg& arg) -> bool { return saveBeautyPPMCommand(arg); });
+    mParser.opt("activePixels", "...command...", "activePixels command",
+                [&](Arg& arg) -> bool {
+                    mParserActivePixelsCurrPtr = &mActivePixels;
+                    return mParserActivePixels.main(arg.childArg());
+                });
+    mParser.opt("numSampleBuffer", "...command...", "numSampleBuffer command",
+                [&](Arg& arg) -> bool {
+                    mParserActivePixelsCurrPtr = &mActivePixels;
+                    mParserNumSampleBufferPtr = &mNumSampleBufferTiled;
+                    return mParserNumSampleBuffer.main(arg.childArg());
+                });
+}
+
+void
+Fb::parserConfigureActivePixels()
+{
+    Parser& parser = mParserActivePixels;
+    parser.description("activePixels command");
+    parser.opt("show", "", "show internal info",
+               [&](Arg& arg) -> bool {
+                   if (!mParserActivePixelsCurrPtr) return arg.msg("current mParserActivePixels is empty\n");
+                   return arg.msg(mParserActivePixelsCurrPtr->show() + '\n');
+               });
+    parser.opt("showTile", "<tileId>", "show tile",
+               [&](Arg& arg) -> bool {
+                   if (!mParserActivePixelsCurrPtr) return arg.msg("current mParserActivePixels is empty\n");
+                   return arg.msg(mParserActivePixelsCurrPtr->showTile((arg++).as<unsigned>(0)) + '\n');
+               });
+}
+
+void
+Fb::parserConfigureNumSampleBuffer()
+{
+    Parser& parser = mParserNumSampleBuffer;
+    parser.description("numSample command");
+    parser.opt("show", "", "show numSample internal info",
+               [&](Arg& arg) -> bool {
+                   if (!mParserNumSampleBufferPtr) return arg.msg("current mParserNumSampleBuffer is empty");
+                   return arg.msg(showParserNumSampleBufferInfo() + '\n');
+               });
+}
+
+std::string
+Fb::showSizeInfo() const
+{
+    auto showViewport = [](const math::Viewport &vp) -> std::string {
+        std::ostringstream ostr;
+        ostr << "(" << vp.mMinX << ',' << vp.mMinY << ")-(" << vp.mMaxX << ',' << vp.mMaxY << ")";
+        return ostr.str();
+    };
+    auto showSizeInfoRenderOutput = [&]() -> std::string { // MTsafe
+        std::lock_guard<std::mutex> lock(mMutex);        
+
+        std::ostringstream ostr;
+        ostr << "size Info RenderOutput (size:" << mRenderOutput.size() << ") {\n";
+        for (const auto& itr : mRenderOutput) {
+            const std::string& name = itr.first;
+            const FbAovShPtr& fbAov = itr.second;
+
+            ostr << "  name:" << name;
+            if (!fbAov->getStatus()) {
+                ostr << "  NotActive\n";
+            } else {
+                ostr << " {\n"
+                     << str_util::addIndent(fbAov->showInfo(), 2) << '\n'
+                     << "  }\n";
+            }
+        }
+        ostr << "}";
+        return ostr.str();
+    };
+
+    std::ostringstream ostr;
+    ostr << "size info {\n"
+         << "  mRezedViewport:" << showViewport(mRezedViewport) << '\n'
+         << "  mAlignedWidth:" << mAlignedWidth << '\n'
+         << "  mAlignedHeight:" << mAlignedHeight << '\n'
+         << "  - - - -\n"
+         << "  mActivePixels: w:" << mActivePixels.getWidth()
+         << " h:" << mActivePixels.getHeight() << '\n'
+         << "  mRenderBufferCoarsePassPrecision:"
+         << showCoarsePassPrecision(mRenderBufferCoarsePassPrecision) << '\n'
+         << "  mRenderBufferFinePassPrecision:"
+         << showFinePassPrecision(mRenderBufferFinePassPrecision) << '\n'
+         << "  - - - -\n"
+         << "  mPixelInfoStatus:" << str_util::boolStr(mPixelInfoStatus) << '\n'
+         << "  mActivePixelsPixelInfo: w:" << mActivePixelsPixelInfo.getWidth()
+         << " h:" << mActivePixelsPixelInfo.getHeight() << '\n'
+         << "  mPixelInfoCoarsePassPrecision:"
+         << showCoarsePassPrecision(mPixelInfoCoarsePassPrecision) << '\n'
+         << "  mPixelInfoFinePassPrecision:"
+         << showFinePassPrecision(mPixelInfoFinePassPrecision) << '\n'
+         << "  - - - -\n"
+         << "  mHeatMapStatus:" << str_util::boolStr(mHeatMapStatus) << '\n'
+         << "  mActivePixelsHeatMap: w:" << mActivePixelsHeatMap.getWidth()
+         << " h:" << mActivePixelsHeatMap.getHeight() << '\n'
+         << "  - - - -\n"
+         << "  mWeightBufferStatus:" << str_util::boolStr(mWeightBufferStatus) << '\n'
+         << "  mActivePixelsWeightBufer: w:" << mActivePixelsWeightBuffer.getWidth()
+         << " h:" << mActivePixelsWeightBuffer.getHeight() << '\n'
+         << "  mWeightBufferCoarsePassPrecision:"
+         << showCoarsePassPrecision(mWeightBufferCoarsePassPrecision) << '\n'
+         << "  mWeightBufferFinePassPrecision:"
+         << showFinePassPrecision(mWeightBufferFinePassPrecision) << '\n'
+         << "  - - - -\n"
+         << "  mRenderBufferOddStatus:" << str_util::boolStr(mRenderBufferOddStatus) << '\n'
+         << "  mRenderOutputStatus:" << str_util::boolStr(mRenderOutputStatus) << '\n'
+         << "  - - - -\n"
+         << str_util::addIndent(showSizeInfoRenderOutput()) << '\n'
+         << "}";
+    return ostr.str();
+}
+
+bool
+Fb::saveBeautyPPMCommand(Arg& arg) const
+{
+    return saveBeautyPPM((arg++)(), [&](const std::string& msg) -> bool { return arg.msg(msg); });
+}
+
+std::string    
+Fb::showParserNumSampleBufferInfo() const
+{
+    unsigned w = mParserNumSampleBufferPtr->getWidth();
+    unsigned h = mParserNumSampleBufferPtr->getHeight();
+
+    auto calcMinMaxNumSample = [&](unsigned& min, unsigned& max) -> unsigned {
+        const ActivePixels* activePixels = mParserActivePixelsCurrPtr;
+        const NumSampleBuffer* numSample = mParserNumSampleBufferPtr;
+        if (!activePixels || !numSample) return 0;
+
+        unsigned total = 0;
+        activePixels->crawlAllActivePixels(*activePixels,
+                                           [&](unsigned currPixOffset) {
+                                               float v = (numSample->getData())[currPixOffset];
+                                               if (!total) {
+                                                   min = max = v;
+                                               } else {
+                                                   if (v < min) min = v;
+                                                   else if (max < v) max = v;
+                                               }
+                                               total++;
+                                           });
+        return total;
+    };
+
+    unsigned minNumSample, maxNumSample;
+    unsigned totalActiveNumSamplePix = calcMinMaxNumSample(minNumSample, maxNumSample);
+
+    std::ostringstream ostr;
+    ostr << "NumSampleBuffer info {\n"
+         << str_util::addIndent(mParserActivePixelsCurrPtr->show()) << '\n'
+         << "  getWidth():" << w << '\n'
+         << "  getHeight():" << h << '\n'
+         << "  statistical info {\n"
+         << "    minNumSample:" << minNumSample << '\n'
+         << "    maxNumSample:" << maxNumSample << '\n'
+         << "    totalActiveNumSamplePix:" << totalActiveNumSamplePix << '\n'
+         << "  }\n"
+         << "}";
+    return ostr.str();
+}
+
 } // namespace grid_util
 } // namespace scene_rdl2
-

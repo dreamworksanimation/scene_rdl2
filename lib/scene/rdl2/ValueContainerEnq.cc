@@ -1,10 +1,9 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "ValueContainerEnq.h"
 #include "SceneObject.h"
+
+#include <scene_rdl2/render/util/StrUtil.h>
 
 #include <iomanip>
 #include <sstream>
@@ -29,6 +28,23 @@ std::string
 ValueContainerEnq::hexDump(const std::string &hd, const std::string &titleMsg, const size_t size) const
 {
     return ValueContainerUtil::hexDump(hd, titleMsg, static_cast<const char *>(&(*mBuff)[0]), size);
+}
+
+std::string
+ValueContainerEnq::showDebug() const
+{
+    std::ostringstream ostr;
+    ostr << "ValueContainerEnq {\n"
+         << "  mStartId:" << mStartId << '\n'
+         << "  mId:" << mId << '\n';
+    if (!mBuff) {
+        ostr << "  mBuff is empty\n";
+    } else {
+        ostr << str_util::addIndent(std::string("mBuff: ") +
+                                    ValueContainerUtil::hexDump("", mBuff->data(), mBuff->size())) << '\n';
+    }
+    ostr << "}";
+    return ostr.str();
 }
 
 void
@@ -98,4 +114,3 @@ ValueContainerEnq::showEnqCounterResult() const
 
 } // namespace rdl2
 } // namespace scene_rdl2
-

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "CacheEnqueue.h"
 
 #include <scene_rdl2/render/util/StrUtil.h>
@@ -31,6 +28,14 @@ CacheEnqueue::show() const
                                "}");
 }
 
+std::string
+CacheEnqueue::showDebug() const
+{
+    return str_util::stringCat("CacheEnqueue {\n",
+                               str_util::addIndent(ValueContainerEnq::showDebug()), '\n',
+                               "  mRuntimeVerify:", str_util::boolStr(mRuntimeVerify), '\n',
+                               "}");
+}
+
 } // namespace cache
 } // namespace scene_rdl2
-

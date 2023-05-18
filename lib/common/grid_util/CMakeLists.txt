@@ -21,7 +21,11 @@ target_sources(${component}
         FbReferenceType.cc
         Fb_accumulate.cc
         Fb_conv888.cc
+	Fb_copy.cc
+	Fb_fbd.cc
         Fb_get.cc
+	Fb_minusOne.cc
+	Fb_ppm.cc
         Fb_setup.cc
         Fb_snapshotDelta.cc
         Fb_untile.cc
@@ -57,6 +61,7 @@ set_property(TARGET ${component}
         PackTilesPassPrecision.h
         PackTilesTest.h
         Parser.h
+	ProgressiveFrameBufferName.h
         RenderPrepStats.h
         RunLenBitTable.h
         Sha1Util.h

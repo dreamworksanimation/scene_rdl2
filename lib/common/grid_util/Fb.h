@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -14,9 +11,11 @@
 // So far only supported Beauty channel
 //
 
+#include "Arg.h"
 #include "ActivePixelsArray.h"
 #include "FbAov.h"
 #include "PackTilesPassPrecision.h"
+#include "Parser.h"
 
 #include <scene_rdl2/common/fb_util/ActivePixels.h>
 #include <scene_rdl2/common/fb_util/FbTypes.h>
@@ -68,32 +67,22 @@ public:
     using FArray = std::vector<float>;
     using UCArray = std::vector<unsigned char>;
 
+    using MessageOutFunc = std::function<bool(const std::string& msg)>;
+
     //------------------------------
 
-    Fb() :
-        mRezedViewport(math::Viewport()),
-        mAlignedWidth(0), mAlignedHeight(0),
-        mRenderBufferCoarsePassPrecision(CoarsePassPrecision::F32),
-        mRenderBufferFinePassPrecision(FinePassPrecision::F32),
-        mPixelInfoStatus(false),
-        mPixelInfoCoarsePassPrecision(CoarsePassPrecision::F32),
-        mPixelInfoFinePassPrecision(FinePassPrecision::F32),
-        mHeatMapStatus(false),
-        mWeightBufferStatus(false),
-        mWeightBufferCoarsePassPrecision(CoarsePassPrecision::F32),
-        mWeightBufferFinePassPrecision(FinePassPrecision::F32),
-        mRenderBufferOddStatus(false),
-        mRenderOutputStatus(false) {}
+    Fb()
+    {
+        parserConfigure();
+    }
 
     // so far copy constructor is not used. But we need definition for vector<Fb>.
     // We only need vector<Fb>.resize() at initialization stage and vector size never changed
     // during execution. (mcrt_dataio/lib/engine/merger/FbMsgSingleFrame.h FbMsgSingleFrame::init())
-    Fb(const Fb &src) :
-        mRezedViewport(math::Viewport()),
-        mAlignedWidth(0), mAlignedHeight(0),
-        mPixelInfoStatus(false), mHeatMapStatus(false), mWeightBufferStatus(false),
-        mRenderBufferOddStatus(false),
-        mRenderOutputStatus(false) {}
+    Fb(const Fb &src)
+    {
+        parserConfigure();
+    }
 
     // width, height are original size and not need to be tile aligned
     finline void init(const math::Viewport &rezedViewport);
@@ -108,18 +97,22 @@ public:
     unsigned getHeight() const { return mRezedViewport.height(); }
     unsigned getAlignedWidth() const { return mAlignedWidth; }
     unsigned getAlignedHeight() const { return mAlignedHeight; }
-    unsigned getTileTotal() const { return (mAlignedWidth >> 3) * (mAlignedHeight >> 3); }
+    unsigned getNumTilesX() const { return mAlignedWidth >> 3; }
+    unsigned getNumTilesY() const { return mAlignedHeight >> 3; }
+    unsigned getTotalTiles() const { return getNumTilesX() * getNumTilesY(); }
 
     //------------------------------
 
-    ActivePixels        &getActivePixels() { return mActivePixels; }
-    const ActivePixels  &getActivePixels() const { return mActivePixels; }
-    RenderBuffer        &getRenderBufferTiled() { return mRenderBufferTiled; }
-    const RenderBuffer  &getRenderBufferTiled() const { return mRenderBufferTiled; }
-    NumSampleBuffer     &getNumSampleBufferTiled() { return mNumSampleBufferTiled; }
-    CoarsePassPrecision &getRenderBufferCoarsePassPrecision() { return mRenderBufferCoarsePassPrecision; }
-    FinePassPrecision   &getRenderBufferFinePassPrecision() { return mRenderBufferFinePassPrecision; }
-    fb_util::RenderColor getPixRenderBuffer(int sx, int sy) const;
+    ActivePixels&          getActivePixels() { return mActivePixels; }
+    const ActivePixels&    getActivePixels() const { return mActivePixels; }
+    RenderBuffer&          getRenderBufferTiled() { return mRenderBufferTiled; }
+    const RenderBuffer&    getRenderBufferTiled() const { return mRenderBufferTiled; }
+    NumSampleBuffer&       getNumSampleBufferTiled() { return mNumSampleBufferTiled; }
+    const NumSampleBuffer& getNumSampleBufferTiled() const { return mNumSampleBufferTiled; }
+    CoarsePassPrecision&   getRenderBufferCoarsePassPrecision() { return mRenderBufferCoarsePassPrecision; }
+    FinePassPrecision&     getRenderBufferFinePassPrecision() { return mRenderBufferFinePassPrecision; }
+    fb_util::RenderColor   getPixRenderBuffer(int sx, int sy) const;
+    unsigned int           getPixRenderBufferNumSample(int sx, int sy) const;
 
     //
     // pixelInfo
@@ -192,15 +185,25 @@ public:
 
     //------------------------------
 
-    void accumulateRenderBuffer(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src);
-    void accumulatePixelInfo(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src);
-    void accumulateHeatMap(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src);
-    void accumulateWeightBuffer(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src);
-    void accumulateRenderBufferOdd(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &src);
+    void accumulateRenderBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void accumulatePixelInfo(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void accumulateHeatMap(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void accumulateWeightBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void accumulateRenderBufferOdd(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
     void accumulateRenderOutput(const PartialMergeTilesTbl *partialMergeTilesTbl, const Fb &srcFb);
     void accumulateAllFbs(const int numMachines,
                           const std::vector<char> &received,
                           const std::vector<grid_util::Fb> &srcFbs);
+
+    void copy(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyRenderBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyPixelInfo(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyHeatMap(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyWeightBuffer(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyRenderBufferOdd(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& src);
+    void copyRenderOutput(const PartialMergeTilesTbl* partialMergeTilesTbl, const Fb& srcFb);
+
+    static std::string showPartialMergeTilesTbl(const PartialMergeTilesTbl& tbl);
 
     //------------------------------
 
@@ -341,6 +344,10 @@ public:
 
     //------------------------------
 
+    bool calcMinusOneRenderBuffer(const Fb& feedbackFb, const Fb& myMergedFb, std::string* errorMsg = nullptr);
+
+    //------------------------------
+
     // return false if this and dstFb has different resolusion.
     // const bool coarsePass : only used by activePixels record logic.
     // You don't need to set coarsePass argument if you don't record.
@@ -359,13 +366,26 @@ public:
 
     //------------------------------
 
-    std::string show(const std::string &hd) const;
+    std::string show() const;
 
     void verifyRenderBufferAccessTest() const;
+    bool verifyAccumulateNumSample(const Fb& src, const std::string& msg) const;
 
     unsigned getActivePixelsTotal() const { return mActivePixels.getActivePixelTotal(); } // for debug
     unsigned getNonBlackRenderBufferPixelTotal() const; // for debug
     std::string showDebugMinMaxActiveWeightPixelInfo() const; // for debug
+
+    Parser& getParser() { return mParser; }
+
+    bool saveBeautyPPM(const std::string& filename,
+                       const MessageOutFunc& messageOutput = nullptr) const;
+    bool saveBeautyFBD(const std::string& filename,
+                       const MessageOutFunc& messageOutput = nullptr) const;
+    // r=numSample g=noralizedNumSample b=0
+    bool saveBeautyNumSamplePPM(const std::string& filename,
+                                const MessageOutFunc& messageOutput = nullptr) const;
+    bool saveBeautyNumSampleFBD(const std::string& filename,
+                                const MessageOutFunc& messageOutput = nullptr) const;
 
 private:
 
@@ -374,8 +394,8 @@ private:
     static constexpr unsigned int sPixelsPerTile = 64; // Tile size is 8x8 = 64 pixels
 
     math::Viewport mRezedViewport;
-    unsigned mAlignedWidth;     // tile aligned (8 pixel) width
-    unsigned mAlignedHeight;    // tile aligned (8 pixel) height
+    unsigned mAlignedWidth {0};     // tile aligned (8 pixel) width
+    unsigned mAlignedHeight {0};    // tile aligned (8 pixel) height
 
     //------------------------------
     //
@@ -384,23 +404,23 @@ private:
     ActivePixels    mActivePixels;         // mRenderBufferTiled activePixels information
     RenderBuffer    mRenderBufferTiled;    // tiled format : tile aligned resolution : normalizeColor
     NumSampleBuffer mNumSampleBufferTiled; // tiled format : tile aligned resolution
-    CoarsePassPrecision mRenderBufferCoarsePassPrecision; // required coarse pass precision for packTile codec
-    FinePassPrecision mRenderBufferFinePassPrecision;     // required fine pass precision for packTile codec
+    CoarsePassPrecision mRenderBufferCoarsePassPrecision {CoarsePassPrecision::F32}; // for packTile codec
+    FinePassPrecision mRenderBufferFinePassPrecision {FinePassPrecision::F32}; // for packTile codec
 
     //
     // PixelInfo buffer
     //
-    bool mPixelInfoStatus;
+    bool mPixelInfoStatus {false};
     std::string mPixelInfoName;
     ActivePixels mActivePixelsPixelInfo;   // mPixelInfoBufferTiled activePixels information
     PixelInfoBuffer mPixelInfoBufferTiled; // tiled format : tile aligned resolution 
-    CoarsePassPrecision mPixelInfoCoarsePassPrecision; // required coarse pass precision for packTile codec
-    FinePassPrecision mPixelInfoFinePassPrecision;     // required fine pass precision for packTile codec
+    CoarsePassPrecision mPixelInfoCoarsePassPrecision {CoarsePassPrecision::F32}; // for packTile codec
+    FinePassPrecision mPixelInfoFinePassPrecision {FinePassPrecision::F32}; // for packTile codec
 
     //
     // HeatMap buffer
     //
-    bool mHeatMapStatus;
+    bool mHeatMapStatus {false};
     std::string mHeatMapName;
     ActivePixels mActivePixelsHeatMap;            // mHeatMapSecBufferTiled activePixels information
     FloatBuffer mHeatMapSecBufferTiled;           // tiled format : tile aligned resolution
@@ -409,17 +429,17 @@ private:
     //
     // Weight buffer
     //
-    bool mWeightBufferStatus;
+    bool mWeightBufferStatus {false};
     std::string mWeightBufferName;
     ActivePixels mActivePixelsWeightBuffer; // mWeightBufferTiled activePixels information
     FloatBuffer mWeightBufferTiled;         // tiled format : tile aligned resolution
-    CoarsePassPrecision mWeightBufferCoarsePassPrecision; // required coarse pass precision for packTile codec
-    FinePassPrecision mWeightBufferFinePassPrecision;     // required fine pass precision for packTile codec
+    CoarsePassPrecision mWeightBufferCoarsePassPrecision {CoarsePassPrecision::F32}; // for packTile codec
+    FinePassPrecision mWeightBufferFinePassPrecision {FinePassPrecision::F32}; // for packTile codec
 
     //
     // RenderBufferOdd (BeautyAux/AlphaAux)
     //
-    bool mRenderBufferOddStatus;
+    bool mRenderBufferOddStatus {false};
     ActivePixels mActivePixelsRenderBufferOdd;            // mRenderBufferOddTiled activePixels information
     RenderBuffer mRenderBufferOddTiled;                   // tiled format : tile aligned resolution
     NumSampleBuffer mRenderBufferOddNumSampleBufferTiled; // tiled format : tile aligned resolution
@@ -427,9 +447,17 @@ private:
     //
     // RenderOutput buffer
     //
-    bool mRenderOutputStatus;
+    bool mRenderOutputStatus {false};
     std::unordered_map<std::string, FbAovShPtr> mRenderOutput;
     mutable std::mutex mMutex;
+
+    //------------------------------
+    
+    Parser mParser;
+    const ActivePixels* mParserActivePixelsCurrPtr {nullptr}; // runtime ActivePixels ptr for parser run
+    const NumSampleBuffer* mParserNumSampleBufferPtr; // runtime NumSampleBuffer ptr for parser run
+    Parser mParserActivePixels;
+    Parser mParserNumSampleBuffer;
 
     //------------------------------
 
@@ -496,15 +524,148 @@ private:
     //
     // accumulate operation related functions
     //
+#ifdef SINGLE_THREAD
     template <typename F>
-    void accumulatePartialTiles(const PartialMergeTilesTbl *partialMergeTilesTbl, F accumTileFunc) const;
+    void operatorOnPartialTiles(const PartialMergeTilesTbl* partialMergeTilesTbl, F operateTileFunc) const
+    {
+        if (!partialMergeTilesTbl) {
+            // If partialMergeTilesTbl is empty, we operate all the tiles.
+            for (int tileId = 0; tileId < static_cast<int>(getTotalTiles()); ++tileId) {
+                operateTileFunc(tileId);
+            }
+        } else {
+            // Only operate tile which specified by partialMergeTilesTbl
+            for (int tileId = 0; tileId < static_cast<int>(getTotalTiles()); ++tileId) {
+                if ((*partialMergeTilesTbl)[tileId]) {
+                    operateTileFunc(tileId);
+                }
+            }
+        }
+    }
+#else // else SINGLE_THREAD
     template <typename F>
-    void accumulateAllActiveAov(const Fb &srcFb, F activeAovFunc);
+    void operatorOnPartialTiles(const PartialMergeTilesTbl* partialMergeTilesTbl, F operateTileFunc) const
+    {
+        if (!partialMergeTilesTbl) {
+            // If partialMergeTilesTbl is empty, we operate all the tiles.
+            if (!getTotalTiles()) return;
+            // Based on several different grain size test (2,4,16,32,64,128,256,512,1024,2048,4096)
+            // and found 64 is somehow reasonable for 1K or more resolution image in this parallel_for loop
+            tbb::blocked_range<size_t> range(0, getTotalTiles(), 64);
+            tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &tileRange) {
+                    for (size_t tileId = tileRange.begin(); tileId < tileRange.end(); ++tileId) {
+                        operateTileFunc(tileId);
+                    }
+                });
+        } else {
+            // Only operate tile which specified by partialMergeTilesTbl
+            std::vector<unsigned> partialMergeTilesId;
+            for (size_t tileId = 0; tileId < partialMergeTilesTbl->size(); ++tileId) {
+                if ((*partialMergeTilesTbl)[tileId]) {
+                    partialMergeTilesId.push_back(tileId);
+                }
+            }
+            if (!partialMergeTilesId.size()) return;
+
+            // Based on several different grain size test (2,4,16,32,64,128,256,512,1024,2048,4096)
+            // and found 16 is somehow reasonable for 1K or more resolution image in this parallel_for loop
+            tbb::blocked_range<size_t> range(0, partialMergeTilesId.size(), 16);
+            tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &idRange) {
+                    for (size_t id = idRange.begin(); id < idRange.end(); ++id) {
+                        operateTileFunc(partialMergeTilesId[id]);
+                    }
+                });
+        }
+    }
+#endif // end !SINGLE_THREAD
+
+#ifdef SINGLE_THREAD
     template <typename F>
-    void accumulateActiveOneTile(ActivePixels &dstActivePixels,
-                                 const ActivePixels &srcActivePixels,
+    void operatorOnAllActiveAovs(const Fb& srcFb, F activeAovFunc)
+    {
+        for (const auto &itr : srcFb.mRenderOutput) {
+            const FbAovShPtr& srcFbAov = itr.second;
+            if (!srcFbAov->getStatus()) continue; // skip non active aov
+            // real data AOV buffer or Reference type
+            const std::string& aovName = srcFbAov->getAovName();
+
+            FbAovShPtr& dstFbAov = getAov(aovName);
+            activeAovFunc(srcFbAov, dstFbAov);
+            mRenderOutputStatus = true;
+        }
+    }
+#else // else SINGLE_THREAD
+    template <typename F>
+    void operatorOnAllActiveAov(const Fb& srcFb, F activeAovFunc)
+    {
+        std::vector<std::string> activeAovNameArray;
+        for (const auto &itr : srcFb.mRenderOutput) {
+            const FbAovShPtr& srcFbAov = itr.second;
+            if (!srcFbAov->getStatus()) continue; // skip non active aov
+            // real data AOV buffer or Reference type
+            activeAovNameArray.push_back(srcFbAov->getAovName());
+        }
+        if (!activeAovNameArray.size()) return;
+
+        tbb::blocked_range<size_t> range(0, activeAovNameArray.size());
+        tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &r) {
+                for (size_t activeAovNameId = r.begin(); activeAovNameId < r.end(); ++activeAovNameId) {
+                    const std::string& aovName = activeAovNameArray[activeAovNameId];
+                    if (!srcFb.findAov(aovName)) {
+                        std::ostringstream ostr;
+                        ostr << ">> ============ Fb.h findAov failed. aovName:>" << aovName << "<";
+                        logging::Logger::error(ostr.str());
+                        continue;
+                    }
+                    const FbAovShPtr& srcFbAov = srcFb.mRenderOutput.at(aovName);
+
+                    FbAovShPtr dstFbAov = getAov(aovName);
+                    activeAovFunc(srcFbAov, dstFbAov);
+                    mRenderOutputStatus = true;
+                }
+            });
+    }
+#endif // end !SINGLE_THREAD    
+
+    template <typename F>
+    void operatorOnActiveOneTile(ActivePixels& dstActivePixels,
+                                 const ActivePixels& srcActivePixels,
                                  const int tileId,
-                                 F accumTileFunc) const;
+                                 F operateTileFunc) const
+    {
+        int pixOffset = tileId << 6;
+
+        uint64_t srcMask = srcActivePixels.getTileMask(tileId);
+        if (srcMask) {
+            uint64_t dstMask = dstActivePixels.getTileMask(tileId);
+            dstMask |= srcMask; // update destination activePixels mask
+            dstActivePixels.setTileMask(tileId, dstMask);
+
+            operateTileFunc(srcMask, pixOffset);
+        }
+    }
+
+    template <typename F>
+    void operatorOnActivePixOfTile(uint64_t srcMask, F operatePixFunc) const
+    {
+        for (unsigned y = 0; y < 8; ++y) {
+            unsigned pixId = (y << 3); // y * 8
+            uint64_t currTileMask = srcMask >> pixId;
+            if (!currTileMask) break; // early exit : rest of them are all empty
+
+            uint64_t currTileScanlineMask =
+                currTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
+            for (unsigned x = 0; x < 8; ++x) {
+                if (!currTileScanlineMask) break; // early exit for scanline
+                if (currTileScanlineMask & static_cast<uint64_t>(0x1)) {
+                    operatePixFunc(pixId);
+                }
+                ++pixId;
+                currTileScanlineMask >>= 1;
+            }
+        }
+    }
+
     template <typename T>
     void accumulateTile(T *dstFirstValOfTile,
                         unsigned int *dstFirstNumSampleTotalOfTile,
@@ -534,6 +695,35 @@ private:
     void accumulateWeightBufferTile(float *dstFirstPixelInfoOfTile,
                                     uint64_t srcMask,
                                     const float *srcFirstPixelInfoOfTile) const;
+
+    bool verifyAccumulateNumSampleTile(uint64_t srcMask,
+                                       const unsigned int* srcFirstNumSampleTotalOfTile,
+                                       const unsigned int* dstFirstNumSampleTotalOfTile,
+                                       const std::string& msg) const;
+    bool verifyAccumulateNumSampleTile(int tileId, const Fb& src, const std::string& msg) const;
+
+    template <typename T>
+    void copyTile(T* dstFirstValOfTile,
+                  unsigned int* dstFirstNumSampleTotalOfTile,
+                  uint64_t srcMask,
+                  const T* srcFirstValOfTile,
+                  const unsigned int* srcFirstNumSampleTotalOfTile) const;
+    void copyRenderBufferOneTile(const Fb& src, const int tileId);
+    void copyPixelInfoOneTile(const Fb& src, const int tileId);
+    void copyHeatMapOneTile(const Fb& src, const int tileId);
+    void copyWeightBufferOneTile(const Fb& src, const int tileId);
+    void copyRenderBufferOddOneTile(const Fb& src, const int tileId);
+    void copyFloat1AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId);
+    void copyFloat2AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId);
+    void copyFloat3AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId);
+    void copyFloat4AovOneTile(FbAovShPtr& dstFbAov, const FbAovShPtr& srcFbAov, const int tileId);
+
+    void copyPixelInfoTile(PixelInfo* dstFirstPixelInfoOfTile,
+                           uint64_t srcMask,
+                           const PixelInfo* srcFirstPixelInfoOfTile) const;
+    void copyWeightBufferTile(float* dstFirstPixelInfoOfTile,
+                              uint64_t srcMask,
+                              const float* srcFirstPixelInfoOfTile) const;
 
     //------------------------------
     //
@@ -573,26 +763,10 @@ private:
     template <typename T, typename F>
     void activePixelCrawler(uint64_t tileMask, const T *firstDataOfTile, F pixFunc) const
     {
-        for (unsigned y = 0; y < 8; ++y) {
-            unsigned offset = (y << 3); // y * 8
-
-            uint64_t currTileMask = tileMask >> offset;
-            if (!currTileMask) break; // early exit : rest of them are all empty
-
-            const T *currPix = firstDataOfTile + offset;
-
-            uint64_t currTileScanlineMask =
-                currTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
-            for (unsigned x = 0; x < 8; ++x) {
-                if (!currTileScanlineMask) break; // early exit for scanline
-
-                if (currTileScanlineMask & static_cast<uint64_t>(0x1)) {
-                    pixFunc(*currPix);
-                }
-                currPix ++;
-                currTileScanlineMask >>= 1;
-            }
-        }
+        operatorOnActivePixOfTile(tileMask, [&](unsigned pixId) {
+                const T* currPix = firstDataOfTile + pixId;
+                pixFunc(*currPix);
+            });
     }
 
     //------------------------------
@@ -650,18 +824,34 @@ private:
 
     //------------------------------
 
-    unsigned getNumTilesX() const { return mAlignedWidth >> 3; }
-    unsigned getNumTilesY() const { return mAlignedHeight >> 3; }
-    unsigned getTotalTiles() const { return getNumTilesX() * getNumTilesY(); }
-
     uint8_t f2c255(const float f) const
     {
         int i = (int)(f * 255.0f); return (f < 0.0f)? 0: ((f > 1.0f)? 255: (uint8_t)(i));
     }
+    uint8_t f2c255Gamma22(const float f) const;
+
+    inline unsigned calcPixX(unsigned pixOffset) const;
+    inline unsigned calcPixY(unsigned pixOffset) const;
 
     std::string showRenderBuffer(const std::string &hd) const;
     std::string showRenderBufferTile(const std::string &hd,
                                      const uint64_t mask, const RenderColor *firstRenderColorOfTile) const;
+
+    //------------------------------------------------------------------------------------------
+
+    void parserConfigure();
+    void parserConfigureActivePixels();
+    void parserConfigureNumSampleBuffer();
+
+    std::string showSizeInfo() const;
+    bool saveBeautyPPMCommand(Arg& arg) const;
+
+    template <typename GetPixFunc, typename MsgOutFunc>
+    bool savePPMMain(const std::string& msg, const std::string& filename, GetPixFunc getPixFunc, MsgOutFunc msgOutFunc) const;
+    template <typename GetPixFunc, typename MsgOutFunc>
+    bool saveFBDMain(const std::string& msg, const std::string& filename, GetPixFunc getPixFunc, MsgOutFunc msgOutFunc) const;
+
+    std::string showParserNumSampleBufferInfo() const;
 }; // Fb
 
 finline void
@@ -1277,6 +1467,29 @@ Fb::clearBeautyBuffer(const PartialMergeTilesTbl &partialMergeTilesTbl)
 #   endif // end !SINGLE_THREAD
 }
 
+inline unsigned
+Fb::calcPixX(unsigned pixOffset) const
+{
+    unsigned tileId = pixOffset / 64;
+    unsigned inTileOffset = pixOffset % 64;
+    unsigned tileLocalX = inTileOffset % 8;
+
+    unsigned tileX = tileId % getNumTilesX();
+
+    return tileX * 8 + tileLocalX;
+}
+
+inline unsigned    
+Fb::calcPixY(unsigned pixOffset) const
+{
+    unsigned tileId = pixOffset / 64;
+    unsigned inTileOffset = pixOffset % 64;
+    unsigned tileLocalY = inTileOffset / 8;
+
+    unsigned tileY = tileId / getNumTilesX();
+
+    return tileY * 8 + tileLocalY;
+}
+
 } // namespace grid_util
 } // namespace scene_rdl2
-

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "ActivePixels.h"
 
 #include <iomanip>
@@ -100,6 +97,37 @@ ActivePixels::showMask(const std::string &hd, const uint64_t mask64)
     return ostr.str();
 }
 
+std::string
+ActivePixels::show() const
+{
+    std::ostringstream ostr;
+    ostr << "ActivePixels {\n"
+         << "  mOriginalWidth:" << mOriginalWidth << '\n'
+         << "  mOriginalHeight:" << mOriginalHeight << '\n'
+         << "  mAlignedWidth:" << mAlignedWidth << '\n'
+         << "  mAlignedHeight:" << mAlignedHeight << '\n'
+         << "  mNumTilesX:" << mNumTilesX << '\n'
+         << "  mNumTilesY:" << mNumTilesY << '\n'
+         << "  mTiles.size():" << mTiles.size() << '\n'
+         << "  getActiveTileTotal():" << getActiveTileTotal() << '\n'
+         << "  getActivePixelTotal():" << getActivePixelTotal() << '\n'
+         << "}";
+    return ostr.str();
+}
+
+std::string
+ActivePixels::showTile(unsigned tileId) const
+{
+    if (tileId > getNumTiles() - 1) {
+        std::ostringstream ostr;
+        ostr << "tileId:" << tileId << " outside range. numTiles:" << getNumTiles();
+        return ostr.str();
+    }
+
+    uint64_t currMask = getTileMask(tileId);
+    return showMask("", currMask);
+}
+
 bool
 ActivePixels::verifyReset(const std::vector<char> *partialMergeTilesTbl) const
 {
@@ -122,4 +150,3 @@ ActivePixels::verifyReset(const std::vector<char> *partialMergeTilesTbl) const
 
 } // namespace fb_util
 } // namespace scene_rdl2
-

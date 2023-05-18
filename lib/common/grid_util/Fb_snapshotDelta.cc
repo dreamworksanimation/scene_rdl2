@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "Fb.h"
 #include "FbActivePixels.h"
 
@@ -239,7 +236,7 @@ Fb::snapshotDeltaMain(ActivePixels &dstActivePixels,
     //
     // We don't need to reset outActivePixels because all tile mask will be set anyway.
     //
-    for (unsigned tileId = 0; tileId < getTileTotal(); ++tileId) {
+    for (unsigned tileId = 0; tileId < getTotalTiles(); ++tileId) {
         uint64_t srcTileMask = srcActivePixels.getTileMask(tileId);
 
         uint64_t activePixelMask = 0x0;
@@ -274,11 +271,11 @@ Fb::snapshotDeltaMain(ActivePixels &dstActivePixels,
                       ActivePixels &outActivePixels,
                       F snapshotTileFunc) const
 {
-    if (!getTileTotal()) return;
+    if (!getTotalTiles()) return;
     //
     // We don't need to reset outActivePixels because all tile mask will be set anyway.
     //
-    tbb::blocked_range<size_t> range(0, getTileTotal(), 64);
+    tbb::blocked_range<size_t> range(0, getTotalTiles(), 64);
     tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &tileRange) {
             for (size_t tileId = tileRange.begin(); tileId < tileRange.end(); ++tileId) {
                 uint64_t srcTileMask = srcActivePixels.getTileMask(tileId);
@@ -311,7 +308,7 @@ template <typename F>
 void
 Fb::snapshotAllTileLoop(Fb &dstFb, F func) const
 {
-    for (unsigned tileId = 0; tileId < getTileTotal(); ++tileId) {
+    for (unsigned tileId = 0; tileId < getTotalTiles(); ++tileId) {
         func(tileId);
     }        
 }
@@ -320,8 +317,8 @@ template <typename F>
 void
 Fb::snapshotAllTileLoop(Fb &dstFb, F func) const
 {
-    if (!getTileTotal()) return;
-    tbb::blocked_range<size_t> range(0, getTileTotal());
+    if (!getTotalTiles()) return;
+    tbb::blocked_range<size_t> range(0, getTotalTiles());
     tbb::parallel_for(range, [&](const tbb::blocked_range<size_t> &tileRange) {
             for (size_t tileId = tileRange.begin(); tileId < tileRange.end(); ++tileId) {
                 func(tileId);
@@ -682,4 +679,3 @@ Fb::snapshotDeltaRenderOutput(Fb &dstFb, FbActivePixels &dstFbActivePixels) cons
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -29,13 +26,13 @@ namespace fb_util {
 class ActivePixels
 {
 public:
-    ActivePixels() :
-        mOriginalWidth(0),
-        mOriginalHeight(0),
-        mAlignedWidth(0),
-        mAlignedHeight(0),
-        mNumTilesX(0),
-        mNumTilesY(0)
+    ActivePixels()
+        : mOriginalWidth(0)
+        , mOriginalHeight(0)
+        , mAlignedWidth(0)
+        , mAlignedHeight(0)
+        , mNumTilesX(0)
+        , mNumTilesY(0)
     {}
     ActivePixels(const ActivePixels &src) { copy(src); }
 
@@ -71,6 +68,8 @@ public:
     std::string show(const std::string &hd) const;
     std::string showFullInfo(const std::string &hd) const;
     static std::string showMask(const std::string &hd, const uint64_t mask64);
+    std::string show() const;
+    std::string showTile(unsigned tileId) const;
 
     // for debugging
     template <typename F>
@@ -232,4 +231,3 @@ ActivePixels::countBit64(const uint64_t mask64) const
 
 } // namespace fb_util
 } // namespace scene_rdl2
-
