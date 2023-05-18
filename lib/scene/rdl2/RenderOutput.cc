@@ -39,9 +39,6 @@ AttributeKey<Int> RenderOutput::sAttrCryptomatteDepth;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputPositions;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputNormals;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputBeauty;
-AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputRefP;
-AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputRefN;
-AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputUV;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteSupportResumeRender;
 AttributeKey<SceneObject*> RenderOutput::sCamera;
 AttributeKey<SceneObject *> RenderOutput::sAttrDisplayFilter;
@@ -401,21 +398,6 @@ RenderOutput::declare(SceneClass &sceneClass)
     sAttrCryptomatteOutputBeauty = sceneClass.declareAttribute<Bool>("cryptomatte_output_beauty", false);
     sceneClass.setMetadata(sAttrCryptomatteOutputBeauty, SceneClass::sComment, 
         "Whether to output beauty data per cryptomatte id");
-
-    // "cryptomatte output refP"
-    sAttrCryptomatteOutputRefP = sceneClass.declareAttribute<Bool>("cryptomatte_output_refp", false);
-    sceneClass.setMetadata(sAttrCryptomatteOutputRefP, SceneClass::sComment, 
-        "Whether to output refp data per cryptomatte id");
-
-    // "cryptomatte output refN"
-    sAttrCryptomatteOutputRefN = sceneClass.declareAttribute<Bool>("cryptomatte_output_refn", false);
-    sceneClass.setMetadata(sAttrCryptomatteOutputRefN, SceneClass::sComment, 
-        "Whether to output refn data per cryptomatte id");
-
-    // "cryptomatte output uv"
-    sAttrCryptomatteOutputUV = sceneClass.declareAttribute<Bool>("cryptomatte_output_uv", false);
-    sceneClass.setMetadata(sAttrCryptomatteOutputUV, SceneClass::sComment, 
-        "Whether to output uv data per cryptomatte id");
 
     // "cryptomatte support resume render"
     sAttrCryptomatteSupportResumeRender = sceneClass.declareAttribute<Bool>("cryptomatte_support_resume_render", false);

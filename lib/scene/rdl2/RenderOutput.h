@@ -275,9 +275,6 @@ public:
     inline bool getCryptomatteOutputPositions() const;
     inline bool getCryptomatteOutputNormals() const;
     inline bool getCryptomatteOutputBeauty() const;
-    inline bool getCryptomatteOutputRefP() const;
-    inline bool getCryptomatteOutputRefN() const;
-    inline bool getCryptomatteOutputUV() const;
     inline bool getCryptomatteSupportResumeRender() const;
     inline int getCryptomatteNumExtraChannels() const;
     inline bool cryptomatteHasExtraOutput() const;
@@ -314,9 +311,6 @@ private:
     static AttributeKey<Bool> sAttrCryptomatteOutputPositions;
     static AttributeKey<Bool> sAttrCryptomatteOutputNormals;
     static AttributeKey<Bool> sAttrCryptomatteOutputBeauty;
-    static AttributeKey<Bool> sAttrCryptomatteOutputRefP;
-    static AttributeKey<Bool> sAttrCryptomatteOutputRefN;
-    static AttributeKey<Bool> sAttrCryptomatteOutputUV;
     static AttributeKey<Bool> sAttrCryptomatteSupportResumeRender;
     static AttributeKey<SceneObject*> sCamera;
     static AttributeKey<SceneObject*> sAttrDisplayFilter;
@@ -475,18 +469,6 @@ bool RenderOutput::getCryptomatteOutputBeauty() const
 { 
     return get(sAttrCryptomatteOutputBeauty);
 }
-bool RenderOutput::getCryptomatteOutputRefP() const
-{ 
-    return get(sAttrCryptomatteOutputRefP);
-}
-bool RenderOutput::getCryptomatteOutputRefN() const
-{ 
-    return get(sAttrCryptomatteOutputRefN);
-}
-bool RenderOutput::getCryptomatteOutputUV() const
-{ 
-    return get(sAttrCryptomatteOutputUV);
-}
 bool RenderOutput::getCryptomatteSupportResumeRender() const
 { 
     return get(sAttrCryptomatteSupportResumeRender);
@@ -497,9 +479,6 @@ int RenderOutput::getCryptomatteNumExtraChannels() const
     if (getCryptomatteOutputPositions())       total += 4;
     if (getCryptomatteOutputNormals())         total += 4;
     if (getCryptomatteOutputBeauty())          total += 4;
-    if (getCryptomatteOutputRefP())            total += 4;
-    if (getCryptomatteOutputRefN())            total += 4;
-    if (getCryptomatteOutputUV())              total += 2;
     if (getCryptomatteSupportResumeRender())   total += 2;
     return total;
 }
