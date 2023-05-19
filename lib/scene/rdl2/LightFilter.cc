@@ -26,7 +26,7 @@ LightFilter::declare(SceneClass& sceneClass)
     auto interface = Parent::declare(sceneClass);
 
     sOnKey = sceneClass.declareAttribute<Bool>("on", true);
-    sceneClass.setMetadata(sOnKey, "comment", "Turns the light filter on/off");
+    sceneClass.setMetadata(sOnKey, "comment", "Turns the light filter on/off.");
 
     return interface | INTERFACE_LIGHTFILTER;
 }
