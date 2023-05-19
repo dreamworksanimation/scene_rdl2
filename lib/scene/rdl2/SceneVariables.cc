@@ -94,6 +94,8 @@ AttributeKey<StringVector> SceneVariables::sDeepIDAttributeNames;
 AttributeKey<Int>          SceneVariables::sDeepMaxLayers;
 AttributeKey<Float>        SceneVariables::sDeepLayerBias;
 
+AttributeKey<String> SceneVariables::sCryptoUVAttributeName;
+
 AttributeKey<Int>  SceneVariables::sTextureCacheSizeMb;
 AttributeKey<Int>  SceneVariables::sTextureFileHandleCount;
 AttributeKey<Bool> SceneVariables::sFastGeomUpdate;
@@ -544,6 +546,13 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTextureCacheSizeMb,
         SceneClass::sComment,
         "size is in Mb and this is the maximum cache size");
+
+    sCryptoUVAttributeName =
+        sceneClass.declareAttribute<String>("crypto_uv_attribute_name", "", {"crypto UV attribute name"});
+    sceneClass.setMetadata(sCryptoUVAttributeName, "label", "crypto UV attribute name");
+    sceneClass.setMetadata(sCryptoUVAttributeName,
+        SceneClass::sComment,
+        "Names of primitive attribute containing crypto UVs");
 
     // Last time we checked, there was a 32k file handle limit per process.
     // Allocate a high maximum for OIIO texture handles.

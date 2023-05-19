@@ -277,6 +277,8 @@ public:
     static AttributeKey<Int> sDeepMaxLayers;
     static AttributeKey<Float> sDeepLayerBias;
 
+    static AttributeKey<String> sCryptoUVAttributeName;
+
     //
     // Caching
     //
