@@ -70,6 +70,16 @@
         "when the mesh doesn't provide shading normals");                 \
     sceneClass.setGroup("Mesh", attrSmoothNormal);
 
+#define DECLARE_COMMON_EXPLICIT_SHADING_ATTRIBUTES                                  \
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrExplicitShading;
+
+#define DEFINE_COMMON_EXPLICIT_SHADING_ATTRIBUTES                                            \
+    attrExplicitShading = sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>(               \
+        "use_explicit_shading_attributes", false, {"use_explicit_shading_attributes"});       \
+    sceneClass.setMetadata(attrExplicitShading, "label", "use explicit shading attributes");     \
+    sceneClass.setMetadata(attrExplicitShading, "comment",                                       \
+        "Enable the use of explicit shading attributes (N, dPds, dPdt) if they are present");
+
 #define DECLARE_COMMON_MOTION_BLUR_ATTRIBUTES                                  \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrUseRotationMotionBlur;                  \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int>  attrMotionBlurType;                         \
