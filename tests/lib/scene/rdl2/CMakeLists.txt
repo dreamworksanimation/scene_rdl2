@@ -77,4 +77,4 @@ make_test_dso(ThrowDuringDeclare)
 make_test_dso(UpdateTracker)
 
 add_test(NAME ${target} COMMAND ${target})
-set_tests_properties(${target} PROPERTIES LABELS "SceneRdl2")
+set_tests_properties(${target} PROPERTIES LABELS "unit")

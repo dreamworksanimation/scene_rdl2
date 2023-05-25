@@ -90,4 +90,4 @@ SceneRdl2_cxx_compile_options(${target})
 SceneRdl2_link_options(${target})
 
 add_test(NAME ${target} COMMAND ${target})
-set_tests_properties(${target} PROPERTIES LABELS "SceneRdl2")
+set_tests_properties(${target} PROPERTIES LABELS "unit")
