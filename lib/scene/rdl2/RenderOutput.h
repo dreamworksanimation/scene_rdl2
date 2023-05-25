@@ -279,6 +279,7 @@ public:
     inline bool getCryptomatteOutputRefN() const;
     inline bool getCryptomatteOutputUV() const;
     inline bool getCryptomatteSupportResumeRender() const;
+    inline bool getCryptomatteEnableRefract() const;
     inline int getCryptomatteNumExtraChannels() const;
     inline bool cryptomatteHasExtraOutput() const;
 
@@ -318,6 +319,7 @@ private:
     static AttributeKey<Bool> sAttrCryptomatteOutputRefN;
     static AttributeKey<Bool> sAttrCryptomatteOutputUV;
     static AttributeKey<Bool> sAttrCryptomatteSupportResumeRender;
+    static AttributeKey<Bool> sAttrCryptomatteEnableRefract;
     static AttributeKey<SceneObject*> sCamera;
     static AttributeKey<SceneObject*> sAttrDisplayFilter;
 };
@@ -490,6 +492,10 @@ bool RenderOutput::getCryptomatteOutputUV() const
 bool RenderOutput::getCryptomatteSupportResumeRender() const
 { 
     return get(sAttrCryptomatteSupportResumeRender);
+}
+bool RenderOutput::getCryptomatteEnableRefract() const
+{
+    return get(sAttrCryptomatteEnableRefract);
 }
 int RenderOutput::getCryptomatteNumExtraChannels() const
 { 
