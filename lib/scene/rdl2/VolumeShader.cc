@@ -43,22 +43,25 @@ VolumeShader::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sBakeResolutionMode, 1, "divisions");
     sceneClass.setEnumValue(sBakeResolutionMode, 2, "voxel size");
     sceneClass.setMetadata(sBakeResolutionMode, "comment",
-        "Toggle method to specify grid resolution of baked density grid.\n"
-        "\t\tdefault: for shaders that are bound to vdb volumes, use vdb resolution. "
-        "For shaders that are bounds to mesh geometries"
-        "use 100 divisions\n"
-        "\t\tdivisions: specify number of divisions.\n"
-        "\t\tvoxel size: specify voxel size.");
+        "Method to specify grid resolution of baked density grid.  Choices are:\n"
+        "\t\t\"default\": For shaders that are bound to vdb volumes, use vdb resolution.\n"
+        "\t\t\t\t\t\tFor shaders that are bounds to mesh geometries use 100 divisions\n"
+        "\t\t\"divisions\": Specify number of divisions.\n"
+        "\t\t\"voxel size\": Specify voxel size.");
+    sceneClass.setGroup("Volume Baking", sBakeResolutionMode);
 
     sBakeDivisions = sceneClass.declareAttribute<Int>("bake_divisions", 100);
     sceneClass.setMetadata(sBakeDivisions, "comment", "Divide widest axis by this many divisions");
+    sceneClass.setGroup("Volume Baking", sBakeDivisions);
 
     sBakeVoxelSize = sceneClass.declareAttribute<Float>("bake_voxel_size", 10.f);
     sceneClass.setMetadata(sBakeVoxelSize, "comment", "Size of voxel in world space");
+    sceneClass.setGroup("Volume Baking", sBakeVoxelSize);
 
     sSurfaceOpacityThreshold = sceneClass.declareAttribute<Float>("surface_opacity_threshold", 0.5f);
     sceneClass.setMetadata(sSurfaceOpacityThreshold, "comment",
         "Accumulated opacity that's considered the 'surface' for computing surface position and Z");
+    sceneClass.setGroup("Volume", sSurfaceOpacityThreshold);
 
     return interface | INTERFACE_VOLUMESHADER;
 }
