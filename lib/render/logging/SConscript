@@ -30,6 +30,7 @@ elif 'clang' in env['CC']:
 
 publicHeaders = [
     'logging.h',
+    'LoggingAssert.h',
 ]
 
 env.DWAInstallInclude(publicHeaders, 'scene_rdl2/render/logging')

@@ -19,6 +19,7 @@
 #    include "shared_mutex.h"
 #endif
 
+#include <mutex>
 
 namespace scene_rdl2 {
 namespace util {
