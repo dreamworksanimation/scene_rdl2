@@ -19,7 +19,6 @@ target_sources(${component}
 set_property(TARGET ${component}
     PROPERTY PUBLIC_HEADER
         logging.h
-        LoggingAssert.h
 )
 
 target_include_directories(${component}

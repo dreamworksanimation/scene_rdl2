@@ -80,7 +80,6 @@ target_sources(scene_rdl2_tmp
         SceneContext.cc
         SceneObject.cc
         SceneVariables.cc
-        Shader.cc
         ShadowReceiverSet.cc
         ShadowSet.cc
         TraceSet.cc

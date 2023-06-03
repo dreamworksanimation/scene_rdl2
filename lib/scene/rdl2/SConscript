@@ -65,7 +65,6 @@ sources = [
     'SceneContext.cc',
     'SceneObject.cc',
     'SceneVariables.cc',
-    'Shader.cc',
     'ShadowReceiverSet.cc',
     'ShadowSet.cc',
     'TraceSet.cc',

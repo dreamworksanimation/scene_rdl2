@@ -6,51 +6,47 @@
 
 #pragma once
 
-#include "LoggingAssert.h"
-
 #include <scene_rdl2/render/util/AtomicFloat.h>
-#include <scene_rdl2/render/util/syncstream.h>
-
-#include <algorithm>
-#include <atomic>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <sstream>
-#include <string>
-#include <unordered_map>
 
 #include <log4cplus/loglevel.h>
 
-namespace logging_util {
+#include <algorithm>
+#include <atomic>
+#include <sstream>
+#include <string>
 
-inline void combineString(const std::ostream&)
+namespace {
+
+inline void
+combineString(std::ostream&)
 {
     // Base case for recursion. Do nothing.
 }
 
 template <typename First, typename... Rest>
-inline void combineString(std::ostream& o, const First& value, const Rest&... rest)
+inline void
+combineString(std::ostream& o, const First& value, const Rest&... rest)
 {
     o << value;
     combineString(o, rest...);
 }
 
 template <typename... T>
-std::string buildString(const T&... value)
+std::string
+buildString(const T&... value)
 {
     std::ostringstream o;
     combineString(o, value...);
     return o.str();
 }
 
-} // namespace logging_util
+} // end anonymous namespace
 
 namespace scene_rdl2 {
 namespace logging {
 
 // Log levels
-using LogLevel = log4cplus::LogLevel;
+typedef log4cplus::LogLevel LogLevel;
 
 // Standard levels inherited from log4cplus
 const LogLevel ALL_LEVEL     = log4cplus::ALL_LOG_LEVEL;
@@ -63,9 +59,10 @@ const LogLevel OFF_LEVEL     = log4cplus::OFF_LOG_LEVEL;
 const LogLevel NOT_SET_LEVEL = log4cplus::NOT_SET_LOG_LEVEL;
 
 // Additional levels used by the console logger
-const LogLevel OUTPUT_LEVEL  = (WARN_LEVEL + ERROR_LEVEL) / 2;
+const LogLevel OUTPUT_LEVEL  = (WARN_LEVEL+ERROR_LEVEL)/2;
 const LogLevel NORMAL_LEVEL  = OUTPUT_LEVEL;
-const LogLevel VERBOSE_LEVEL = INFO_LEVEL;
+const LogLevel VERBOSE_LEVEL = log4cplus::INFO_LOG_LEVEL;
+
 
 // Central place for logging support.
 //
@@ -86,31 +83,31 @@ public:
     template <typename... T>
     static void debug(const T&... value)
     {
-        logDebug(logging_util::buildString(value...));
+        logDebug(buildString(value...));
     }
 
     template <typename... T>
     static void info(const T&... value)
     {
-        logInfo(logging_util::buildString(value...));
+        logInfo(buildString(value...));
     }
 
     template <typename... T>
     static void warn(const T&... value)
     {
-        logWarn(logging_util::buildString(value...));
+        logWarn(buildString(value...));
     }
 
     template <typename... T>
     static void error(const T&... value)
     {
-        logError(logging_util::buildString(value...));
+        logError(buildString(value...));
     }
 
     template <typename... T>
     static void fatal(const T&... value)
     {
-        logFatal(logging_util::buildString(value...));
+        logFatal(buildString(value...));
     }
 
     // Calls one of the other log functions, depending on the level.
@@ -149,286 +146,152 @@ private:
     static void logFatal(const std::string& s);
 };
 
+
 // Describes a single logging "event" to be saved in the ObjectLogs class.
 // See a detailed description in the ObjectLogs class.
-using LogEvent = int;
+typedef int LogEvent;
+
 
 // ObjectLogs is a class for very quickly saving logging "events" that may occur
 // in situations where writing to console or to a file would be too expensive.
 // Instead, LogEvents are created in a LogEventRegistry at some previous time.
 // This will associate a string and a logging level with a LogEvent object (which
 // is simply an integer. This LogEvent is saved away and whenever we need to log
-// that this type of event happened, we call ObjectLogs with that LogEvent.
+// that this type of event happened, we call ObjectLogs with that LogEvent. 
 // ObjectLogs will maintain a counter of how many times each different LogEvent was
 // logged. This count can be used at a later time (e.g. postFrame) to print actual
 // error messages.
 //
 // Sample usage:
-//
+// 
 // LogEventRegistry registry;
 // LogEvent mBadAttributeError = registry.createEvent(scene_rdl2::logging::ERROR_LEVEL, "Bad attribute value");
+// ObjectLogs objLog;
+// registry.initLog(objLog);
 // ...
-// registry.log(shaderPtr, mBadAttributeError);
+// objLog.log(mBadAttributeError);
 // ...
-// registry.outputReport(shaderPtr, objectName, sceneClassName);
+// registry.report(sceneObject, objLog);
 //
 // shading::logEvent is available in Shading.h for convenient logging within Shaders
-
-#define DEBUG_LOG_EVENT_REGISTRY 0
-
-// I apologize for the complexity of this class. If I knew how to simplify it, I would.
-// We share the EventCounters across threads, but we want to know the origin of the events. So, we have a map from a
-// pointer address (an object of type T: e.g., a Shader) that maps to another map of LogEvent to count.
-//
-// mMap: Object pointer to EventCountMap
-// EventCountMap: LogEvent to count
-template <typename T>
-class EventCounters
+class ObjectLogs
 {
-    using MutexType = std::mutex;
-
-    using EventCountMap = std::unordered_map<LogEvent, unsigned>;
-
-    using KeyType   = const T*;
-    using ValueType = EventCountMap;
-    using MapType   = std::unordered_map<KeyType, ValueType>;
-
 public:
-    void clear()
-    {
-        std::lock_guard<MutexType> lock(mMutex);
-        mMap.clear();
+    ObjectLogs() {
+        mNumEvents = 0;
+        mEventCounts = nullptr;
     }
 
-    void record(const T* const p, LogEvent event)
-    {
-        std::lock_guard<MutexType> lock(mMutex);
-
-        // Constant time (O(1)) lookup in unordered_map
-        auto baseIt = mMap.find(p);
-
-        if (baseIt == mMap.cend()) {
-            // Pointer not found: insert it
-            const auto insertionResult = mMap.emplace(p, EventCountMap{});
-            MNRY_LOGGING_LIBRARY_ASSERT(insertionResult.second);
-            baseIt = insertionResult.first;
-        }
-
-        EventCountMap& eventMap = baseIt->second;
-        ++eventMap[event];
+    ~ObjectLogs() {
+        delete [] mEventCounts;
     }
 
-    unsigned getCount(const T* const p, LogEvent event) const
-    {
-        std::lock_guard<MutexType> lock(mMutex);
+    // Sets the maximum number of event types that need to be supported by this
+    // object.
+    void setNumEvents(int n);
 
-        // Constant time (O(1)) lookup in unordered_map
-        const auto baseIt = mMap.find(p);
-
-        if (baseIt == mMap.cend()) {
-            // We didn't find any records for this pointer, so the count is zero.
-            return 0;
-        } else {
-            const EventCountMap& eventMap = baseIt->second;
-            const auto           it       = eventMap.find(event);
-            if (it == eventMap.cend()) {
-                return 0;
-            } else {
-                return it->second;
-            }
+    // Sets all event counts to 0.
+    void clear() {
+        for (int i = 0; i < mNumEvents; i++) {
+            mEventCounts[i] = 0;
         }
+    }
+
+    // Records an event.
+    void log(LogEvent event) {
+        mEventCounts[(int)event]++;
+    }
+
+    // Gets a count of how many times log(event) was called for event since
+    // the last clear.
+    int getCount(LogEvent event) const {
+        return mEventCounts[(int)event];
+    }
+
+    // Combines two ObjectLogs objects, summing their event counts
+    ObjectLogs &operator+=(const ObjectLogs & other) {
+        if (mNumEvents != other.mNumEvents) {
+            setNumEvents(other.mNumEvents);
+        }
+        for (int i = 0; i < mNumEvents; i++) {
+            mEventCounts[i] += other.mEventCounts[i];
+        }
+        return *this;
     }
 
 private:
-    mutable MutexType mMutex;
-    MapType           mMap;
+    int mNumEvents;
+    int *mEventCounts;
 };
 
+
 // Maintains a registry of the types of events that could be logged by an object.
-// This class basically provides a mapping from a LogEvent (which is an int)
+// This class basically provides a mapping from a LogEvent (which is an int) 
 // into a string description and logging level.
 // LogEventRegistry and ObjectLogs should be used in pairs, with LogEventRegistrys
 // maintaining string descriptions of events and ObjectLogs maintaining counts.
 // Typically there will be multiple ObjectLogs associated with the same LogEventRegistry
 // since we want to maintain a separate ObjectLog per thread to avoid synchronization.
-template <typename T>
 class LogEventRegistry
 {
-    using MutexType = std::mutex;
-#if DEBUG_LOG_EVENT_REGISTRY
-    using BasicLock = std::unique_lock<MutexType>;
-#else
-    using BasicLock = std::lock_guard<MutexType>;
-#endif
-public:
-    LogEventRegistry() = default;
+ public:
+    LogEventRegistry() {}
 
-    LogEvent createEvent(LogLevel level, std::string eventDescription)
-    {
+    LogEvent createEvent(LogLevel level,
+                         std::string eventDescription) {
+
         if (level == FATAL_LEVEL) {
             Logger::error("Fatal events are not supported while shading, using error instead");
             level = ERROR_LEVEL;
         }
-
-        BasicLock  lock(mMutex);
-        const auto itr = mStringToEvent.find(eventDescription);
-        if (itr != mStringToEvent.end()) {
-            // Make sure we're adding errors consistently.
-            MNRY_LOGGING_LIBRARY_ASSERT(itr->second.mLevel == level);
-            return itr->second.mEvent;
+        std::vector<std::string>::iterator itr = std::find(mDescriptions.begin(),
+                                                           mDescriptions.end(),
+                                                           eventDescription);
+        if (itr != mDescriptions.end()) {
+            return LogEvent(std::distance(mDescriptions.begin(), itr));
         } else {
-            return addDescription(std::move(eventDescription), level, lock);
+            int n = static_cast<int>(mDescriptions.size());
+            mLevels.push_back(level);
+            mDescriptions.push_back(eventDescription);
+            return LogEvent(n);
         }
     }
 
     // Returns a description of a given LogEvent.
-    const std::string& getDescription(LogEvent event) const
-    {
-        BasicLock lock(mMutex);
-        return mEventToNode[event]->first;
+    const std::string &getDescription(LogEvent event) const {
+        return mDescriptions[(int)event];
     }
 
-    LogLevel getLevel(LogEvent event) const
-    {
-        BasicLock lock(mMutex);
-        return mEventToNode[event]->second.mLevel;
+    // Initializes an ObjectLog associated with this registry.
+    // This sets the number of different types of LogEvents this ObjectLog
+    // can expect.
+    void initLog(ObjectLogs &logs) const {
+        logs.setNumEvents(static_cast<int>(mLevels.size()));
     }
 
     // Logs each event recorded in log for a object SceneObject i.e.
     // the name and the type of the SceneObject will be associated with
     // each log message.
-    void outputReport(const T* p, const std::string& objectName, const std::string& sceneClassName) const;
+    void report(const std::string& objectName,
+                const std::string& sceneClassName,
+                const ObjectLogs &log) const;
 
     // Clears the events and descriptions.
-    void clearAll()
-    {
-        BasicLock lock(mMutex);
-        mStringToEvent.clear();
-        mEventToNode.clear();
-        mEventCounters.clear();
+    void clear() {
+        mLevels.clear();
+        mDescriptions.clear();
     }
 
-    void clearCounters()
-    {
-        // EventCounters is already thread-safe.
-        mEventCounters.clear();
-    }
-
-    // Records an event.
-    void log(const T* p, LogEvent event)
-    {
-        // EventCounters is already thread-safe. No need for a lock.
-        mEventCounters.record(p, event);
-    }
-
-    // Gets a count of how many times log(event) was called for event since
-    // the last clear.
-    int getCount(const T* p, LogEvent event) const
-    {
-        // EventCounters is already thread-safe. No need for a lock.
-        return mEventCounters.getCount(p, event);
-    }
-
-    static void setLoggingGlobalSwitch(bool flag) noexcept
-    {
-        mLoggingGlobalSwitch = flag;
-    }
-
-    static bool getLoggingGlobalSwitch() noexcept
-    {
-        return mLoggingGlobalSwitch;
-    }
+    static void setLoggingGlobalSwitch(bool flag) { mLoggingGlobalSwitch = flag; }
+    static bool getLoggingGlobalSwitch() { return mLoggingGlobalSwitch; }
 
 private:
-    // The lock parameter is to guarantee we have a lock; it's not used here.
-    template <typename Lock>
-    LogEvent addDescription(std::string description, LogLevel level, [[gnu::unused]] const Lock& lock)
-    {
-#if DEBUG_LOG_EVENT_REGISTRY
-        MNRY_LOGGING_LIBRARY_ASSERT(lock.owns_lock());
-#endif
-        MNRY_LOGGING_LIBRARY_ASSERT(mStringToEvent.size() == mEventToNode.size());
-        MNRY_LOGGING_LIBRARY_ASSERT(mStringToEvent.find(description) == mStringToEvent.end());
-        const auto event = static_cast<LogEvent>(mEventToNode.size());
-
-        const auto stringResult = mStringToEvent.emplace(std::move(description), Event{level, event});
-        MNRY_LOGGING_LIBRARY_ASSERT(stringResult.second); // Make sure it wasn't previously inserted
-
-        mEventToNode.push_back(stringResult.first);
-
-        MNRY_LOGGING_LIBRARY_ASSERT(mStringToEvent.size() == mEventToNode.size());
-        return event;
-    }
-
-    struct Event
-    {
-        LogLevel mLevel;
-        LogEvent mEvent;
-    };
-
-    // We want to keep track of three immediate things (independent of event counts, which is covered later):
-    // 1. Log message (string)
-    // 2. Log level
-    // 3. A unique LogEvent token that points to the log message
-    //
-    // We also want these conditions:
-    // 1. To be able to quickly lookup by message to check for duplicates
-    // 2. To be able to quickly lookup by LogEvent
-    // 3. To quickly find the largest LogEvent token so that we can add a new one by incrementing the largest
-    //
-    // To have these two quick lookups, we use an associative container that maps messages to levels and events.
-    // (It's undefined behavior if the same message is added with a different log level.)
-    // We have an array that maps events to iterators into the first map.
-    //
-    // We use std::map instead of std::unordered_map because we store iterators of this map. std::map iterators are not
-    // invalidated on map manipulation (aside from the pointed to iterator). std::unordered_map iterators are
-    // invalidated on rehash.
-    using StringToEventContainer         = std::map<std::string, Event, std::less<>>;
-    using StringToEventContainerIterator = typename StringToEventContainer::const_iterator;
-    using EventToNodeContainer           = std::vector<StringToEventContainerIterator>;
-
-    StringToEventContainer mStringToEvent;
-    EventToNodeContainer   mEventToNode;
-
-    // The event counter has its own mutex and locks, which may lead to concern about deadlocks if the locks are not
-    // taken in a consistent order. This is not a problem, because the locks within EventCounters are self-contained.
-    // There are only two possible scenarios:
-    // 1. LogEventRegistry does not take its lock and calls into the EventCounters, which is not an issue because we
-    //    assume EventCounters is doing the proper work.
-    // 2. LogEventRegistry takes its lock and calls into EventCounters, which takes its lock. The order is always the
-    //    same. There is no way for EventCounters to lock before LogEventRegistry locks without EventCounters
-    //    relinquishing its lock first.
-    EventCounters<T> mEventCounters;
-
-    mutable std::mutex mMutex;
+    std::vector<LogLevel> mLevels;
+    std::vector<std::string> mDescriptions;
 
     static std::atomic<bool> mLoggingGlobalSwitch;
 };
 
-template <typename T>
-std::atomic<bool> LogEventRegistry<T>::mLoggingGlobalSwitch{true};
-
-template <typename T>
-void LogEventRegistry<T>::outputReport(const T*           p,
-                                       const std::string& objectName,
-                                       const std::string& sceneClassName) const
-{
-    if (!mLoggingGlobalSwitch) {
-        return;
-    }
-
-    BasicLock lock(mMutex);
-
-    for (auto v : mStringToEvent) {
-        const auto& event = v.second.mEvent;
-        const auto  c     = mEventCounters.getCount(p, event);
-        if (c > 0) {
-            const auto& description = v.first;
-            const auto& level       = v.second.mLevel;
-            Logger::log(level, sceneClassName, "(\"", objectName, "\"): ", "(", c, " times) ", description);
-        }
-    }
-}
-
 } // end namespace logging
 } // end namespace scene_rdl2
+
