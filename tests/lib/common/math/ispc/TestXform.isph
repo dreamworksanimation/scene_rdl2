@@ -747,8 +747,8 @@ testIsEqual()
     uniform int error = 0;
     const varying int pi = programIndex + 1;
 
-    XFORM3_ISEQUAL_TEST(VAR, float, Xform3f, pi, isEqual);
-    XFORM3_ISEQUAL_TEST(UNI, float, Xform3f, 1., isEqual);
+    XFORM3_ISEQUAL_TEST(VAR, varying float, Xform3f, pi, isEqual);
+    XFORM3_ISEQUAL_TEST(UNI, uniform float, Xform3f, 1., isEqual);
 
     return error;
 }
@@ -764,8 +764,8 @@ testIsEqualFixedEps()
     uniform int error = 0;
     const varying int pi = programIndex + 1;
 
-    XFORM3_ISEQUAL_TEST(VAR, float, Xform3f, pi, isEqualFixedEps);
-    XFORM3_ISEQUAL_TEST(UNI, float, Xform3f, 1., isEqualFixedEps);
+    XFORM3_ISEQUAL_TEST(VAR, varying float, Xform3f, pi, isEqualFixedEps);
+    XFORM3_ISEQUAL_TEST(UNI, uniform float, Xform3f, 1., isEqualFixedEps);
 
     return error;
 }

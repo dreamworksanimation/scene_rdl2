@@ -385,7 +385,7 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
             }                                                           \
             l0.h = l0.h / 60.0f;                                        \
             l0.sector = (int)l0.h;                                      \
-            l0.f = l0.h - (float)l0.sector;                             \
+            l0.f = l0.h - l0.sector;                                    \
             l0.p = p0.b * (1.0f - p0.g);                                \
             l0.q = p0.b * (1.0f - p0.g * l0.f);                         \
             l0.t = p0.b * (1.0f - p0.g * (1.0f - l0.f));                \
@@ -417,7 +417,7 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
             }                                                           \
             l0.h = l0.h / 60.0f;                                        \
             l0.sector = (int)eval(l0.h);                                \
-            l0.f = l0.h - (float)l0.sector;                             \
+            l0.f = l0.h - l0.sector;                                    \
             l0.p = p0.b * (1.0f - p0.g);                                \
             l0.q = p0.b * (1.0f - p0.g * l0.f);                         \
             l0.t = p0.b * (1.0f - p0.g * (1.0f - l0.f));                \
@@ -474,7 +474,7 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
             }                                                                                       \
             l0.h = l0.h / 60.0f;                                                                    \
             l0.sector = (int)l0.h;                                                                  \
-            l0.f = l0.h - (float)l0.sector;                                                         \
+            l0.f = l0.h - l0.sector;                                                                \
             if (p0.b < 0.5) {                                                                       \
                 l0.p = p0.b * (1.0f - p0.g);                                                        \
                 l0.w = p0.b * (1.0f + p0.g);                                                        \
@@ -514,7 +514,7 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
             }                                                                                       \
             l0.h = l0.h / 60.0f;                                                                    \
             l0.sector = (int)eval(l0.h);                                                            \
-            l0.f = l0.h - (float)l0.sector;                                                         \
+            l0.f = l0.h - l0.sector;                                                                \
             if (eval(p0.b) < 0.5) {                                                                 \
                 l0.p = p0.b * (1.0f - p0.g);                                                        \
                 l0.w = p0.b * (1.0f + p0.g);                                                        \
