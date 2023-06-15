@@ -181,11 +181,11 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sFrameKey = sceneClass.declareAttribute<Float>("frame", 0.0f);
 
-    sCamera       = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
+    sCamera = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
     sceneClass.setMetadata(sCamera,
         SceneClass::sComment,
-        "This specifies the camera object used for rendering. If no camera is specified in the scene variables, MoonRay "
-        "will render using the first camera object encountered.");
+        "This specifies the camera object used for rendering. If no camera is specified in the scene variables, "
+        "MoonRay will render using the first camera object encountered.");
     sDicingCamera = sceneClass.declareAttribute<SceneObject*>("dicing_camera", FLAGS_NONE, INTERFACE_CAMERA);
 
     sLayer = sceneClass.declareAttribute<SceneObject*>("layer", FLAGS_NONE, INTERFACE_LAYER);
@@ -451,8 +451,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sSampleClampingValue, "label", "sample clamping value");
     sceneClass.setMetadata(sSampleClampingValue,
         SceneClass::sComment,
-            "Clamp sample radiance values to this maximum value (the feature is disabled if the value is 0.0). Using "
-            "this technique reduces fireflies, but is biased.");
+        "Clamp sample radiance values to this maximum value (the feature is disabled if the value is 0.0). Using this "
+        "technique reduces fireflies, but is biased.");
 
     sSampleClampingDepth = sceneClass.declareAttribute<Int>("sample_clamping_depth", Int(1), {"sample clamping depth"});
     sceneClass.setMetadata(sSampleClampingDepth, "label", "sample clamping depth");
@@ -545,7 +545,8 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTextureCacheSizeMb, "label", "texture cache size");
     sceneClass.setMetadata(sTextureCacheSizeMb,
         SceneClass::sComment,
-        "size is in Mb and this is the maximum cache size");
+        "This setting specifies the maximum size of the texture cache in megabytes. This value can significantly "
+        "impact rendering speed, where larger values often improve rendering speed.");
 
     sCryptoUVAttributeName =
         sceneClass.declareAttribute<String>("crypto_uv_attribute_name", "", {"crypto UV attribute name"});
@@ -713,12 +714,10 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sOnResumeScript, "label", "on resume script");
     sceneClass.setMetadata(sOnResumeScript,
         SceneClass::sComment,
-        "Define on-resume lua script name. This script is loaded into the renderer just after renderPrep execution "
-        "under resume render mode then executed. This script is not executed if non-resume render mode even if you set "
-        "script name.Renderer sets some lua global variables and lua script can access them. We can get resume render "
-        "start condition (true=properly started or false=failed to start as resume render and fall back to normal "
-        "rendering) via lua global variable. See details in rendering-wiki checkpoint/resume page. If empty, on-resume "
-        "script execution is disabled.");
+        "When using resumable rendering, the Lua script named here is executed after the render prep stage. In "
+        "addition, MoonRay sets some Lua global variables the script can access. This functionality is disabled when "
+        "the script name is empty or when not using resumable rendering. Please refer to the checkpoint/resume "
+        "documentation for more details.");
 
     // Global overriding toggles
     sEnableMotionBlur = sceneClass.declareAttribute<Bool>("enable_motion_blur", true, {"enable motion blur"});
@@ -866,10 +865,10 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTwoStageOutput, "label", "two stage output");
     sceneClass.setMetadata(sTwoStageOutput,
         SceneClass::sComment,
-        "Selection of image file write uses two stage output logic or not. Two stage output (=true: default) is that "
-        "the image file is written out to temporary file location first and copy/rename next. This solution greatly "
-        "reduces the risk of output data collapsing from unexpected render process termination for both of final "
-        "output and checkpoint output. Temporary file directory is defined by tmp_dir scene_variable.");
+        "This setting specifies whether to use a two-stage writing process for images. In two-stage writing, the image "
+        "is first written to a temporary location and then moved to the final location. This approach significantly "
+        "reduces the risk of output data corruption due to an unexpected render process termination.\n"
+        "The directory where the temporary files are stored is defined by the \"tmp_dir\" scene variable.");
 
     sDebugKey = sceneClass.declareAttribute<Bool>("debug", false);
 
@@ -914,11 +913,13 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sDebugConsole, "label", "debug console");
     sceneClass.setMetadata(sDebugConsole,
         SceneClass::sComment,
-        "Specify port number for debug console. If you set -1 (=default), all debug console functionalities are "
-        "disabled. If you set 0 or positive port number, debug console functionalities are enabled. If enabled, we can "
-        "send commands via telnet connection and control rendering behavior for debugging purposes. If you set 0, the "
-        "kernel finds the available port for you and displays the port number to the cerr. Otherwise you have to set "
-        "the available port number yourself.");
+        "This setting specifies the port number for the debug console. When the debug console functionalities are "
+        "enabled, you can use a telnet connection to send commands and control rendering behavior for debugging "
+        "purposes.\n"
+        "- A value of -1 disables all debug console functionality.\n"
+        "- A positive value specifies a specific port number.\n"
+        "- If you set the port number to 0, the kernel will find an available port for you and display the port number "
+        "to stderr.");
 
     sValidateGeometry = sceneClass.declareAttribute<Bool>("validate_geometry", false, {"validate geometry"});
     sceneClass.setMetadata(sValidateGeometry, "label", "validate geometry");
@@ -926,8 +927,9 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     // capture multiple layers of presence data for cryptomatte
     sCryptomatteMultiPresence = sceneClass.declareAttribute<Bool>("cryptomatte_multi_presence", false);
-    sceneClass.setMetadata(sCryptomatteMultiPresence, SceneClass::sComment, "Whether to count presence bounces as "
-                                                                            "separate cryptomatte samples");
+    sceneClass.setMetadata(sCryptomatteMultiPresence,
+        SceneClass::sComment,
+        "This setting determines whether to record presence bounces as separate cryptomatte samples");
 
     // Grouping the attributes for Torch - the order of
     // the attributes should be the same as how they are defined.
