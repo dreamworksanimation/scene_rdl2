@@ -102,6 +102,9 @@ public:
     /// Returns the dicing camera
     finline const Camera* getDicingCamera() const;
 
+    /// Returns whether use_local_motion_blur is enabled
+    finline bool getUseLocalMotionBlur() const;
+
     // TODO this is a temporary band-aid to avoid attribute modification
     // that doesn't require geometry to regenerate causing long regenerate wait
     // during interactive workflow. One solution would be to have a more
@@ -134,6 +137,7 @@ public:
     static AttributeKey<String> sShadowExclusionMappings;
     static AttributeKey<Bool> sContainsCamera;
     static AttributeKey<SceneObject*> sDicingCamera;
+    static AttributeKey<Bool> sUseLocalMotionBlur;
 
     /// Returns whether the internal procedural geometric data has been deformed.
     /// WARNING: assumes that procedural exists, verify that getProcedural
@@ -263,6 +267,12 @@ Geometry::getDicingCamera() const
         return dicingCamera;
     }
     return nullptr;
+}
+
+bool
+Geometry::getUseLocalMotionBlur() const
+{
+    return get(sUseLocalMotionBlur);
 }
 
 const std::string&

@@ -273,25 +273,17 @@
     sceneClass.setGroup("Motion Guides", attrMotionGuidesCollisionTolerance);
 
 #define DECLARE_COMMON_LOCAL_MOTION_BLUR_ATTRIBUTES                                                             \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrUseLocalMotionBlur;                              \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::String> attrLocalMotionBlurPointsFile;                     \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrLocalMotionBlurStrengthMult;                    \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrLocalMotionBlurRadiusMult;
 
 #define DEFINE_COMMON_LOCAL_MOTION_BLUR_ATTRIBUTES                                                                    \
-    attrUseLocalMotionBlur =                                                                                          \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("use_local_motion_blur", false);                          \
-    sceneClass.setMetadata(attrUseLocalMotionBlur, "display_name", "use local motion blur");                          \
-    sceneClass.setMetadata(attrUseLocalMotionBlur, "label", "use local motion blur");                                 \
-    sceneClass.setMetadata(attrUseLocalMotionBlur, "comment",                                                         \
-        "Use local motion blur which modulates the amount of motion blur based on the input points file");            \
-                                                                                                                      \
     attrLocalMotionBlurPointsFile =                                                                                   \
         sceneClass.declareAttribute<scene_rdl2::rdl2::String>("local_motion_blur_points_file", "",                    \
                                                               scene_rdl2::rdl2::FLAGS_FILENAME);                      \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "display_name", "local motion blur points file");           \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "label", "local motion blur points file");                  \
-    sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "disable when", "{ use_local_motion_blur == 0}");              \
+    sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "disable when", "{ use_local_motion_blur == 0}");           \
     sceneClass.setMetadata(attrLocalMotionBlurPointsFile, "comment",                                                  \
             "File containing points defining regions of motion blur modulation");                                     \
                                                                                                                       \

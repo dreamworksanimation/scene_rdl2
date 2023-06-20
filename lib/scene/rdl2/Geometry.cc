@@ -33,6 +33,7 @@ AttributeKey<String> Geometry::sShadowReceiverLabel;
 AttributeKey<String> Geometry::sShadowExclusionMappings;
 AttributeKey<Bool> Geometry::sContainsCamera;
 AttributeKey<SceneObject*> Geometry::sDicingCamera;
+AttributeKey<Bool> Geometry::sUseLocalMotionBlur;
 
 Geometry::Geometry(const SceneClass& sceneClass, const std::string& name) :
     Parent(sceneClass, name),
@@ -182,6 +183,11 @@ Geometry::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sDicingCamera, SceneClass::sComment,
         "Alternate camera that is used for adaptive tessellation.  This is useful if you want adaptive tessellation to "
         "behave consistently in a sequence, regardless of what the main camera is doing");
+
+    sUseLocalMotionBlur = sceneClass.declareAttribute<Bool>("use_local_motion_blur", false);
+    sceneClass.setMetadata(sUseLocalMotionBlur, "label", "use local motion blur");
+    sceneClass.setMetadata(sUseLocalMotionBlur, "comment",
+        "Enables the local motion blur feature, which makes the geometry procedural responsible for handling all of the geometry's motion and allows for custom effects");
 
     return interface | INTERFACE_GEOMETRY;
 }
