@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -24,7 +25,7 @@ struct Options
     std::string sceneObject;
     std::string dsoPath;
     bool simple;
-    bool non_alphabetize = false;
+    bool alphabetize = true;
 };
 
 std::string
@@ -33,27 +34,42 @@ getUsageMessage(const std::string& programName)
     std::stringstream stream;
 
     stream << "Usage:\n";
-    stream << "    " << programName << "\n";
-    stream << "    Print all SceneClasses found in the DSO path.\n";
+    stream << "    " << programName << " [options]" << '\n';
+    stream << "    Print all SceneClasses found in the RDL2_DSO_PATH environment variable.\n";
     stream << '\n';
-    stream << "    " << programName << " <-s/--simple>\n";
-    stream << "    Print without comments.\n";
+    stream << "    " << programName << " [options] [<SceneClass name>]\n";
+    stream << "    Print a specific SceneClass found in the RDL2_DSO_PATH environment variable.\n";
     stream << '\n';
-    stream << "    " << programName << " <--dso_path> " << " </user_specified_path>\n";
-    stream << "    Print all SceneClasses found in the user specified DSO path.\n";
-    stream << '\n';
-    stream << "    " << programName << " <SceneClass name>\n";
-    stream << "    Print a specific SceneClass found in the DSO path.\n";
-    stream << '\n';
-    stream << "    " << programName << " <RDL file>\n";
+    stream << "    " << programName << " [options] [<RDL file>]\n";
     stream << "    Print all SceneObjects found in the RDL file.\n";
     stream << '\n';
-    stream << "    " << programName << " <RDL file> <SceneObject name>\n";
-    stream << "    Print a specific SceneObject found in the RDL file.\n";
+    stream << "    " << programName << " [options] [<RDL file> <SceneObject name>]\n";
+    stream << "    Print a specific SceneObject found in the RDL file.  The default SceneVariables object is named __SceneVariables__.\n";
     stream << '\n';
-    stream << "    " << programName << " <-non_alphabetize>\n";
-    stream << "    Print without alphabetizing output by class and attribute.\n";
 
+    stream << "Options:\n";
+    stream << "    " << std::setw(24) << std::left << "-d, ---dso_path" << "Specify an additional path to search for SceneClasses (DSOs).\n";
+    stream << "    " << std::setw(24) << std::left << "-h, --help"      << "Print this help message.\n";
+    stream << "    " << std::setw(24) << std::left << "--no_sort"       << "Do not sort the classes and attributes alphabetically.\n";
+    stream << "    " << std::setw(24) << std::left << "-s, --simple"    << "Print without comments.\n";
+    stream << '\n';
+
+    stream << "Examples:\n";
+    stream << "    " << "# print all available SceneClasses with attributes, comments and default values\n";
+    stream << "    " << programName << '\n';
+    stream << '\n';
+    stream << "    " << "# print the attributes, comments and default values of the RectLight SceneClass\n";
+    stream << "    " << programName << " RectLight\n";
+    stream << '\n';
+    stream << "    " << "# print the attributes with default values of the SceneVariables SceneClass\n";
+    stream << "    " << programName << " -s SceneVariables\n";
+    stream << '\n';
+    stream << "    " << "# print the attributes of the SceneVariables instance in a given RDL file\n";
+    stream << "    " << programName << " ./scene.rdla __SceneVariables__\n";
+    stream << '\n';
+    stream << "    " << "# print the attributes of the some SceneObject instance in a given RDL file\n";
+    stream << "    " << programName << " ./scene.rdla /name/of/some/scene/object\n";
+    stream << '\n';
     return stream.str();
 }
 
@@ -65,12 +81,17 @@ parseCommandLine(int argc, char* argv[])
 
     options.simple = false;
     while (index < argc) {
+        if (strcmp(argv[index], "-d") == 0 ||
+            strcmp(argv[index], "--dso_path") == 0) {
+            // we'll parse this at the end, skip for now
+            ++index; ++index; continue;
+        }
         if (strcmp(argv[index], "-s") == 0 ||
             strcmp(argv[index], "--simple") == 0) {
             options.simple = true;
         }
-        if (strcmp(argv[index], "-non_alphabetize") == 0) {
-            options.non_alphabetize = true;
+        if (strcmp(argv[index], "--no_sort") == 0) {
+            options.alphabetize = false;
         } else if (options.rdlFile.empty() &&
                    (access(argv[index], R_OK) == 0)) {
             options.rdlFile = argv[index];
@@ -79,7 +100,7 @@ parseCommandLine(int argc, char* argv[])
         } else if (!options.rdlFile.empty()) {
             options.sceneObject = argv[index];
         }
-        index++;
+        ++index;
     }
     if (argc > 1) {
         std::string dsoPath = rdl2::DsoFinder::parseDsoPath(argc, argv);
@@ -87,7 +108,7 @@ parseCommandLine(int argc, char* argv[])
             options.dsoPath = dsoPath;
         }
     }
-    
+
     return options;
 }
 
@@ -135,12 +156,12 @@ printAllSceneClasses(const rdl2::SceneContext& ctx, const bool simple, const boo
     }
 
     if (alphabetize) {
-        std::sort(array.begin(), array.end(), 
+        std::sort(array.begin(), array.end(),
                   [](const rdl2::SceneClass* sc1, const rdl2::SceneClass* sc2)
                   { return (sc1->getName() < sc2->getName());});
     } else {
-        auto partIT = std::stable_partition(array.begin(), array.end(), 
-                                            [](const rdl2::SceneClass* sc) 
+        auto partIT = std::stable_partition(array.begin(), array.end(),
+                                            [](const rdl2::SceneClass* sc)
                                             { return sc->getName() == "SceneVariables"; });
         std::sort(partIT, array.end(), compareSceneClasses);
     }
@@ -163,7 +184,7 @@ printAllSceneObjects(const rdl2::SceneContext& ctx, const bool simple, const boo
     }
 
     if (alphabetize) {
-        std::sort(array.begin(), array.end(), 
+        std::sort(array.begin(), array.end(),
                   [](const rdl2::SceneObject* s1, const rdl2::SceneObject * s2)
                   { return (s1->getSceneClass().getName() < s2->getSceneClass().getName());});
     }
@@ -178,7 +199,7 @@ printAllSceneObjects(const rdl2::SceneContext& ctx, const bool simple, const boo
 
 int main(int argc, char* argv[])
 {
-    if (argc > 1 && std::string(argv[1]) == "-h") {
+    if (argc > 1 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
         std::cerr << getUsageMessage(argv[0]) << '\n';
         std::exit(EXIT_FAILURE);
     }
@@ -198,17 +219,17 @@ int main(int argc, char* argv[])
         if (!options.rdlFile.empty()) {
             rdl2::readSceneFromFile(options.rdlFile, context);
             if (options.sceneObject.empty()) {
-                printAllSceneObjects(context, options.simple, !options.non_alphabetize);   
+                printAllSceneObjects(context, options.simple, options.alphabetize);
             } else {
-                std::cout << getSceneInfoStr(*(context.getSceneObject(options.sceneObject)), options.simple, !options.non_alphabetize);
+                std::cout << getSceneInfoStr(*(context.getSceneObject(options.sceneObject)), options.simple, options.alphabetize);
             }
         } else if (!options.sceneClass.empty()) {
             // Print just the DSO in question.
-            std::cout << getSceneInfoStr(*(context.createSceneClass(options.sceneClass)), options.simple, !options.non_alphabetize);
+            std::cout << getSceneInfoStr(*(context.createSceneClass(options.sceneClass)), options.simple, options.alphabetize);
         } else {
             // Print all DSOs in the path.
             context.loadAllSceneClasses();
-            printAllSceneClasses(context, options.simple, !options.non_alphabetize);
+            printAllSceneClasses(context, options.simple, options.alphabetize);
         }
     } catch (std::exception& e) {
         std::cerr << "ERROR: " << e.what() << '\n';
