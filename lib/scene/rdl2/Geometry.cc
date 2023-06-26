@@ -34,6 +34,7 @@ AttributeKey<String> Geometry::sShadowExclusionMappings;
 AttributeKey<Bool> Geometry::sContainsCamera;
 AttributeKey<SceneObject*> Geometry::sDicingCamera;
 AttributeKey<Bool> Geometry::sUseLocalMotionBlur;
+AttributeKey<Bool> Geometry::sUseLocalCameraMotionBlur;
 
 Geometry::Geometry(const SceneClass& sceneClass, const std::string& name) :
     Parent(sceneClass, name),
@@ -188,6 +189,12 @@ Geometry::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sUseLocalMotionBlur, "label", "use local motion blur");
     sceneClass.setMetadata(sUseLocalMotionBlur, "comment",
         "Enables the local motion blur feature, which makes the geometry procedural responsible for handling all of the geometry's motion and allows for custom effects");
+
+    sUseLocalCameraMotionBlur = sceneClass.declareAttribute<Bool>("use_local_camera_motion_blur", false);
+    sceneClass.setMetadata(sUseLocalCameraMotionBlur, "label", "use local camera motion blur");
+    sceneClass.setMetadata(sUseLocalCameraMotionBlur, "enable if", "OrderedDict([(u'use_local_motion_blur', u'true')])");      \
+    sceneClass.setMetadata(sUseLocalCameraMotionBlur, "comment",
+        "Enables experimental feature that also attempts to remove the camera blur in the local regions");
 
     return interface | INTERFACE_GEOMETRY;
 }

@@ -105,6 +105,9 @@ public:
     /// Returns whether use_local_motion_blur is enabled
     finline bool getUseLocalMotionBlur() const;
 
+    /// Returns whether use_local_motion_camera_blur is enabled
+    finline bool getUseLocalCameraMotionBlur() const;
+
     // TODO this is a temporary band-aid to avoid attribute modification
     // that doesn't require geometry to regenerate causing long regenerate wait
     // during interactive workflow. One solution would be to have a more
@@ -138,6 +141,7 @@ public:
     static AttributeKey<Bool> sContainsCamera;
     static AttributeKey<SceneObject*> sDicingCamera;
     static AttributeKey<Bool> sUseLocalMotionBlur;
+    static AttributeKey<Bool> sUseLocalCameraMotionBlur;
 
     /// Returns whether the internal procedural geometric data has been deformed.
     /// WARNING: assumes that procedural exists, verify that getProcedural
@@ -273,6 +277,12 @@ bool
 Geometry::getUseLocalMotionBlur() const
 {
     return get(sUseLocalMotionBlur);
+}
+
+bool
+Geometry::getUseLocalCameraMotionBlur() const
+{
+    return get(sUseLocalCameraMotionBlur);
 }
 
 const std::string&
