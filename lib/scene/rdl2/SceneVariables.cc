@@ -289,9 +289,17 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sLightSamplesSqrt = sceneClass.declareAttribute<Int>("light_samples", Int(2), {"light samples"});
     sceneClass.setMetadata(sLightSamplesSqrt, "label", "light samples");
+    sceneClass.setMetadata(sLightSamplesSqrt,
+        SceneClass::sComment,
+        "The square root of the number of samples taken for each light on the primary intersection.");
 
     sBsdfSamplesSqrt = sceneClass.declareAttribute<Int>("bsdf_samples", Int(2), {"bsdf samples"});
     sceneClass.setMetadata(sBsdfSamplesSqrt, "label", "bsdf samples");
+    sceneClass.setMetadata(sBsdfSamplesSqrt,
+        SceneClass::sComment,
+        "The square root of the number of samples taken for BSDF lobe evaluations on the primary intersection. The "
+        "number of samples taken per material depends on the BSDF sampler strategy and the number of lobes that "
+        "comprise the material.");
 
     sBsdfSamplerStrategy = sceneClass.declareAttribute<Int>("bsdf_sampler_strategy",
         Int(BsdfSamplerStrategy::MULTI_SAMPLE),
@@ -306,6 +314,10 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sBssrdfSamplesSqrt = sceneClass.declareAttribute<Int>("bssrdf_samples", Int(2), {"bssrdf samples"});
     sceneClass.setMetadata(sBssrdfSamplesSqrt, "label", "bssrdf samples");
+    sceneClass.setMetadata(sBssrdfSamplesSqrt,
+        SceneClass::sComment,
+        "The square root of the number of samples taken to evaluate BSSRDF (subsurface scattering) contributions on "
+        "the primary intersection.");
 
     sMaxDepth = sceneClass.declareAttribute<Int>("max_depth", Int(5), {"max depth"});
     sceneClass.setMetadata(sMaxDepth, "label", "max depth");
@@ -725,6 +737,7 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sEnableDof = sceneClass.declareAttribute<Bool>("enable_dof", true, {"enable DOF"});
     sceneClass.setMetadata(sEnableDof, "label", "enable DOF");
+    sceneClass.setMetadata(sEnableDof, SceneClass::sComment, "Enable camera depth-of-field (DOF)");
 
     sEnableMaxGeomResolution =
         sceneClass.declareAttribute<Bool>("enable_max_geometry_resolution", false, {"enable max geometry resolution"});
@@ -816,6 +829,11 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sBatchTileOrder, 5, "random");
     sceneClass.setEnumValue(sBatchTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sBatchTileOrder, 7, "spiral rect");
+    sceneClass.setMetadata(sBatchTileOrder,
+        SceneClass::sComment,
+        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for batch rendering, "
+        "which determines which areas of the image are rendered first. The ordering is not guaranteed: the strict "
+        "sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
     sProgressiveTileOrder = sceneClass.declareAttribute<Int>("progressive_tile_order",
         Int(4),
@@ -831,6 +849,11 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sProgressiveTileOrder, 5, "random");
     sceneClass.setEnumValue(sProgressiveTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sProgressiveTileOrder, 7, "spiral rect");
+    sceneClass.setMetadata(sProgressiveTileOrder,
+        SceneClass::sComment,
+        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for progressive "
+        "rendering, which determines which areas of the image are rendered first. The ordering is not guaranteed: the "
+        "strict sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
     sCheckpointTileOrder = sceneClass.declareAttribute<Int>("checkpoint_tile_order",
         Int(4),
@@ -846,6 +869,11 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sCheckpointTileOrder, 5, "random");
     sceneClass.setEnumValue(sCheckpointTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sCheckpointTileOrder, 7, "spiral rect");
+    sceneClass.setMetadata(sCheckpointTileOrder,
+        SceneClass::sComment,
+        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for checkpoint "
+        "rendering, which determines which areas of the image are rendered first. The ordering is not guaranteed: the "
+        "strict sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
     sOutputFile = sceneClass.declareAttribute<String>("output_file", "scene.exr", {"output file"});
     sceneClass.setMetadata(sOutputFile, "label", "output file");
@@ -929,7 +957,7 @@ SceneVariables::declare(SceneClass& sceneClass)
     sCryptomatteMultiPresence = sceneClass.declareAttribute<Bool>("cryptomatte_multi_presence", false);
     sceneClass.setMetadata(sCryptomatteMultiPresence,
         SceneClass::sComment,
-        "This setting determines whether to record presence bounces as separate cryptomatte samples");
+        "This setting determines whether to record presence bounces as separate cryptomatte samples.");
 
     // Grouping the attributes for Torch - the order of
     // the attributes should be the same as how they are defined.

@@ -48,7 +48,7 @@ getUsageMessage(const std::string& programName)
     stream << '\n';
 
     stream << "Options:\n";
-    stream << "    " << std::setw(24) << std::left << "-d, ---dso_path" << "Specify an additional path to search for SceneClasses (DSOs).\n";
+    stream << "    " << std::setw(24) << std::left << "-d, --dso_path"  << "Specify an additional path to search for SceneClasses (DSOs).\n";
     stream << "    " << std::setw(24) << std::left << "-h, --help"      << "Print this help message.\n";
     stream << "    " << std::setw(24) << std::left << "--no_sort"       << "Do not sort the classes and attributes alphabetically.\n";
     stream << "    " << std::setw(24) << std::left << "-s, --simple"    << "Print without comments.\n";
