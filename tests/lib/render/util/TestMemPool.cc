@@ -9,7 +9,7 @@
 #include <scene_rdl2/render/util/Random.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
-#include <tbb/task_scheduler_init.h>
+#include <tbb/info.h>
 #include <set>
 #include <vector>
 
@@ -249,7 +249,7 @@ testMemPoolAllocator(const char *name,
                      unsigned numLoops,
                      unsigned numOpsPerLoop)
 {
-    const unsigned numThreads = tbb::task_scheduler_init::default_num_threads();
+    const unsigned numThreads = tbb::info::default_concurrency();
     const unsigned totalBlocks = numBlocksToReservePerThread * numThreads;
 
     //
