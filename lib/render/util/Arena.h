@@ -115,7 +115,7 @@ public:
 
 protected:
     unsigned            mBlockSize;
-    tbb::atomic<unsigned> mTotalBlocks;
+    std::atomic<unsigned> mTotalBlocks;
 
     CACHE_ALIGN util::ConcurrentSList mFreeBlocks;
 };
