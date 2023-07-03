@@ -429,7 +429,7 @@ LuaScriptRunner::Impl::convertJsonObj(const std::string &name, const Json::Value
 {
     beginDictionary(name, false);
     for (Json::ValueConstIterator it = jv.begin(); it != jv.end(); ++it) {
-        convertJsonVal(it.memberName(), (*it));
+        convertJsonVal(it.name(), (*it));
     }
     endDictionary();
 }
