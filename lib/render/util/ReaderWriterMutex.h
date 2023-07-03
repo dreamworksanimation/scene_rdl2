@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <mutex>
+
 #if defined(__has_include)
 #    if __has_include(<shared_mutex>)
 #        include <shared_mutex>

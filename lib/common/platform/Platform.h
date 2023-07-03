@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 
