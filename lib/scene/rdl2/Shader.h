@@ -86,7 +86,7 @@ public:
 
     // Copy existing attributes into a cache
     void cacheAttributes() const {
-        tbb::mutex::scoped_lock lock(mCachedAttributesMutex);
+        std::scoped_lock lock(mCachedAttributesMutex);
 
         mCachedRequiredAttributes.clear();
         if (!mRequiredAttributes.empty()) {
@@ -127,7 +127,7 @@ public:
     }
 
     void clearCachedAttributes() const {
-        tbb::mutex::scoped_lock lock(mCachedAttributesMutex);
+        std::scoped_lock lock(mCachedAttributesMutex);
 
         mCachedRequiredAttributes.clear();
         mCachedOptionalAttributes.clear();
@@ -176,7 +176,7 @@ private:
     /**
      * Mutex to protect the attribute caches.
      */
-    mutable tbb::mutex mCachedAttributesMutex;
+    mutable std::mutex mCachedAttributesMutex;
 };
 
 template <>
