@@ -3,11 +3,18 @@
 
 set(component __${PACKAGE_NAME}__)
 
+if (NOT DEFINED BOOST_PYTHON_COMPONENT_NAME)
+    # may need to be, e.g. python36, python39
+    set(BOOST_PYTHON_COMPONENT_NAME python)
+endif()
+
+# may need to be, e.g. python36, python39
+
 find_package(Python COMPONENTS Interpreter Development)
 find_package(Boost REQUIRED
   COMPONENTS
     system
-    python
+    "${BOOST_PYTHON_COMPONENT_NAME}"
     date_time
     chrono)
 
@@ -60,7 +67,7 @@ target_include_directories(${component} SYSTEM
 target_link_libraries(${component}
     PRIVATE
         Boost::system
-        Boost::python
+        Boost::${BOOST_PYTHON_COMPONENT_NAME}
         Boost::date_time
         Boost::chrono
         ${PROJECT_NAME}::${PACKAGE_NAME}
