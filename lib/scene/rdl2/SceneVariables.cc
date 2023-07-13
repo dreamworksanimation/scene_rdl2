@@ -1292,8 +1292,8 @@ SceneVariables::getTmpDir() const
     if (tmpDir.empty()) {
         tmpDir = util::getenv<std::string>("TMPDIR");
     }
-    if (tmpDir.back() == '/') tmpDir.pop_back();
     if (tmpDir.empty()) tmpDir = "/tmp";
+    if (tmpDir.back() == '/') tmpDir.pop_back();
     return tmpDir;
 }
 
