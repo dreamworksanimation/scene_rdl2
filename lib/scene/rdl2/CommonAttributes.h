@@ -31,15 +31,15 @@
     sceneClass.setMetadata (attrCurvesSubType, "comment",                                                           \
         "Selects the style the curves are rendered");
 
-#define DECLARE_COMMON_MESH_ATTRIBUTES                                         \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrMeshResolution;                        \
-    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrAdaptiveError;                         \
+#define DECLARE_COMMON_MESH_ATTRIBUTES                                              \
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrMeshResolution;     \
+    scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Float> attrAdaptiveError;      \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool>  attrSmoothNormal;
 
 #define DEFINE_COMMON_MESH_ATTRIBUTES                                          \
     attrMeshResolution =                                                       \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("mesh_resolution", 2.0f,      \
-        scene_rdl2::rdl2::FLAGS_NONE, scene_rdl2::rdl2::INTERFACE_GENERIC,                             \
+        scene_rdl2::rdl2::FLAGS_NONE, scene_rdl2::rdl2::INTERFACE_GENERIC,     \
         {"resolution factor", "subd resolution", "subd_resolution"});          \
     sceneClass.setMetadata(attrMeshResolution, "label", "mesh resolution");    \
     sceneClass.setMetadata(attrMeshResolution, "comment",                      \
@@ -66,21 +66,21 @@
         sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("smooth_normal", true);        \
     sceneClass.setMetadata(attrSmoothNormal, "display_name", "smooth normal"); \
     sceneClass.setMetadata(attrSmoothNormal, "comment",                        \
-        "Generates smooth shading normals on a PolygonMesh "       \
-        "when the mesh doesn't provide shading normals");                 \
+        "Generates smooth shading normals on a PolygonMesh "                   \
+        "when the mesh doesn't provide shading normals");                      \
     sceneClass.setGroup("Mesh", attrSmoothNormal);
 
 #define DECLARE_COMMON_EXPLICIT_SHADING_ATTRIBUTES                                  \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrExplicitShading;
 
-#define DEFINE_COMMON_EXPLICIT_SHADING_ATTRIBUTES                                            \
-    attrExplicitShading = sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>(               \
-        "use_explicit_shading_attributes", false, {"use_explicit_shading_attributes"});       \
-    sceneClass.setMetadata(attrExplicitShading, "label", "use explicit shading attributes");     \
-    sceneClass.setMetadata(attrExplicitShading, "comment",                                       \
+#define DEFINE_COMMON_EXPLICIT_SHADING_ATTRIBUTES                                               \
+    attrExplicitShading = sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>(                  \
+        "use_explicit_shading_attributes", false, {"use_explicit_shading_attributes"});         \
+    sceneClass.setMetadata(attrExplicitShading, "label", "use explicit shading attributes");    \
+    sceneClass.setMetadata(attrExplicitShading, "comment",                                      \
         "Enable the use of explicit shading attributes (N, dPds, dPdt) if they are present");
 
-#define DECLARE_COMMON_MOTION_BLUR_ATTRIBUTES                                  \
+#define DECLARE_COMMON_MOTION_BLUR_ATTRIBUTES                                                          \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Bool> attrUseRotationMotionBlur;                  \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int>  attrMotionBlurType;                         \
     scene_rdl2::rdl2::AttributeKey<scene_rdl2::rdl2::Int>  attrCurvedMotionBlurSampleCount;            \
@@ -92,9 +92,9 @@
     sceneClass.setMetadata(attrUseRotationMotionBlur, "label",                                                                  \
         "use rotation motion blur");                                                                                            \
     sceneClass.setMetadata(attrUseRotationMotionBlur, "comment",                                                                \
-        "If \"xform\" is time varying and motion blur is enabled, "                                                           \
-        "enabling this feature can produce a curved rotation trail.  "                                                      \
-        "Enabling this feature will disable adaptive tessellation for this mesh");                                   \
+        "If \"xform\" is time varying and motion blur is enabled, "                                                             \
+        "enabling this feature can produce a curved rotation trail.  "                                                          \
+        "Enabling this feature will disable adaptive tessellation for this mesh");                                              \
     sceneClass.setGroup("Motion Blur", attrUseRotationMotionBlur);                                                              \
     attrMotionBlurType =                                                                                                        \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("motion_blur_type", (int)scene_rdl2::rdl2::MotionBlurType::BEST,                             \
@@ -189,7 +189,7 @@
 
 #define DEFINE_COMMON_MOTIONGUIDE_ATTRIBUTES                                                \
     attrApplyMotionGuides =                                                                 \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("apply_motion_guides", false,               \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("apply_motion_guides", false,   \
                                                 { "apply motion guides" });                 \
     sceneClass.setMetadata(attrApplyMotionGuides, "label", "apply motion guides");          \
     sceneClass.setMetadata(attrApplyMotionGuides, "comment",                                \
@@ -205,7 +205,7 @@
             1 - Position Interpolation, 2 - Position Wrap");                                \
     sceneClass.setGroup("Motion Guides", attrMotionGuidesDeformationMode);                  \
     attrMotionGuidesBindingMode =                                                           \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("motion_guides_binding_mode", 0,             \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::Int>("motion_guides_binding_mode", 0, \
                                                { "motion guides binding mode" });           \
     sceneClass.setMetadata(attrMotionGuidesBindingMode, "label",                            \
                            "motion guides binding mode");                                   \
@@ -213,12 +213,12 @@
             "Motion guides hair binding mode: 0 - Tip Binding, 1 - Per-CV Binding");        \
     sceneClass.setGroup("Motion Guides", attrMotionGuidesBindingMode);                      \
     attrMotionGuidesFile =                                                                  \
-        sceneClass.declareAttribute<scene_rdl2::rdl2::String>("motion_guides_file", "",                 \
+        sceneClass.declareAttribute<scene_rdl2::rdl2::String>("motion_guides_file", "",     \
         scene_rdl2::rdl2::FLAGS_FILENAME, scene_rdl2::rdl2::INTERFACE_GENERIC, { "motion guides file" });           \
     sceneClass.setMetadata(attrMotionGuidesFile, "label", "motion guides file");            \
     sceneClass.setMetadata(attrMotionGuidesFile, "comment",                                 \
             "Alembic file containing motion guides");                                       \
-    sceneClass.setGroup("Motion Guides", attrMotionGuidesFile);                            \
+    sceneClass.setGroup("Motion Guides", attrMotionGuidesFile);                             \
     attrMotionGuidesNodePath =                                                              \
         sceneClass.declareAttribute<scene_rdl2::rdl2::String>("motion_guides_node_path", "",            \
                                                   {"motion guides node path"});             \
