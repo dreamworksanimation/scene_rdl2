@@ -107,7 +107,7 @@
     sceneClass.setEnumValue(attrMotionBlurType, (int)scene_rdl2::rdl2::MotionBlurType::BEST,         "best");                               \
     sceneClass.setMetadata (attrMotionBlurType, "label", "motion blur type");                                                   \
     sceneClass.setMetadata (attrMotionBlurType, "comment",                                                                      \
-        "Motion blur type for PolygonMesh/Points/Curves in alembic file.\n"                                                     \
+        "Motion blur type for PolygonMesh/Points/Curves.\n"                                                                     \
         "\"static\" will treat the mesh as static.\n"                                                                           \
         "\"velocity\" will blur using the supplied vertex positions and velocities.\n"                                          \
         "\"frame delta\" will interpolate between the two supplied vertex positions.\n"                                         \
