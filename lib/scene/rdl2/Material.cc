@@ -65,6 +65,8 @@ Material::declare(SceneClass& sceneClass)
 
     sInvisibleRefractiveCryptomatte = sceneClass.declareAttribute<Bool>(
             "invisible_refractive_cryptomatte", false, {"invisible refractive cryptomatte"});
+    sceneClass.setMetadata(sInvisibleRefractiveCryptomatte, "comment", "Indicates whether material should/should not " 
+                                                                       "appear in the refractive cryptomatte layers");
 
     return interface | INTERFACE_MATERIAL;
 }
