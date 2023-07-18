@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include <scene_rdl2/common/fb_util/ispc/SnapshotUtil_ispc_stubs.h>
 
 #include "SnapshotUtil.h"
@@ -19,21 +16,53 @@
 namespace scene_rdl2 {
 namespace fb_util {
 
+//
+// We have 2 sets of implementations C++ and ISPC.
+// The following directives define which implementation we use.
+// Current settings are based on the profiling test at Jun/19/2023 on Intel Xeon Gold 6140 CPU @ 2.3GHz
+// Profiling was done using unitTest (tests/lib/common/fb_util/TestSnapshotUtil.{h,cc}).
+// See TestSnapshotUtil.cc for more detail.
+//
+// Basically, the difference between C++ (SISD) and ISPC (SIMD) was pretty small in this case and less
+// than a 1% difference based on the current unitTest profiling framework. This timing result should be
+// respected even if the test pattern is not based on the actual snapshotDelta.
+// Current unitTest is focused on covering all edge cases and not focused on the actual statistical
+// condition of real snapshotDelta. Actually, making general purpose snapshotDelta profiling test based
+// on the actual statistical pattern is pretty difficult because snapshotDelta pattern is pretty
+// dependent on the scene itself. General purpose snapshotDelta profiling suites are future work.
+//        
+/* We have ISPC code issues and are temporarily disabling all ISPC code now.
+//#define SNAPSHOTTILE_COL_WEIGHT_ISPC
+//#define SNAPSHOTTILE_COL_NUMSAMPLE_ISPC
+//#define SNAPSHOTTILE_HEAT_WEIGHT_ISPC
+//#define SNAPSHOTTILE_HEAT_NUMSAMPLE_ISPC
+#define SNAPSHOTTILE_WEIGHT_ISPC
+
+//#define SNAPSHOTTILE_FLOAT_WEIGHT_ISPC
+//#define SNAPSHOTTILE_FLOAT_NUMSAMPLE_ISPC
+//#define SNAPSHOTTILE_FLOAT2_WEIGHT_ISPC
+//#define SNAPSHOTTILE_FLOAT2_NUMSAMPLE_ISPC
+//#define SNAPSHOTTILE_FLOAT3_WEIGHT_ISPC
+#define SNAPSHOTTILE_FLOAT3_NUMSAMPLE_ISPC
+//#define SNAPSHOTTILE_FLOAT4_WEIGHT_ISPC
+#define SNAPSHOTTILE_FLOAT4_NUMSAMPLE_ISPC
+
+#define SNAPSHOTTILE_UINT32_MASK_ISPC // This was manually profiled.
+*/
+
 //------------------------------------------------------------------------------
 //
 // beauty buffer
 //
 // static function
 uint64_t
-SnapshotUtil::snapshotTileColorWeight(uint32_t *dstC,
-                                      uint32_t *dstW,
-                                      const uint32_t *srcC,
-                                      const uint32_t *srcW)
+SnapshotUtil::snapshotTileColorWeight(uint32_t* dstC,
+                                      uint32_t* dstW,
+                                      const uint32_t* srcC,
+                                      const uint32_t* srcW)
 //
 // make snapshot for color + weight data
 // update destination buffers and return active pixel mask for this tile
-//
-// This is an ISPC version
 //
 // dstC : destination tile start address of color  data : color  buffer (r,g,b,a) = 16byte * 8 * 8
 // dstW : destination tile start address of weight data : weight buffer (w)       =  4byte * 8 * 8
@@ -41,23 +70,30 @@ SnapshotUtil::snapshotTileColorWeight(uint32_t *dstC,
 // srcW :      source tile start address of weight data : weight buffer (w)       =  4byte * 8 * 8
 //
 {
-    return ispc::snapshotTileFloat4Weight((int *)dstC, (int *)dstW,
-                                          const_cast<int *>((const int *)srcC),
-                                          const_cast<int *>((const int *)srcW));
+#ifdef SNAPSHOTTILE_COL_WEIGHT_ISPC
+    return ispc::snapshotTileFloat4Weight(reinterpret_cast<int*>(dstC),
+                                          reinterpret_cast<int*>(dstW),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcC)),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcW)));
+#else // else SNAPSHOTTILE_COL_WEIGHT_ISPC
+    return snapshotTileFloat4Weight_SISD(dstC, dstW, srcC, srcW);
+#endif // end else SNAPSHOTTILE_COL_WEIGHT_ISPC
 }
 
 #ifdef AVX2_TEST
 // static function
 uint64_t
-SnapshotUtil::snapshotTileColorWeight_AVX2(uint32_t *dstCPtr,
-                                           uint32_t *dstWPtr,
-                                           const uint32_t *srcCPtr,
-                                           const uint32_t *srcWPtr)
+SnapshotUtil::snapshotTileColorWeight_AVX2(uint32_t* dstCPtr,
+                                           uint32_t* dstWPtr,
+                                           const uint32_t* srcCPtr,
+                                           const uint32_t* srcWPtr)
 //
 // make snapshot for color + weight data
 // update destination buffers and return active pixel mask for this tile
 //
 // This is AVX2 version (experimental)
+// This code does not check source weight value is not 0.0f for active pixel decision yet due to
+// experimental code. In order to finalize this code, we have to consider the weight value check.
 //
 {
     __m256i offsetMask;
@@ -156,17 +192,23 @@ SnapshotUtil::snapshotTileColorWeight_AVX2(uint32_t *dstCPtr,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileColorNumSample(uint32_t *dstC,
-                                         uint32_t *dstN,
+SnapshotUtil::snapshotTileColorNumSample(uint32_t* dstC,
+                                         uint32_t* dstN,
                                          const uint64_t dstTileMask,
-                                         const uint32_t *srcC,
-                                         const uint32_t *srcN,
+                                         const uint32_t* srcC,
+                                         const uint32_t* srcN,
                                          const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloat4NumSample((int *)dstC, (int *)dstN, dstTileMask,
-                                             const_cast<int *>((const int *)srcC),
-                                             const_cast<int *>((const int *)srcN),
+#ifdef SNAPSHOTTILE_COL_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloat4NumSample(reinterpret_cast<int*>(dstC),
+                                             reinterpret_cast<int*>(dstN),
+                                             dstTileMask,
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcC)),
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcN)),
                                              srcTileMask);
+#else // else SNAPSHOTTILE_COL_NUMSAMPLE_ISPC
+    return snapshotTileFloat4NumSample_SISD(dstC, dstN, dstTileMask, srcC, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_COL_NUMSAMPLE_ISPC
 }
 
 //------------------------------------------------------------------------------
@@ -175,46 +217,45 @@ SnapshotUtil::snapshotTileColorNumSample(uint32_t *dstC,
 //
 // static function
 uint64_t
-SnapshotUtil::snapshotTileHeatMapWeight(uint64_t *dstV,
-                                        uint32_t *dstW,
-                                        const uint64_t *srcV,
-                                        const uint32_t *srcW)
+SnapshotUtil::snapshotTileHeatMapWeight(uint64_t* dstV,
+                                        uint32_t* dstW,
+                                        const uint64_t* srcV,
+                                        const uint32_t* srcW)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-      
-    return ispc::snapshotTileHeatMapWeight((int64_t *)dstV, (int *)dstW,
-                                           const_cast<int64_t*>((const int64_t*)srcV),
-                                           const_cast<int *>((const int *)srcW));
-    */
+#ifdef SNAPSHOTTILE_HEAT_WEIGHT_ISPC
+    return ispc::snapshotTileHeatMapWeight(reinterpret_cast<int64_t*>(dstV),
+                                           reinterpret_cast<int*>(dstW),
+                                           const_cast<int64_t*>(reinterpret_cast<const int64_t*>(srcV)),
+                                           const_cast<int*>(reinterpret_cast<const int*>(srcW)));
+#else // else SNAPSHOTTILE_HEAT_WEIGHT_ISPC
     return snapshotTileHeatMapWeight_SISD(dstV, dstW, srcV, srcW);
+#endif // end else SNAPSHOTTILE_HEAT_WEIGHT_ISPC
 }
     
 // static function
 uint64_t
-SnapshotUtil::snapshotTileHeatMapWeight_SISD(uint64_t *dstV,
-                                             uint32_t *dstW,
-                                             const uint64_t *srcV,
-                                             const uint32_t *srcW)
+SnapshotUtil::snapshotTileHeatMapWeight_SISD(uint64_t* dstV,
+                                             uint32_t* dstW,
+                                             const uint64_t* srcV,
+                                             const uint32_t* srcW)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint64_t *currSrcVPtr = srcV + offset;
-        const uint32_t *currSrcWPtr = srcW + offset;
-        uint64_t       *currDstVPtr = dstV + offset;
-        uint32_t       *currDstWPtr = dstW + offset;
+        const uint64_t* currSrcVPtr = srcV + offset;
+        const uint32_t* currSrcWPtr = srcW + offset;
+        uint64_t*       currDstVPtr = dstV + offset;
+        uint32_t*       currDstWPtr = dstW + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
+            // See more detail for snapshotTileFloat4Weight_SISD()'s comment
             //
-            uint64_t activeMask = ((currSrcVPtr[0] - currDstVPtr[0]) |
-                                   static_cast<uint64_t>(currSrcWPtr[0] - currDstWPtr[0])); // cast to 64bit
+            uint64_t srcWFlag = (currSrcWPtr[0]) ? ~static_cast<uint64_t>(0) : static_cast<uint64_t>(0);
+            uint64_t activeMask =
+                ((currSrcVPtr[0] - currDstVPtr[0]) |
+                 static_cast<uint64_t>(currSrcWPtr[0] - currDstWPtr[0])) & srcWFlag;
             if (activeMask) {
                 // update data
                 currDstVPtr[0] = currSrcVPtr[0];
@@ -235,17 +276,23 @@ SnapshotUtil::snapshotTileHeatMapWeight_SISD(uint64_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileHeatMapNumSample(uint32_t *dstV,
-                                           uint32_t *dstN,
+SnapshotUtil::snapshotTileHeatMapNumSample(uint32_t* dstV,
+                                           uint32_t* dstN,
                                            const uint64_t dstTileMask,
-                                           const uint32_t *srcV,
-                                           const uint32_t *srcN,
+                                           const uint32_t* srcV,
+                                           const uint32_t* srcN,
                                            const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloatNumSample((int *)dstV, (int *)dstN, dstTileMask,
-                                            const_cast<int *>((const int *)srcV),
-                                            const_cast<int *>((const int *)srcN),
+#ifdef SNAPSHOTTILE_HEAT_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloatNumSample(reinterpret_cast<int *>(dstV),
+                                            reinterpret_cast<int *>(dstN),
+                                            dstTileMask,
+                                            const_cast<int *>(reinterpret_cast<const int *>(srcV)),
+                                            const_cast<int *>(reinterpret_cast<const int *>(srcN)),
                                             srcTileMask);
+#else // else SNAPSHOTTILE_HEAT_NUMSAMPLE_ISPC
+    return snapshotTileFloatNumSample_SISD(dstV, dstN, dstTileMask, srcV, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_HEAT_NUMSAMPLE_ISPC
 }
 
 //------------------------------------------------------------------------------
@@ -254,38 +301,32 @@ SnapshotUtil::snapshotTileHeatMapNumSample(uint32_t *dstV,
 //
 // static function
 uint64_t
-SnapshotUtil::snapshotTileWeightBuffer(uint32_t *dst,
-                                       const uint32_t *src)
+SnapshotUtil::snapshotTileWeightBuffer(uint32_t* dst, const uint32_t* src)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-
-    return ispc::snapshotTileWeightBuffer((int *)dst,
-                                          const_cast<int *>((const int *)src));
-    */
+#ifdef SNAPSHOTTILE_WEIGHT_ISPC
+    return ispc::snapshotTileWeightBuffer(reinterpret_cast<int*>(dst),
+                                          const_cast<int *>(reinterpret_cast<const int*>(src)));
+#else // else SNAPSHOTTILE_WEIGHT_ISPC   
     return snapshotTileWeightBuffer_SISD(dst, src);
+#endif // end else SNAPSHOTTILE_WEIGHT_ISPC
 }
     
 // static function
 uint64_t
-SnapshotUtil::snapshotTileWeightBuffer_SISD(uint32_t *dst,
-                                            const uint32_t *src)
+SnapshotUtil::snapshotTileWeightBuffer_SISD(uint32_t* dst, const uint32_t* src)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint32_t *currSrc = src + offset;
-        uint32_t       *currDst = dst + offset;
+        const uint32_t* currSrc = src + offset;
+        uint32_t*       currDst = dst + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
+            // See more detail for snapshotTileFloat4Weight_SISD()'s comment
             //
-            uint32_t activeMask = (currSrc[0] - currDst[0]);
+            uint32_t activeMask = (currSrc[0] - currDst[0]) & ((currSrc[0]) ? ~0x0 : 0x0);
             if (activeMask) {
                 // update data
                 currDst[0] = currSrc[0];
@@ -308,46 +349,43 @@ SnapshotUtil::snapshotTileWeightBuffer_SISD(uint32_t *dst,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloatWeight(uint32_t *dstV,
-                                      uint32_t *dstW,
-                                      const uint32_t *srcV,
-                                      const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloatWeight(uint32_t* dstV,
+                                      uint32_t* dstW,
+                                      const uint32_t* srcV,
+                                      const uint32_t* srcW)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-
-    return ispc::snapshotTileFloatWeight((int *)dstV, (int *)dstW,
-                                         const_cast<int *>((const int *)srcV),
-                                         const_cast<int *>((const int *)srcW));
-    */
+#ifdef SNAPSHOTTILE_FLOAT_WEIGHT_ISPC
+    return ispc::snapshotTileFloatWeight(reinterpret_cast<int*>(dstV),
+                                         reinterpret_cast<int*>(dstW),
+                                         const_cast<int *>(reinterpret_cast<const int*>(srcV)),
+                                         const_cast<int *>(reinterpret_cast<const int*>(srcW)));
+#else // else SNAPSHOTTILE_FLOAT_WEIGHT_ISPC
     return snapshotTileFloatWeight_SISD(dstV, dstW, srcV, srcW);
+#endif // end else SNAPSHOTTILE_FLOAT_WEIGHT_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloatWeight_SISD(uint32_t *dstV,
-                                           uint32_t *dstW,
-                                           const uint32_t *srcV,
-                                           const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloatWeight_SISD(uint32_t* dstV,
+                                           uint32_t* dstW,
+                                           const uint32_t* srcV,
+                                           const uint32_t* srcW)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint32_t *currSrcV = srcV + offset;
-        const uint32_t *currSrcW = srcW + offset;
-        uint32_t *currDstV = dstV + offset;
-        uint32_t *currDstW = dstW + offset;
+        const uint32_t* currSrcV = srcV + offset;
+        const uint32_t* currSrcW = srcW + offset;
+        uint32_t*       currDstV = dstV + offset;
+        uint32_t*       currDstW = dstW + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
+            // See more detail for snapshotTileFloat4Weight_SISD()'s comment
             //
             uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
-                                   (currSrcW[0] - currDstW[0]));
+                                   (currSrcW[0] - currDstW[0])) & ((currSrcW[0]) ? ~0x0 : 0x0);
             if (activeMask) {
                 // update data
                 currDstV[0] = currSrcV[0];
@@ -368,26 +406,32 @@ SnapshotUtil::snapshotTileFloatWeight_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloatNumSample(uint32_t *dstV,
-                                         uint32_t *dstN,
+SnapshotUtil::snapshotTileFloatNumSample(uint32_t* dstV,
+                                         uint32_t* dstN,
                                          const uint64_t dstTileMask,
-                                         const uint32_t *srcV,
-                                         const uint32_t *srcN,
+                                         const uint32_t* srcV,
+                                         const uint32_t* srcN,
                                          const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloatNumSample((int *)dstV, (int *)dstN, dstTileMask,
-                                            const_cast<int *>((const int *)srcV),
-                                            const_cast<int *>((const int *)srcN),
+#ifdef SNAPSHOTTILE_FLOAT_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloatNumSample(reinterpret_cast<int*>(dstV),
+                                            reinterpret_cast<int*>(dstN),
+                                            dstTileMask,
+                                            const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                            const_cast<int*>(reinterpret_cast<const int*>(srcN)),
                                             srcTileMask);
+#else // else SNAPSHOTTILE_FLOAT_NUMSAMPLE_ISPC
+    return snapshotTileFloatNumSample_SISD(dstV, dstN, dstTileMask, srcV, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_FLOAT_NUMSAMPLE_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t *dstV,
-                                              uint32_t *dstN,
+SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t* dstV,
+                                              uint32_t* dstN,
                                               const uint64_t dstTileMask,
-                                              const uint32_t *srcV,
-                                              const uint32_t *srcN,
+                                              const uint32_t* srcV,
+                                              const uint32_t* srcN,
                                               const uint64_t srcTileMask)
 {
     if (!srcTileMask) return 0x0;
@@ -400,10 +444,10 @@ SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t *dstV,
         if (!currSrcTileMask) break; // early exit : rest of them are all empty
         uint64_t currDstTileMask = dstTileMask >> offset;
 
-        const uint32_t *currSrcV = srcV + offset;
-        uint32_t       *currDstV = dstV + offset;
-        const uint32_t *currSrcN = srcN + offset;
-        uint32_t       *currDstN = dstN + offset;
+        const uint32_t* currSrcV = srcV + offset;
+        uint32_t*       currDstV = dstV + offset;
+        const uint32_t* currSrcN = srcN + offset;
+        uint32_t*       currDstN = dstN + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
         uint64_t currDstTileScanlineMask = currDstTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
@@ -413,11 +457,12 @@ SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t *dstV,
             if (currSrcTileScanlineMask & static_cast<uint64_t>(0x1)) {
                 //
                 // Compare bit pattern between previous and current
+                // See more detail for snapshotTileFloat4Weight_SISD()'s comment
                 //
                 uint32_t freshPixelCondition = (currDstTileScanlineMask & static_cast<uint64_t>(0x1))? 0x0: 0xffffffff;
                 uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                        (currSrcN[0] - currDstN[0]) |
-                                       freshPixelCondition);
+                                       freshPixelCondition) & ((currSrcN[0]) ? ~0x0 : 0x0);
                 if (activeMask) {
                     // updated pixel
                     currDstV[0] = currSrcV[0];
@@ -441,47 +486,44 @@ SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat2Weight(uint32_t *dstV,
-                                       uint32_t *dstW,
-                                       const uint32_t *srcV,
-                                       const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat2Weight(uint32_t* dstV,
+                                       uint32_t* dstW,
+                                       const uint32_t* srcV,
+                                       const uint32_t* srcW)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-
-    return ispc::snapshotTileFloat2Weight((int *)dstV, (int64_t *)dstW,
-                                          const_cast<int *>((const int *)srcV),
-                                          const_cast<int64_t *>((const int64_t *)srcW));
-    */
+#ifdef SNAPSHOTTILE_FLOAT2_WEIGHT_ISPC
+    return ispc::snapshotTileFloat2Weight(reinterpret_cast<int*>(dstV),
+                                          reinterpret_cast<int64_t*>(dstW),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                          const_cast<int64_t*>(reinterpret_cast<const int64_t*>(srcW)));
+#else // else SNAPSHOTTILE_FLOAT2_WEIGHT_ISPC
     return snapshotTileFloat2Weight_SISD(dstV, dstW, srcV, srcW);
+#endif // end else SNAPSHOTTILE_FLOAT2_WEIGHT_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat2Weight_SISD(uint32_t *dstV,
-                                            uint32_t *dstW,
-                                            const uint32_t *srcV,
-                                            const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat2Weight_SISD(uint32_t* dstV,
+                                            uint32_t* dstW,
+                                            const uint32_t* srcV,
+                                            const uint32_t* srcW)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint32_t *currSrcV = srcV + offset * 2;
-        const uint32_t *currSrcW = srcW + offset;
-        uint32_t *currDstV = dstV + offset * 2;
-        uint32_t *currDstW = dstW + offset;
+        const uint32_t* currSrcV = srcV + offset * 2;
+        const uint32_t* currSrcW = srcW + offset;
+        uint32_t*       currDstV = dstV + offset * 2;
+        uint32_t*       currDstW = dstW + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
+            // See more detail for snapshotTileFloat4Weight_SISD()'s comment
             //
             uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                    (currSrcV[1] - currDstV[1]) |
-                                   (currSrcW[0] - currDstW[0]));
+                                   (currSrcW[0] - currDstW[0])) & ((currSrcW[0]) ? ~0x0 : 0x0);
             if (activeMask) {
                 // update data
                 currDstV[0] = currSrcV[0];
@@ -503,26 +545,32 @@ SnapshotUtil::snapshotTileFloat2Weight_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat2NumSample(uint32_t *dstV,
-                                          uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat2NumSample(uint32_t* dstV,
+                                          uint32_t* dstN,
                                           const uint64_t dstTileMask,
-                                          const uint32_t *srcV,
-                                          const uint32_t *srcN,
+                                          const uint32_t* srcV,
+                                          const uint32_t* srcN,
                                           const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloat2NumSample((int *)dstV, (int64_t *)dstN, dstTileMask,
-                                             const_cast<int *>((const int *)srcV),
-                                             const_cast<int64_t *>((const int64_t *)srcN),
+#ifdef SNAPSHOTTILE_FLOAT2_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloat2NumSample(reinterpret_cast<int*>(dstV),
+                                             reinterpret_cast<int64_t*>(dstN),
+                                             dstTileMask,
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                             const_cast<int64_t*>(reinterpret_cast<const int64_t*>(srcN)),
                                              srcTileMask);
+#else // else SNAPSHOTTILE_FLOAT2_NUMSAMPLE_ISPC
+    return snapshotTileFloat2NumSample_SISD(dstV, dstN, dstTileMask, srcV, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_FLOAT2_NUMSAMPLE_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat2NumSample_SISD(uint32_t *dstV,
-                                               uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat2NumSample_SISD(uint32_t* dstV,
+                                               uint32_t* dstN,
                                                const uint64_t dstTileMask,
-                                               const uint32_t *srcV,
-                                               const uint32_t *srcN,
+                                               const uint32_t* srcV,
+                                               const uint32_t* srcN,
                                                const uint64_t srcTileMask)
 {
     if (!srcTileMask) return 0x0;
@@ -535,10 +583,10 @@ SnapshotUtil::snapshotTileFloat2NumSample_SISD(uint32_t *dstV,
         if (!currSrcTileMask) break; // early exit : rest of them are all empty
         uint64_t currDstTileMask = dstTileMask >> offset;
 
-        const uint32_t *currSrcV = srcV + offset * 2;
-        uint32_t       *currDstV = dstV + offset * 2;
-        const uint32_t *currSrcN = srcN + offset;
-        uint32_t       *currDstN = dstN + offset;
+        const uint32_t* currSrcV = srcV + offset * 2;
+        const uint32_t* currSrcN = srcN + offset;
+        uint32_t*       currDstV = dstV + offset * 2;
+        uint32_t*       currDstN = dstN + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
         uint64_t currDstTileScanlineMask = currDstTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
@@ -548,12 +596,13 @@ SnapshotUtil::snapshotTileFloat2NumSample_SISD(uint32_t *dstV,
             if (currSrcTileScanlineMask & static_cast<uint64_t>(0x1)) {
                 //
                 // Compare bit pattern between previous and current
+                // See more detail for snapshotTileFloat4Weight_SISD()'s comment
                 //
                 uint32_t freshPixelCondition = (currDstTileScanlineMask & static_cast<uint64_t>(0x1))? 0x0: 0xffffffff;
                 uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                        (currSrcV[1] - currDstV[1]) |
                                        (currSrcN[0] - currDstN[0]) |
-                                       freshPixelCondition);
+                                       freshPixelCondition) & ((currSrcN[0]) ? ~0x0 : 0x0);
                 if (activeMask) {
                     // updated pixel
                     currDstV[0] = currSrcV[0];
@@ -577,50 +626,46 @@ SnapshotUtil::snapshotTileFloat2NumSample_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat3Weight(uint32_t *dstV,
-                                       uint32_t *dstW,
-                                       const uint32_t *srcV,
-                                       const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat3Weight(uint32_t* dstV,
+                                       uint32_t* dstW,
+                                       const uint32_t* srcV,
+                                       const uint32_t* srcW)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-
-    return ispc::snapshotTileFloat3Weight((int *)dstV, (int *)dstW,
-                                          const_cast<int *>((const int *)srcV),
-                                          const_cast<int *>((const int *)srcW));
-    */
+#ifdef SNAPSHOTTILE_FLOAT3_WEIGHT_ISPC
+    return ispc::snapshotTileFloat3Weight(reinterpret_cast<int*>(dstV),
+                                          reinterpret_cast<int*>(dstW),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcW)));
+#else // else SNAPSHOTTILE_FLOAT3_WEIGHT_ISPC
     return snapshotTileFloat3Weight_SISD(dstV, dstW, srcV, srcW);
+#endif // end else SNAPSHOTTILE_FLOAT3_WEIGHT_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat3Weight_SISD(uint32_t *dstV,
-                                            uint32_t *dstW,
-                                            const uint32_t *srcV,
-                                            const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat3Weight_SISD(uint32_t* dstV,
+                                            uint32_t* dstW,
+                                            const uint32_t* srcV,
+                                            const uint32_t* srcW)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint32_t *currSrcV = srcV + offset * 3;
-        const uint32_t *currSrcW = srcW + offset;
-        uint32_t *currDstV = dstV + offset * 3;
-        uint32_t *currDstW = dstW + offset;
+        const uint32_t* currSrcV = srcV + offset * 3;
+        const uint32_t* currSrcW = srcW + offset;
+        uint32_t*       currDstV = dstV + offset * 3;
+        uint32_t*       currDstW = dstW + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
+            // See more detail for snapshotTileFloat4Weight_SISD()'s comment
             //
             uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                    (currSrcV[1] - currDstV[1]) |
                                    (currSrcV[2] - currDstV[2]) |
-                                   (currSrcW[0] - currDstW[0]));
+                                   (currSrcW[0] - currDstW[0])) & ((currSrcW[0]) ? ~0x0 : 0x0);
             if (activeMask) {
-                // update data
                 currDstV[0] = currSrcV[0];
                 currDstV[1] = currSrcV[1];
                 currDstV[2] = currSrcV[2];
@@ -641,26 +686,32 @@ SnapshotUtil::snapshotTileFloat3Weight_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat3NumSample(uint32_t *dstV,
-                                          uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat3NumSample(uint32_t* dstV,
+                                          uint32_t* dstN,
                                           const uint64_t dstTileMask,
-                                          const uint32_t *srcV,
-                                          const uint32_t *srcN,
+                                          const uint32_t* srcV,
+                                          const uint32_t* srcN,
                                           const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloat3NumSample((int *)dstV, (int *)dstN, dstTileMask,
-                                             const_cast<int *>((const int *)srcV),
-                                             const_cast<int *>((const int *)srcN),
+#ifdef SNAPSHOTTILE_FLOAT3_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloat3NumSample(reinterpret_cast<int*>(dstV),
+                                             reinterpret_cast<int*>(dstN),
+                                             dstTileMask,
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcN)),
                                              srcTileMask);
+#else // else SNAPSHOTTILE_FLOAT3_NUMSAMPLE_ISPC
+    return snapshotTileFloat3NumSample_SISD(dstV, dstN, dstTileMask, srcV, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_FLOAT3_NUMSAMPLE_ISPC    
 }
     
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat3NumSample_SISD(uint32_t *dstV,
-                                               uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat3NumSample_SISD(uint32_t* dstV,
+                                               uint32_t* dstN,
                                                const uint64_t dstTileMask,
-                                               const uint32_t *srcV,
-                                               const uint32_t *srcN,
+                                               const uint32_t* srcV,
+                                               const uint32_t* srcN,
                                                const uint64_t srcTileMask)
 {
     if (!srcTileMask) return 0x0;
@@ -673,10 +724,10 @@ SnapshotUtil::snapshotTileFloat3NumSample_SISD(uint32_t *dstV,
         if (!currSrcTileMask) break; // early exit : rest of them are all empty
         uint64_t currDstTileMask = dstTileMask >> offset;
 
-        const uint32_t *currSrcV = srcV + offset * 3;
-        uint32_t       *currDstV = dstV + offset * 3;
-        const uint32_t *currSrcN = srcN + offset;
-        uint32_t       *currDstN = dstN + offset;
+        const uint32_t* currSrcV = srcV + offset * 3;
+        const uint32_t* currSrcN = srcN + offset;
+        uint32_t*       currDstV = dstV + offset * 3;
+        uint32_t*       currDstN = dstN + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
         uint64_t currDstTileScanlineMask = currDstTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
@@ -686,13 +737,14 @@ SnapshotUtil::snapshotTileFloat3NumSample_SISD(uint32_t *dstV,
             if (currSrcTileScanlineMask & static_cast<uint64_t>(0x1)) {
                 //
                 // Compare bit pattern between previous and current
+                // See more detail for snapshotTileFloat4Weight_SISD()'s comment
                 //
                 uint32_t freshPixelCondition = (currDstTileScanlineMask & static_cast<uint64_t>(0x1))? 0x0: 0xffffffff;
                 uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                        (currSrcV[1] - currDstV[1]) |
                                        (currSrcV[2] - currDstV[2]) |
                                        (currSrcN[0] - currDstN[0]) |
-                                       freshPixelCondition);
+                                       freshPixelCondition) & ((currSrcN[0]) ? ~0x0 : 0x0);
                 if (activeMask) {
                     // updated pixel
                     currDstV[0] = currSrcV[0];
@@ -717,49 +769,60 @@ SnapshotUtil::snapshotTileFloat3NumSample_SISD(uint32_t *dstV,
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat4Weight(uint32_t *dstV,
-                                       uint32_t *dstW,
-                                       const uint32_t *srcV,
-                                       const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat4Weight(uint32_t* dstV,
+                                       uint32_t* dstW,
+                                       const uint32_t* srcV,
+                                       const uint32_t* srcW)
 {
-    /*
-      I switched back to SISD version due to this ispc function crashing under the following reflplat.
-      variant=3 : refplat-houdini165.1
-      variant=6 : refplat-maya2018.1
-      variant=7 : refplat-vfx2018.2 icc-17.0
-      Other refplat is fine. Toshi (Oct/24/2020)
-
-    return ispc::snapshotTileFloat4Weight((int *)dstV, (int *)dstW,
-                                          const_cast<int *>((const int *)srcV),
-                                          const_cast<int *>((const int *)srcW));
-    */
+#ifdef SNAPSHOTTILE_FLOAT4_WEIGHT_ISPC
+    return ispc::snapshotTileFloat4Weight(reinterpret_cast<int*>(dstV),
+                                          reinterpret_cast<int*>(dstW),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                          const_cast<int*>(reinterpret_cast<const int*>(srcW)));
+#else // else SNAPSHOTTILE_FLOAT4_WEIGHT_ISPC
     return snapshotTileFloat4Weight_SISD(dstV, dstW, srcV, srcW);
+#endif // end else SNAPSHOTTILE_FLOAT4_WEIGHT_ISPC
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat4Weight_SISD(uint32_t *dstV,
-                                            uint32_t *dstW,
-                                            const uint32_t *srcV,
-                                            const uint32_t *srcW)
+SnapshotUtil::snapshotTileFloat4Weight_SISD(uint32_t* dstV,
+                                            uint32_t* dstW,
+                                            const uint32_t* srcV,
+                                            const uint32_t* srcW)
 {
     uint64_t activePixelMask = static_cast<uint64_t>(0x0);
     for (unsigned y = 0; y < 8; ++y) {
         unsigned offset = (y << 3);
-        const uint32_t *currSrcV = srcV + offset * 4;
-        const uint32_t *currSrcW = srcW + offset;
-        uint32_t *currDstV = dstV + offset * 4;
-        uint32_t *currDstW = dstW + offset;
+        const uint32_t* currSrcV = srcV + offset * 4;
+        const uint32_t* currSrcW = srcW + offset;
+        uint32_t*       currDstV = dstV + offset * 4;
+        uint32_t*       currDstW = dstW + offset;
 
         for (unsigned x = 0; x < 8; ++x) {
             //
             // Compare bit pattern between previous and current
             //
+            // Basically, activeMask is a representation of the bit pattern difference between the previous
+            // and current pixel values. We only test this bit pattern difference when the current pixel
+            // weight is not 0.0f. This is why we add "& ((currSrcW[0]) ? ~0x0 : 0x0)" at the end.
+            // The following code explains the naive implementation of the same idea.
+            //
+            // uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
+            //                        (currSrcV[1] - currDstV[1]) |
+            //                        (currSrcV[2] - currDstV[2]) |
+            //                        (currSrcV[3] - currDstV[3]) |
+            //                        (currSrcW[0] - currDstW[0]));
+            // float cW = *(float *)(&currSrcW[0]);
+            // if (cW != 0.0f && activeMask) {
+            //     ... update data ...
+            // }
+            //
             uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
                                    (currSrcV[1] - currDstV[1]) |
                                    (currSrcV[2] - currDstV[2]) |
                                    (currSrcV[3] - currDstV[3]) |
-                                   (currSrcW[0] - currDstW[0]));
+                                   (currSrcW[0] - currDstW[0])) & ((currSrcW[0]) ? ~0x0 : 0x0);
             if (activeMask) {
                 // update data
                 currDstV[0] = currSrcV[0];
@@ -782,26 +845,32 @@ SnapshotUtil::snapshotTileFloat4Weight_SISD(uint32_t *dstV,
 }
 
 uint64_t
-SnapshotUtil::snapshotTileFloat4NumSample(uint32_t *dstV,
-                                          uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat4NumSample(uint32_t* dstV,
+                                          uint32_t* dstN,
                                           const uint64_t dstTileMask,
-                                          const uint32_t *srcV,
-                                          const uint32_t *srcN,
+                                          const uint32_t* srcV,
+                                          const uint32_t* srcN,
                                           const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileFloat4NumSample((int *)dstV, (int *)dstN, dstTileMask,
-                                             const_cast<int *>((const int *)srcV),
-                                             const_cast<int *>((const int *)srcN),
+#ifdef SNAPSHOTTILE_FLOAT4_NUMSAMPLE_ISPC
+    return ispc::snapshotTileFloat4NumSample(reinterpret_cast<int*>(dstV),
+                                             reinterpret_cast<int*>(dstN),
+                                             dstTileMask,
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcV)),
+                                             const_cast<int*>(reinterpret_cast<const int*>(srcN)),
                                              srcTileMask);
+#else // else SNAPSHOTTILE_FLOAT4_NUMSAMPLE_ISPC
+    return snapshotTileFloat4NumSample_SISD(dstV, dstN, dstTileMask, srcV, srcN, srcTileMask);
+#endif // end else SNAPSHOTTILE_FLOAT4_NUMSAMPLE_ISPC    
 }
     
 // static function
 uint64_t
-SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t *dstV,
-                                               uint32_t *dstN,
+SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t* dstV,
+                                               uint32_t* dstN,
                                                const uint64_t dstTileMask,
-                                               const uint32_t *srcV,
-                                               const uint32_t *srcN,
+                                               const uint32_t* srcV,
+                                               const uint32_t* srcN,
                                                const uint64_t srcTileMask)
 {
     if (!srcTileMask) return 0x0;
@@ -814,10 +883,10 @@ SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t *dstV,
         if (!currSrcTileMask) break; // early exit : rest of them are all empty
         uint64_t currDstTileMask = dstTileMask >> offset;
 
-        const uint32_t *currSrcV = srcV + offset * 4;
-        uint32_t       *currDstV = dstV + offset * 4;
-        const uint32_t *currSrcN = srcN + offset;
-        uint32_t       *currDstN = dstN + offset;
+        const uint32_t* currSrcV = srcV + offset * 4;
+        const uint32_t* currSrcN = srcN + offset;
+        uint32_t*       currDstV = dstV + offset * 4;
+        uint32_t*       currDstN = dstN + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
         uint64_t currDstTileScanlineMask = currDstTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
@@ -827,6 +896,7 @@ SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t *dstV,
             if (currSrcTileScanlineMask & static_cast<uint64_t>(0x1)) {
                 //
                 // Compare bit pattern between previous and current
+                // See more detail for snapshotTileFloat4Weight_SISD()'s comment
                 //
                 uint32_t freshPixelCondition = (currDstTileScanlineMask & static_cast<uint64_t>(0x1))? 0x0: 0xffffffff;
                 uint32_t activeMask = ((currSrcV[0] - currDstV[0]) |
@@ -834,7 +904,7 @@ SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t *dstV,
                                        (currSrcV[2] - currDstV[2]) |
                                        (currSrcV[3] - currDstV[3]) |
                                        (currSrcN[0] - currDstN[0]) |
-                                       freshPixelCondition);
+                                       freshPixelCondition) & ((currSrcN[0]) ? ~0x0 : 0x0);
                 if (activeMask) {
                     // updated pixel
                     currDstV[0] = currSrcV[0];
@@ -861,21 +931,26 @@ SnapshotUtil::snapshotTileFloat4NumSample_SISD(uint32_t *dstV,
 //------------------------------------------------------------------------------
 
 uint64_t
-SnapshotUtil::snapshotTileUInt32WithMask(uint32_t *dst,
+SnapshotUtil::snapshotTileUInt32WithMask(uint32_t* dst,
                                          const uint64_t dstTileMask,
-                                         const uint32_t *src,
+                                         const uint32_t* src,
                                          const uint64_t srcTileMask)
 {
-    return ispc::snapshotTileUInt32WithMask((int *)dst, dstTileMask,
-                                            const_cast<int *>((const int *)src),
+#ifdef SNAPSHOTTILE_UINT32_MASK_ISPC
+    return ispc::snapshotTileUInt32WithMask(reinterpret_cast<int *>(dst),
+                                            dstTileMask,
+                                            const_cast<int *>(reinterpret_cast<const int *>(src)),
                                             srcTileMask);
+#else // else SNAPSHOTTILE_UINT32_MASK_ISPC
+    return snapshotTileUInt32WithMask_SISD(dst, dstTileMask, src, srcTileMask);
+#endif // end else SNAPSHOTTILE_UINT32_MASK_ISPC    
 }
 
 // static function
 uint64_t
-SnapshotUtil::snapshotTileUInt32WithMask_SISD(uint32_t *dst,
+SnapshotUtil::snapshotTileUInt32WithMask_SISD(uint32_t* dst,
                                               const uint64_t dstTileMask,
-                                              const uint32_t *src,
+                                              const uint32_t* src,
                                               const uint64_t srcTileMask)
 {
     if (!srcTileMask) return 0x0;
@@ -888,8 +963,8 @@ SnapshotUtil::snapshotTileUInt32WithMask_SISD(uint32_t *dst,
         if (!currSrcTileMask) break; // early exit : rest of them are all empty
         uint64_t currDstTileMask = dstTileMask >> offset;
 
-        const uint32_t *currSrc = src + offset;
-        uint32_t       *currDst = dst + offset;
+        const uint32_t* currSrc = src + offset;
+        uint32_t*       currDst = dst + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
         uint64_t currDstTileMaskScanline = currDstTileMask & static_cast<uint64_t>(0xff); // get one scanline mask
@@ -897,9 +972,13 @@ SnapshotUtil::snapshotTileUInt32WithMask_SISD(uint32_t *dst,
             if (!currSrcTileScanlineMask) break; // early exit for scanline
 
             if (currSrcTileScanlineMask & static_cast<uint64_t>(0x1)) {
+                //
+                // Compare bit pattern between previous and current
+                // See more detail for snapshotTileFloat4Weight_SISD()'s comment                
+                //
                 uint32_t freshPixelCondition = (currDstTileMaskScanline & static_cast<uint64_t>(0x1))? 0x0: 0xffffffff;
                 uint32_t activeMask = ((currSrc[0] - currDst[0]) |
-                                       freshPixelCondition);
+                                       freshPixelCondition) & ((currSrc[0]) ? ~0x0 : 0x0);
                 if (activeMask) {
                     // updated pixel
                     currDst[0] = currSrc[0];
@@ -942,4 +1021,3 @@ SnapshotUtil::showMask(const uint64_t mask64)
 
 } // namespace fb_util
 } // namespace scene_rdl2
-

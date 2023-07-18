@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include "Arg.h"
@@ -279,6 +276,8 @@ public:
     const std::string &argMsg() const { return mArgMsg; }
     const std::string &shortMsg() const { return mShortMsg; }
 
+    std::string showShortMsgWithConstLen(const size_t offsetShortMsg, const size_t maxLen) const;
+
     size_t getNameLen() const { return mName.size(); }
     size_t getArgMsgLen() const { return mArgMsg.size(); }
     size_t getArgCount() const { return mArgCount; }
@@ -389,4 +388,3 @@ protected:
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

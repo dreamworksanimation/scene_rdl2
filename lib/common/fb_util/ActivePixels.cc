@@ -35,6 +35,22 @@ ActivePixels::compare(const ActivePixels &target) const // for debug
     return true;
 }
 
+bool
+ActivePixels::getActivePixelCondition(const unsigned sx, const unsigned sy) const
+{
+    if (sx >= getWidth() || sy >= getHeight()) return false;
+
+    constexpr unsigned tileSize = 8;
+    unsigned tileX = sx / tileSize;
+    unsigned tileY = sy / tileSize;
+    uint64_t tileMask = getTile(tileX, tileY);
+
+    unsigned offX = sx % tileSize;
+    unsigned offY = sy % tileSize;
+    unsigned offset = offY * tileSize + offX;
+    return ((uint64_t)(tileMask >> offset) & 0x1) ? true : false;
+}
+
 std::string
 ActivePixels::show(const std::string &hd) const
 {

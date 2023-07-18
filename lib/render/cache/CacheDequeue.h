@@ -13,13 +13,16 @@ public:
     using rdl2::ValueContainerDeq::seekSet;
     using rdl2::ValueContainerDeq::deq;          // template
     using rdl2::ValueContainerDeq::deqBool;
+    using rdl2::ValueContainerDeq::deqFloat;
     using rdl2::ValueContainerDeq::deqFloat12;
     using rdl2::ValueContainerDeq::deqString;
     using rdl2::ValueContainerDeq::deqByteData;
     using rdl2::ValueContainerDeq::deqVector;    // template
-    using rdl2::ValueContainerDeq::deqVLInt;
+    using rdl2::ValueContainerDeq::deqVLInt;     // 32bit
     using rdl2::ValueContainerDeq::deqVLUInt;
-    using rdl2::ValueContainerDeq::deqVLSizeT;
+    using rdl2::ValueContainerDeq::deqVLLong;    // 64bit
+    using rdl2::ValueContainerDeq::deqVLULong;
+    using rdl2::ValueContainerDeq::deqVLSizeT;   // = deqVLULong
     using rdl2::ValueContainerDeq::getRestSize;
     using rdl2::ValueContainerDeq::getCurrDataAddress;
     using rdl2::ValueContainerDeq::deqAlignPad;

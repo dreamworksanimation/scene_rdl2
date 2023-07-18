@@ -14,14 +14,17 @@ class CacheEnqueue : private rdl2::ValueContainerEnq
 public:
     using rdl2::ValueContainerEnq::enq;         // template
     using rdl2::ValueContainerEnq::enqBool;
+    using rdl2::ValueContainerEnq::enqFloat;
     using rdl2::ValueContainerEnq::enqFloat12;
     using rdl2::ValueContainerEnq::enqString;
     using rdl2::ValueContainerEnq::enqByteData;
     using rdl2::ValueContainerEnq::enqAlignPad;
     using rdl2::ValueContainerEnq::enqVector;   // template
-    using rdl2::ValueContainerEnq::enqVLInt;
+    using rdl2::ValueContainerEnq::enqVLInt;    // 32bit
     using rdl2::ValueContainerEnq::enqVLUInt;
-    using rdl2::ValueContainerEnq::enqVLSizeT;
+    using rdl2::ValueContainerEnq::enqVLLong;   // 64bit
+    using rdl2::ValueContainerEnq::enqVLULong;
+    using rdl2::ValueContainerEnq::enqVLSizeT;  // = enqVLULong
     using rdl2::ValueContainerEnq::enqReserveMem;
     using rdl2::ValueContainerEnq::finalize;
     using rdl2::ValueContainerEnq::currentSize;

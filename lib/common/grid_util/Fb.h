@@ -71,18 +71,12 @@ public:
 
     //------------------------------
 
-    Fb()
-    {
-        parserConfigure();
-    }
+    Fb() { parserConfigure(); }
 
     // so far copy constructor is not used. But we need definition for vector<Fb>.
     // We only need vector<Fb>.resize() at initialization stage and vector size never changed
     // during execution. (mcrt_dataio/lib/engine/merger/FbMsgSingleFrame.h FbMsgSingleFrame::init())
-    Fb(const Fb &src)
-    {
-        parserConfigure();
-    }
+    Fb(const Fb &src) { parserConfigure(); }
 
     // width, height are original size and not need to be tile aligned
     finline void init(const math::Viewport &rezedViewport);
@@ -111,6 +105,7 @@ public:
     const NumSampleBuffer& getNumSampleBufferTiled() const { return mNumSampleBufferTiled; }
     CoarsePassPrecision&   getRenderBufferCoarsePassPrecision() { return mRenderBufferCoarsePassPrecision; }
     FinePassPrecision&     getRenderBufferFinePassPrecision() { return mRenderBufferFinePassPrecision; }
+    bool                   getPixRenderBufferActivePixels(int sx, int sy) const;
     fb_util::RenderColor   getPixRenderBuffer(int sx, int sy) const;
     unsigned int           getPixRenderBufferNumSample(int sx, int sy) const;
 
@@ -377,6 +372,8 @@ public:
 
     Parser& getParser() { return mParser; }
 
+    bool saveBeautyActivePixelsPPM(const std::string& filename,
+                                   const MessageOutFunc& messageOutput = nullptr) const;
     bool saveBeautyPPM(const std::string& filename,
                        const MessageOutFunc& messageOutput = nullptr) const;
     bool saveBeautyFBD(const std::string& filename,
@@ -844,7 +841,8 @@ private:
     void parserConfigureNumSampleBuffer();
 
     std::string showSizeInfo() const;
-    bool saveBeautyPPMCommand(Arg& arg) const;
+    std::string showPixRenderBuffer(const int sx, const int sy) const;
+    std::string showPixRenderBufferNumSample(const int sx, const int sy) const;
 
     template <typename GetPixFunc, typename MsgOutFunc>
     bool savePPMMain(const std::string& msg, const std::string& filename, GetPixFunc getPixFunc, MsgOutFunc msgOutFunc) const;

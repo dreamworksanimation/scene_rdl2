@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -25,9 +22,7 @@ namespace grid_util {
 class ActivePixelsArray
 {
 public:
-    ActivePixelsArray() :
-        mStatus(false)
-    {}
+    ActivePixelsArray() = default;
 
     // reset internal memory and also set rec mode as stop.
     void reset() { mStatus = false; mActivePixels.clear(); mCoarsePass.clear(); }
@@ -50,11 +45,10 @@ public:
     void decode(const std::string &inData); // throw exception(except::RuntimeError) if decode failed internal
 
 private:
-    bool mStatus;
+    bool mStatus {false};
     std::vector<fb_util::ActivePixels> mActivePixels;
     std::vector<unsigned char> mCoarsePass;
 };
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

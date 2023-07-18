@@ -1,29 +1,60 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "Parser.h"
 
+#include <iostream>
 #include <algorithm>
 
 namespace scene_rdl2 {
 namespace grid_util {
 
-size_t
-ParserItem::computeArgCount() const
+std::string
+ParserItem::showShortMsgWithConstLen(const size_t offsetShortMsg,
+                                     const size_t maxLen) const
 {
-    // mArgMsg is already finished about
-    //  1) trimBlank
-    //  2) replaceBlankToSingleSpace
+    if (mShortMsg.empty()) return "";
+    if (maxLen == 0) return mShortMsg;       // special case
 
-    if (mArgMsg.empty()) return 0;
+    std::string output;
+    auto outPartialShortMsg = [&](const size_t startId, const size_t endId) {
+        if (!output.empty()) {
+            output += '\n';
+            output += std::string(offsetShortMsg, ' '); 
+        }
+        output += mShortMsg.substr(startId, endId - startId);
+    };
+    auto isSplitWordAtLineEnd = [&](const size_t id) {
+        if (id >= mShortMsg.size()) return false;
+        if (std::isspace(mShortMsg[id])) return false;
+        if (id + 1 < mShortMsg.size() && std::isspace(mShortMsg[id + 1])) return false;
+        return true;
+    };
+    auto getNextStartId = [&](const size_t endId, size_t& newStartId) {
+        for (size_t id = endId; id < mShortMsg.size(); ++id) {
+            if (!std::isspace(mShortMsg[id])) {
+                newStartId = id;
+                return true;
+            }
+        }
+        return false;
+    };
 
-    int totalArg = 1;
-    for (size_t i = 0; i < mArgMsg.size(); ++i) {
-        if (std::isblank(mArgMsg[i])) totalArg++;
+    size_t startId = 0;
+    while (1) {
+        size_t endId = startId + maxLen;
+        outPartialShortMsg(startId, endId);
+
+        if (mShortMsg.size() - 1 <= endId) {
+            break; // end of short message
+        }
+
+        if (isSplitWordAtLineEnd(endId - 1)) output += '-';
+        if (!getNextStartId(endId, startId)) {
+            break; // end of short message
+        }
     }
-    return totalArg;
+
+    return output;
 }
 
 std::string
@@ -38,6 +69,24 @@ ParserItem::show() const
          << "  mArgCount:" << mArgCount << '\n'
          << "}";
     return ostr.str();
+}
+
+size_t
+ParserItem::computeArgCount() const
+{
+    //
+    // The following operations are already applied to mArgMsg before calling this function.
+    // 
+    //  1) str_util::trimBlank()
+    //  2) str_util::replaceBlankToSingleSpace()
+    //
+    if (mArgMsg.empty()) return 0;
+
+    int totalArg = 1;
+    for (size_t i = 0; i < mArgMsg.size(); ++i) {
+        if (std::isblank(mArgMsg[i])) totalArg++;
+    }
+    return totalArg;
 }
 
 // static function
@@ -242,13 +291,29 @@ Parser::optList(const bool sort) const
                   });
     }
 
+    size_t offsetShortMsg = (maxNameLen + maxArgMsgLen +
+                             1 /* space between name and arguments */ +
+                             3 /* space between arguments and shortMessage */);
+
+    constexpr size_t totalMaxLen = 110; // 110 column max
+    constexpr size_t minimumShortMsgLen = 10;
+    size_t shortMsgMaxLen = 0;
+    if (offsetShortMsg + minimumShortMsgLen < totalMaxLen) {
+        // Compute the length of max shortMessage. If shortMessage is more than
+        // this limitation, output as multiple lines.
+        shortMsgMaxLen = (totalMaxLen -
+                          2 /* one indentation (i.e. = 2 spaces) */ -
+                          offsetShortMsg);
+    } else {
+        // We give up multiple line output and simply output whole shortMessage as single line
+    }
     std::ostringstream ostr;
     for (size_t i = 0; i < optTbl.size(); ++i) {
         const ParserItem &currItem = *optTbl[i];
         ostr << spaces(maxNameLen - currItem.getNameLen()) << currItem.name();
         if (maxArgMsgLen) ostr << ' ';
         ostr << currItem.argMsg() << spaces(maxArgMsgLen - currItem.getArgMsgLen());
-        ostr << " : " << currItem.shortMsg();
+        ostr << " : " << currItem.showShortMsgWithConstLen(offsetShortMsg, shortMsgMaxLen);
         if (i != optTbl.size() - 1) ostr << '\n';
     }
 
@@ -300,4 +365,3 @@ Parser::showParserItemTbl() const
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

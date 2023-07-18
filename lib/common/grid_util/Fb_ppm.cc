@@ -10,6 +10,22 @@ namespace scene_rdl2 {
 namespace grid_util {
 
 bool
+Fb::saveBeautyActivePixelsPPM(const std::string& filename,
+                              const MessageOutFunc& messageOutput) const
+{
+    return savePPMMain("saveBeautyActivePixelsPPM",
+                       filename,
+                       [&](int u, int v, unsigned char c[3]) {
+                           c[0] = (getPixRenderBufferActivePixels(u, v)) ? 255 : 0;
+                           c[1] = c[0];
+                           c[2] = c[0];
+                       },
+                       [&](const std::string& msg) {
+                           return (messageOutput) ? messageOutput(msg) : true;
+                       });
+}
+
+bool
 Fb::saveBeautyPPM(const std::string& filename,
                   const MessageOutFunc& messageOutput) const
 {
@@ -21,9 +37,8 @@ Fb::saveBeautyPPM(const std::string& filename,
                            c[1] = f2c255Gamma22(col[1]);
                            c[2] = f2c255Gamma22(col[2]);
                        },
-                       [&](const std::string& msg) -> bool {
-                           if (messageOutput) return messageOutput(msg);
-                           return true;
+                       [&](const std::string& msg) {
+                           return (messageOutput) ? messageOutput(msg) : true;
                        });
 }
 
@@ -43,15 +58,12 @@ Fb::saveBeautyNumSamplePPM(const std::string& filename,
     return savePPMMain("saveBeautyNumSamplePPM",
                        filename,
                        [&](int u, int v, unsigned char c[3]) {
-                           unsigned n = getPixRenderBufferNumSample(u, v);
-                           unsigned nn  = static_cast<unsigned>(static_cast<float>(n) * scale);
-                           c[0] = n;  // original value
-                           c[1] = nn; // normalized value
+                           c[0] = getPixRenderBufferNumSample(u, v); // original value
+                           c[1] = static_cast<unsigned>(static_cast<float>(c[0]) * scale); // normalized value
                            c[2] = 0;
                        },
-                       [&](const std::string& msg) -> bool {
-                           if (messageOutput) return messageOutput(msg);
-                           return true;
+                       [&](const std::string& msg) {
+                           return (messageOutput) ? messageOutput(msg) : true;
                        });
 }
 

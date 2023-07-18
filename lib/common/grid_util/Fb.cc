@@ -214,20 +214,59 @@ Fb::parserConfigure()
     parserConfigureNumSampleBuffer();
 
     mParser.description("fb command");
+    mParser.opt("extrapolateRenderBuffer", "", "apply extrapolation to RenderBuffer",
+                [&](Arg& arg) { extrapolateRenderBuffer(); return true; });
     mParser.opt("showSizeInfo", "", "show size related information",
-                [&](Arg& arg) -> bool { return arg.msg(showSizeInfo() + '\n'); });
+                [&](Arg& arg) { return arg.msg(showSizeInfo() + '\n'); });
+    mParser.opt("saveBeautyActivePixelsPPM", "<filename>", "save beauty ActivePixels buffer as PPM file",
+                [&](Arg& arg) {
+                    return saveBeautyActivePixelsPPM((arg++)(),
+                                                     [&](const std::string& msg) { return arg.msg(msg); });
+                });
     mParser.opt("saveBeautyPPM", "<filename>", "save beauty buffer as PPM file",
-                [&](Arg& arg) -> bool { return saveBeautyPPMCommand(arg); });
+                [&](Arg& arg) {
+                    return saveBeautyPPM((arg++)(), [&](const std::string& msg) { return arg.msg(msg); });
+                });
+    mParser.opt("saveBeautyNumSamplePPM", "<filename>", "save beauty numSampleBuffer as PPM file",
+                [&](Arg& arg) {
+                    return saveBeautyNumSamplePPM((arg++)(),
+                                                  [&](const std::string& msg) { return arg.msg(msg); });
+                });
+    mParser.opt("saveBeautyFBD", "<filename>", "save beauty buffer as FBD file",
+                [&](Arg& arg) {
+                    return saveBeautyFBD((arg++)(), [&](const std::string& msg) { return arg.msg(msg); });
+                });
+    mParser.opt("saveBeautyNumSampleFBD", "<filename>", "save beauty numSampleBuffer as FBD file",
+                [&](Arg& arg) {
+                    return saveBeautyNumSampleFBD((arg++)(), [&](const std::string& msg) { return arg.msg(msg); });
+                });
     mParser.opt("activePixels", "...command...", "activePixels command",
-                [&](Arg& arg) -> bool {
+                [&](Arg& arg) {
                     mParserActivePixelsCurrPtr = &mActivePixels;
                     return mParserActivePixels.main(arg.childArg());
                 });
     mParser.opt("numSampleBuffer", "...command...", "numSampleBuffer command",
-                [&](Arg& arg) -> bool {
+                [&](Arg& arg) {
                     mParserActivePixelsCurrPtr = &mActivePixels;
                     mParserNumSampleBufferPtr = &mNumSampleBufferTiled;
                     return mParserNumSampleBuffer.main(arg.childArg());
+                });
+    mParser.opt("reset", "", "clear beauty include color, set non-active condition for other buffers",
+                [&](Arg& arg) { reset(); return arg.msg("reset\n"); });
+    mParser.opt("resetExceptColor", "",
+                "clear beauty except color, set non-active condition for other buffers",
+                [&](Arg& arg) { resetExceptColor(); return arg.msg("resetExceptColor\n"); });
+    mParser.opt("showPixRenderBuffer", "<x> <y>", "show RenderBuffer pix info",
+                [&](Arg& arg) {
+                    int sx = (arg++).as<int>(0);
+                    int sy = (arg++).as<int>(0);
+                    return arg.msg(showPixRenderBuffer(sx, sy) + '\n');
+                });
+    mParser.opt("showPixRenderBufferNumSample", "<x> <y>", "show RenderBuffer numSample pix info",
+                [&](Arg& arg) {
+                    int sx = (arg++).as<int>(0);
+                    int sy = (arg++).as<int>(0);
+                    return arg.msg(showPixRenderBufferNumSample(sx, sy) + '\n');
                 });
 }
 
@@ -237,12 +276,12 @@ Fb::parserConfigureActivePixels()
     Parser& parser = mParserActivePixels;
     parser.description("activePixels command");
     parser.opt("show", "", "show internal info",
-               [&](Arg& arg) -> bool {
+               [&](Arg& arg) {
                    if (!mParserActivePixelsCurrPtr) return arg.msg("current mParserActivePixels is empty\n");
                    return arg.msg(mParserActivePixelsCurrPtr->show() + '\n');
                });
     parser.opt("showTile", "<tileId>", "show tile",
-               [&](Arg& arg) -> bool {
+               [&](Arg& arg) {
                    if (!mParserActivePixelsCurrPtr) return arg.msg("current mParserActivePixels is empty\n");
                    return arg.msg(mParserActivePixelsCurrPtr->showTile((arg++).as<unsigned>(0)) + '\n');
                });
@@ -254,7 +293,7 @@ Fb::parserConfigureNumSampleBuffer()
     Parser& parser = mParserNumSampleBuffer;
     parser.description("numSample command");
     parser.opt("show", "", "show numSample internal info",
-               [&](Arg& arg) -> bool {
+               [&](Arg& arg) {
                    if (!mParserNumSampleBufferPtr) return arg.msg("current mParserNumSampleBuffer is empty");
                    return arg.msg(showParserNumSampleBufferInfo() + '\n');
                });
@@ -331,10 +370,23 @@ Fb::showSizeInfo() const
     return ostr.str();
 }
 
-bool
-Fb::saveBeautyPPMCommand(Arg& arg) const
+std::string
+Fb::showPixRenderBuffer(const int sx, const int sy) const
 {
-    return saveBeautyPPM((arg++)(), [&](const std::string& msg) -> bool { return arg.msg(msg); });
+    fb_util::RenderColor c = getPixRenderBuffer(sx, sy);
+    std::ostringstream ostr;
+    ostr << "RenderBuffer pix(sx:" << sx << " sy:" << sy << ") ="
+         << " R:" << c[0] << " G:" << c[1] << " B:" << c[2] << " A:" << c[3];
+    return ostr.str();
+}
+
+std::string    
+Fb::showPixRenderBufferNumSample(const int sx, const int sy) const
+{
+    unsigned int n = getPixRenderBufferNumSample(sx, sy);
+    std::ostringstream ostr;
+    ostr << "RenderBufferNumSample pix(sx:" << sx << " sy:" << sy << ") = N:" << n;
+    return ostr.str();
 }
 
 std::string    

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include <scene_rdl2/common/platform/Platform.isph>
 
 export uniform uint64_t
@@ -11,7 +8,6 @@ snapshotTileHeatMapWeight(uniform int64 dstVBuff[],
                           uniform int64 srcVBuff[],
                           uniform int   srcWBuff[])
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileHeatMapWeight_SISD().
-// Speed is 1.09x~1.10x faster than snapshotTileHeatMapWeight_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount;
     uniform uint64_t mask = (uint64_t)0x0;
@@ -23,7 +19,9 @@ snapshotTileHeatMapWeight(uniform int64 dstVBuff[],
         int64 srcV = srcVBuff[offset];
         int   srcW = srcWBuff[offset];
 
-        if (((srcW - dstW) != 0x0) || ((srcV - dstV) != (int64)0x0)) {
+        int64 srcWFlag = (srcW) ? ~(int64)0x0 : (int64)0x0;
+        int activeMask = ((srcW - dstW) | (srcV - dstV)) & srcWFlag;
+        if (activeMask) {
             dstVBuff[offset] = srcV;
             dstWBuff[offset] = srcW;
 
@@ -37,7 +35,6 @@ export uniform uint64_t
 snapshotTileWeightBuffer(uniform int dstBuff[],
                          uniform int srcBuff[])
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileWeightBuffer_SISD().
-// Speed is 1.50x~1.56x faster than snapshotTileWeightBuffer_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount;
     uniform uint64_t mask = (uint64_t)0x0;
@@ -47,7 +44,8 @@ snapshotTileWeightBuffer(uniform int dstBuff[],
         int dst = dstBuff[offset];
         int src = srcBuff[offset];
 
-        if ((src - dst) != 0x0) {
+        int activeMask = (src - dst) & ((src) ? ~0x0 : 0x0);
+        if (activeMask) {
             dstBuff[offset] = src;
 
             mask |= ((uint64_t)(lanemask()) << (loopId * programCount));
@@ -62,7 +60,6 @@ snapshotTileFloatWeight(uniform int dstVBuff[],
                         uniform int srcVBuff[],
                         uniform int srcWBuff[])
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloatWeight_SISD().
-// Speed is 1.31x~1.49x faster than snapshotTileFloatWeight_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount;
     uniform uint64_t mask = (uint64_t)0x0;
@@ -74,7 +71,8 @@ snapshotTileFloatWeight(uniform int dstVBuff[],
         int srcV = srcVBuff[offset];
         int srcW = srcWBuff[offset];
 
-        if (((srcV - dstV) != 0x0) || ((srcW - dstW) != 0x0)) {        
+        int activeMask = ((srcV - dstV) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
+        if (activeMask) {
             dstVBuff[offset] = srcV;
             dstWBuff[offset] = srcW;
 
@@ -93,7 +91,6 @@ snapshotTileFloatNumSample(uniform int dstVBuff[],
                            uniform int srcNBuff[],
                            uniform uint64_t srcTileMask)
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloatNumSample_SISD().
-// Speed is 2.80x~3.02x faster than snapshotTileFloatNumSample_SISD() (Toshi Oct/20/2020)
 {
     if (!srcTileMask) return (uint64_t)0x0;
 
@@ -116,7 +113,7 @@ snapshotTileFloatNumSample(uniform int dstVBuff[],
                 int srcN = srcNBuff[offset + programIndex];
                             
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
-                int activeMask = (srcV - dstV) | (srcN - dstN) | freshPixCondition;
+                int activeMask = ((srcV - dstV) | (srcN - dstN) | freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
                     dstVBuff[offset + programIndex] = srcV;
                     dstNBuff[offset + programIndex] = srcN;
@@ -152,7 +149,7 @@ snapshotTileFloat2Weight(uniform int dstVaBuff[],
         int srcVb = srcVbBuff[offset];
         int srcW  = srcWBuff[offset];
 
-        int activeMask = (srcVa - dstVa) | (srcVb - dstVb) | (srcW - dstW);
+        int activeMask = ((srcVa - dstVa) | (srcVb - dstVb) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
             mask |= (uint64_t)0x1 << offset;
 
@@ -172,7 +169,6 @@ snapshotTileFloat2Weight(uniform int   dstVBuff[],
 // We don't have aos_to_soa2() inside ISPC lib, so I used aos_to_soa4() and processed 2 pixels at once
 // The downside is that this function updates the destination buffer by 2 pixels at once when we found
 // active pixels. We need a more clever way to optimize.
-// Speed is 1.06x~1.08x faster than snapshotTileFloat2Weight_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount / 2;
     uint64_t mask = (uint64_t)0x0;
@@ -201,11 +197,11 @@ snapshotTileFloat2Weight(uniform int   dstVBuff[],
         int srcWb = srcW >> 32;
 
         bool active = false;
-        if ((srcR - dstR) | (srcG - dstG) | (srcWa - dstWa)) {
+        if (((srcR - dstR) | (srcG - dstG) | (srcWa - dstWa)) & ((srcWa) ? ~0x0 : 0x0)) {
             mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
             active = true;
         }
-        if ((srcB - dstB) | (srcA - dstA) | (srcWb - dstWb)) {
+        if (((srcB - dstB) | (srcA - dstA) | (srcWb - dstWb)) & ((srcWb) ? ~0x0 : 0x0)) {
             mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
             active = true;
         }
@@ -228,7 +224,6 @@ snapshotTileFloat2NumSample(uniform int   dstVBuff[],
 // We don't have aos_to_soa2() inside ISPC lib, so I used aos_to_soa4() and processed 2 pixels at once
 // The downside is that this function updates the destination buffer by 2 pixels at once when we found
 // active pixels. We need a more clever way to optimize.
-// Speed is 1.22~1.39 faster than snapshotTileFloat2NumSample_SISD() (Toshi Oct/21/2020)
 {
     if (!srcTileMask) return (uint64_t)0x0;
 
@@ -268,11 +263,11 @@ snapshotTileFloat2NumSample(uniform int   dstVBuff[],
                 int srcNb = srcN >> 32;
 
                 bool active = false;
-                if ((srcR - dstR) | (srcG - dstG) | (srcNa - dstNa)) {
+                if (((srcR - dstR) | (srcG - dstG) | (srcNa - dstNa)) & ((srcNa) ? ~0x0 : 0x0)) {
                     mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
                     active = true;
                 }
-                if ((srcB - dstB) | (srcA - dstA) | (srcNb - dstNb)) {
+                if (((srcB - dstB) | (srcA - dstA) | (srcNb - dstNb)) & ((srcNb) ? ~0x0 : 0x0)) {
                     mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
                     active = true;
                 }
@@ -292,7 +287,6 @@ snapshotTileFloat3Weight(uniform int dstCBuff[],
                          uniform int srcCBuff[],
                          uniform int srcWBuff[])
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloat3Weight_SISD().
-// Speed is 1.15x~1.31x faster than snapshotTileFloat3Weight_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount;
     uniform uint64_t mask = (uint64_t)0x0;
@@ -308,7 +302,7 @@ snapshotTileFloat3Weight(uniform int dstCBuff[],
         aos_to_soa3(&srcCBuff[offsetC], &srcR, &srcG, &srcB);
         int srcW = srcWBuff[offsetW + programIndex];
 
-        int activeMask = (srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcW - dstW);
+        int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
             soa_to_aos3(srcR, srcG, srcB, &dstCBuff[offsetC]);
             dstWBuff[offsetW + programIndex] = srcW;
@@ -327,7 +321,6 @@ snapshotTileFloat3NumSample(uniform int dstVBuff[],
                             uniform int srcNBuff[],
                             uniform uint64_t srcTileMask)
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloat3NumSample_SISD().
-// Speed is 1.49x~1.54x faster than snapshotTileFloat3NumSample_SISD() (Toshi Oct/20/2020)
 {
     if (!srcTileMask) return (uint64_t)0x0;
 
@@ -353,7 +346,7 @@ snapshotTileFloat3NumSample(uniform int dstVBuff[],
                 int srcN = srcNBuff[offsetN + programIndex];
                             
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
-                int activeMask = (srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcN - dstN) | freshPixCondition;
+                int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcN - dstN) | freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
                     soa_to_aos3(srcR, srcG, srcB, &dstVBuff[offsetV]);
                     dstNBuff[offsetN + programIndex] = srcN;
@@ -372,7 +365,6 @@ snapshotTileFloat4Weight(uniform int dstVBuff[],
                          uniform int srcVBuff[],
                          uniform int srcWBuff[])
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloat4Weight_SISD().
-// Speed is 1.23x~1.26x faster than snapshotTileFloat4Weight_SISD() (Toshi Oct/20/2020)
 {
     uniform int loopMax = 64 / programCount;
     uniform uint64_t mask = (uint64_t)0x0;
@@ -388,7 +380,7 @@ snapshotTileFloat4Weight(uniform int dstVBuff[],
         aos_to_soa4(&srcVBuff[offsetV], &srcR, &srcG, &srcB, &srcA);
         int srcW = srcWBuff[offsetW + programIndex];
 
-        int activeMask = (srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcW - dstW);
+        int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
             soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
             dstWBuff[offsetW + programIndex] = srcW;
@@ -407,7 +399,6 @@ snapshotTileFloat4NumSample(uniform int dstVBuff[],
                             uniform int srcNBuff[],
                             uniform uint64_t srcTileMask)
 // This is an ISPC version of scene_rdl2::fb_util::SnapshotUtil::snapshotTileFloat4NumSample_SISD().
-// Speed is 1.31x~1.57x faster than snapshotTileFloat4NumSample_SISD() (Toshi Oct/20/2020)
 {
     if (!srcTileMask) return (uint64_t)0x0;
 
@@ -435,8 +426,7 @@ snapshotTileFloat4NumSample(uniform int dstVBuff[],
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
                 int activeMask =
                     ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcN - dstN) |
-                     freshPixCondition);
-
+                     freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
                     soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
                     dstNBuff[offsetN + programIndex] = srcN;
@@ -475,7 +465,7 @@ snapshotTileUInt32WithMask(uniform int dstVBuff[],
                 int srcV = srcVBuff[offset + programIndex];
 
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
-                int activeMask = (srcV - dstV) | freshPixCondition;
+                int activeMask = ((srcV - dstV) | freshPixCondition) & ((srcV) ? ~0x0 : 0x0);
                 if (activeMask) {
                     dstVBuff[offset + programIndex] = srcV;
 
@@ -486,4 +476,3 @@ snapshotTileUInt32WithMask(uniform int dstVBuff[],
     }
     return mask;
 }
-

@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "ActivePixelsArray.h"
 #include "PackTiles.h"
 
@@ -23,7 +20,7 @@ ActivePixelsArray::start()
     // This is useful to make sure properly start ActivePixels recording for debugging purpose only
     // This API is called inside mcrt computations and using cerr always guarantees
     // to bypass output logging system of arras_framework and minimise the delay to see the msessage.
-    std::cerr << ">> ActivePixelsArray.cc ActivePixelsArray::start()" << std::endl;
+    std::cerr << ">> ActivePixelsArray.cc ActivePixelsArray::start()\n";
 }
 
 void
@@ -34,7 +31,7 @@ ActivePixelsArray::stop()
     // This is also useful to make sure properly stop ActivePixels recording for debugging purpose only
     // This API is called inside mcrt computations and using cerr always guarantees
     // to bypass output logging system of arras_framework and minimise the delay to see the msessage.
-    std::cerr << ">> ActivePixelsArray.cc ActivePixelsArray::stop()" << std::endl;
+    std::cerr << ">> ActivePixelsArray.cc ActivePixelsArray::stop()\n";
 }
 
 void
@@ -48,7 +45,7 @@ ActivePixelsArray::set(const fb_util::ActivePixels &activePixels,
 #       ifdef DEBUG_SET_MSG
         if ((mActivePixels.size() % 10) == 0) {
             std::cerr << ">> ActivePixelsArray.cc ActivePixelsArray::set() size:"
-                      << mActivePixels.size() << std::endl;
+                      << mActivePixels.size() << '\n';
         }
 #       endif // end DEBUG_SET_MSG
     }
@@ -74,7 +71,7 @@ ActivePixelsArray::encode(std::string &outData) const
     // to bypass output logging system of arras_framework and minimise the delay to see the msessage.
     std::cerr << ">> ActivePixelsArray.cc encode()"
               << " total:" << total
-              << " size:" << dataSize << std::endl;
+              << " size:" << dataSize << '\n';
 }
 
 void    
@@ -99,9 +96,8 @@ ActivePixelsArray::decode(const std::string &inData)
     // independent small debug purpose program (scene_rdl2/cmd/mcrt_cmd/snapshotDeltaDump)
     // and using cerr is most easiest way to dump out decode information.
     std::cerr << "#>> ActivePixelsArray.cc decode()"
-              << " total:" << total << std::endl;
+              << " total:" << total << '\n';
 }
 
 } // namespace grid_util
 } // namespace scene_rdl2
-
