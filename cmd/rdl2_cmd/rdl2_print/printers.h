@@ -10,6 +10,6 @@
 #include <utility>
 
 std::string getAttributeStr(const scene_rdl2::rdl2::Attribute& attr, const bool simple);
-std::string getSceneInfoStr(const scene_rdl2::rdl2::SceneClass& obj, const bool simple, const bool alphabetize);
-std::string getSceneInfoStr(const scene_rdl2::rdl2::SceneObject& obj, const bool simple, const bool alphabetize);
+std::string getSceneInfoStr(const scene_rdl2::rdl2::SceneClass& obj, const bool attrs, const bool simple, const bool alphabetize);
+std::string getSceneInfoStr(const scene_rdl2::rdl2::SceneObject& obj, const bool attrs, const bool simple, const bool alphabetize);
 

@@ -109,6 +109,12 @@ std::string DsoFinder::parseDsoPath(int argc, char* argv[]) {
         foundAtIndex = args.getFlagValues("--dso_path", 1, values, foundAtIndex + 1);
     }
     
+    foundAtIndex = args.getFlagValues("--dso-path", 1, values);
+    while (foundAtIndex >= 0) {
+        dsoPath = values[0];
+        foundAtIndex = args.getFlagValues("--dso-path", 1, values, foundAtIndex + 1);
+    }
+
     foundAtIndex = args.getFlagValues("-d", 1, values);
     while (foundAtIndex >= 0) {
         dsoPath = values[0];

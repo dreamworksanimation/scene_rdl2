@@ -167,7 +167,7 @@ outputValueHelper(std::ostream& os, const rdl2::SceneObject& obj,
     auto key = rdl2::AttributeKey<T>(attr);
     os << obj.get(key, timestep);
     if (!obj.hasChanged(key) && !simple) {
-        os << " (default)";
+        os << "  -- default";
     }
 }
 
@@ -182,11 +182,11 @@ outputValueHelper<rdl2::Int>(std::ostream& os, const rdl2::SceneObject& obj,
     os << value;
 
     if (attr.isEnumerable() && attr.isValidEnumValue(value) && !simple) {
-        os << " (" << attr.getEnumDescription(value) << ")";
+        os << "  -- \"" << attr.getEnumDescription(value) << "\"";
     }
 
     if (!obj.hasChanged(key) && !simple) {
-        os << " (default)";
+        os << "  -- default";
     }
 }
 
@@ -199,7 +199,7 @@ outputValueHelper<rdl2::Bool>(std::ostream& os, const rdl2::SceneObject& obj,
     auto key = rdl2::AttributeKey<rdl2::Bool>(attr);
     os << std::boolalpha << obj.get(key, timestep) << std::noboolalpha;
     if (!obj.hasChanged(key) && !simple) {
-        os << " (default)";
+        os << "  -- default";
     }
 }
 
@@ -638,8 +638,16 @@ getAttributeStr(const rdl2::Attribute& attr, const bool simple)
     if (attr.getType() == rdl2::TYPE_STRING) {
         os << "\"";
     }
+
     if (simple) {
         os << ',';
+        // If the attribute type is enumerable, show the description as well.
+        if (attr.isEnumerable() && attr.getType() == rdl2::TYPE_INT) {
+            rdl2::Int value = attr.getDefaultValue<rdl2::Int>();
+            if (attr.isValidEnumValue(value)) {
+                os << "  -- \"" << attr.getEnumDescription(value) << "\"";
+            }
+        }
     } else {
         os << ",  -- " << rdl2::attributeTypeName(attr.getType());
 
@@ -659,7 +667,7 @@ getAttributeStr(const rdl2::Attribute& attr, const bool simple)
         if (attr.isEnumerable() && attr.getType() == rdl2::TYPE_INT) {
             rdl2::Int value = attr.getDefaultValue<rdl2::Int>();
             if (attr.isValidEnumValue(value)) {
-                os << " (" << attr.getEnumDescription(value) << ")";
+                os << ", \"" << attr.getEnumDescription(value) << "\"";
             }
         }
     }
@@ -668,13 +676,20 @@ getAttributeStr(const rdl2::Attribute& attr, const bool simple)
 }
 
 std::string
-getSceneInfoStr(const rdl2::SceneClass& sc, const bool simple, const bool alphabetize)
+getSceneInfoStr(const rdl2::SceneClass& sc,
+                const bool attrs,
+                const bool simple,
+                const bool alphabetize)
 {
     std::ostringstream os;
 
     os << sc.getName() << "(\"" <<
-        rdl2::interfaceTypeName(sc.getDeclaredInterface()) << "\") {\n";
-    
+        rdl2::interfaceTypeName(sc.getDeclaredInterface()) << "\")" << (attrs ? " {\n" : "\n");
+
+    if (!attrs) {
+        return os.str();
+    }
+
     std::vector<const rdl2::Attribute*> array;
     for (auto iter = sc.beginAttributes(); iter != sc.endAttributes(); ++iter) {
         array.push_back(*iter);
@@ -704,20 +719,25 @@ getSceneInfoStr(const rdl2::SceneClass& sc, const bool simple, const bool alphab
             }
         }
     }
-    
-    os << "}\n";
 
+    os << "}\n\n";
     return os.str();
 }
 
 std::string
-getSceneInfoStr(const rdl2::SceneObject& obj, const bool simple, const bool alphabetize)
+getSceneInfoStr(const rdl2::SceneObject& obj,
+                const bool attrs,
+                const bool simple,
+                const bool alphabetize)
 {
     const rdl2::SceneClass& sc = obj.getSceneClass();
     std::ostringstream os;
 
-    os << sc.getName() << "(\"" << obj.getName() << "\") {\n";
+    os << sc.getName() << "(\"" << obj.getName() << "\")" << (attrs ? " {\n" : "\n");
 
+    if (!attrs) {
+        return os.str();
+    }
     // Special formatting for Layers.
     if (obj.isA<rdl2::Layer>()) {
         auto geometries = obj.get<rdl2::SceneObjectIndexable>("geometries");
@@ -835,8 +855,9 @@ getSceneInfoStr(const rdl2::SceneObject& obj, const bool simple, const bool alph
             }
             os << '\n';
         }
+        os << "}\n";
     }
-    os << "}\n";
+    os << '\n';
     return os.str();
 }
 

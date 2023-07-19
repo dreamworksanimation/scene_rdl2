@@ -24,8 +24,20 @@ struct Options
     std::string sceneClass;
     std::string sceneObject;
     std::string dsoPath;
-    bool simple;
-    bool alphabetize = true;
+    bool alphabetize    = true;
+    bool attrs          = true;
+    bool simple         = false;
+
+    void print()
+    {
+        std::cout << "rdlFile: " << rdlFile << "\n";
+        std::cout << "sceneClass: " << sceneClass << "\n";
+        std::cout << "sceneObject: " << sceneObject << "\n";
+        std::cout << "dsoPath: " << dsoPath << "\n";
+        std::cout << "alphabetize: " << alphabetize << "\n";
+        std::cout << "attrs: " << attrs << "\n";
+        std::cout << "simple: " << simple << "\n";
+    }
 };
 
 std::string
@@ -48,9 +60,10 @@ getUsageMessage(const std::string& programName)
     stream << '\n';
 
     stream << "Options:\n";
-    stream << "    " << std::setw(24) << std::left << "-d, --dso_path"  << "Specify an additional path to search for SceneClasses (DSOs).\n";
+    stream << "    " << std::setw(24) << std::left << "-d, --dso-path"  << "Specify an additional path to search for SceneClasses (DSOs).\n";
     stream << "    " << std::setw(24) << std::left << "-h, --help"      << "Print this help message.\n";
-    stream << "    " << std::setw(24) << std::left << "--no_sort"       << "Do not sort the classes and attributes alphabetically.\n";
+    stream << "    " << std::setw(24) << std::left << "--no-attrs"      << "Do no include the attributes.\n";
+    stream << "    " << std::setw(24) << std::left << "--no-sort"       << "Do not sort the classes and attributes alphabetically.\n";
     stream << "    " << std::setw(24) << std::left << "-s, --simple"    << "Print without comments.\n";
     stream << '\n';
 
@@ -82,17 +95,25 @@ parseCommandLine(int argc, char* argv[])
     options.simple = false;
     while (index < argc) {
         if (strcmp(argv[index], "-d") == 0 ||
-            strcmp(argv[index], "--dso_path") == 0) {
+            strcmp(argv[index], "--dso-path") == 0) {
             // we'll parse this at the end, skip for now
             ++index; ++index; continue;
         }
         if (strcmp(argv[index], "-s") == 0 ||
             strcmp(argv[index], "--simple") == 0) {
             options.simple = true;
+            ++index; continue;
         }
-        if (strcmp(argv[index], "--no_sort") == 0) {
+        if (strcmp(argv[index], "--no-attrs") == 0) {
+            options.attrs = false;
+            ++index; continue;
+        }
+        if (strcmp(argv[index], "--no-sort") == 0) {
             options.alphabetize = false;
-        } else if (options.rdlFile.empty() &&
+            ++index; continue;
+        }
+
+        if (options.rdlFile.empty() &&
                    (access(argv[index], R_OK) == 0)) {
             options.rdlFile = argv[index];
         } else if (options.rdlFile.empty()) {
@@ -109,6 +130,7 @@ parseCommandLine(int argc, char* argv[])
         }
     }
 
+    // options.print();
     return options;
 }
 
@@ -144,7 +166,8 @@ compareSceneClasses(const rdl2::SceneClass *cls1, const rdl2::SceneClass *cls2)
 }
 
 void
-printAllSceneClasses(const rdl2::SceneContext& ctx, const bool simple, const bool alphabetize)
+printAllSceneClasses(const rdl2::SceneContext& ctx, const bool attrs,
+                     const bool simple, const bool alphabetize)
 {
     std::vector<rdl2::SceneClass*> array;
     for (auto iter = ctx.beginSceneClass(); iter != ctx.endSceneClass(); ++iter) {
@@ -167,13 +190,13 @@ printAllSceneClasses(const rdl2::SceneContext& ctx, const bool simple, const boo
     }
 
     for (auto iter = array.cbegin(); iter != array.cend(); ++iter) {
-        std::cout << getSceneInfoStr(**(iter), simple, alphabetize);
-        std::cout << '\n';
+        std::cout << getSceneInfoStr(**(iter), attrs, simple, alphabetize);
     }
 }
 
 void
-printAllSceneObjects(const rdl2::SceneContext& ctx, const bool simple, const bool alphabetize)
+printAllSceneObjects(const rdl2::SceneContext& ctx, const bool attrs,
+                     const bool simple, const bool alphabetize)
 {
     std::vector<rdl2::SceneObject*> array;
     for (auto iter = ctx.beginSceneObject(); iter != ctx.endSceneObject(); ++iter) {
@@ -189,9 +212,9 @@ printAllSceneObjects(const rdl2::SceneContext& ctx, const bool simple, const boo
                   { return (s1->getSceneClass().getName() < s2->getSceneClass().getName());});
     }
 
-    std::cout << getSceneInfoStr(*array.front(), simple, alphabetize);
+    std::cout << getSceneInfoStr(*array.front(), attrs, simple, alphabetize);
     for (auto iter = std::next(array.begin()); iter != array.end(); ++iter) {
-        std::cout << '\n' << getSceneInfoStr(**(iter), simple, alphabetize);
+        std::cout << getSceneInfoStr(**(iter), attrs, simple, alphabetize);
     }
 }
 
@@ -219,17 +242,17 @@ int main(int argc, char* argv[])
         if (!options.rdlFile.empty()) {
             rdl2::readSceneFromFile(options.rdlFile, context);
             if (options.sceneObject.empty()) {
-                printAllSceneObjects(context, options.simple, options.alphabetize);
+                printAllSceneObjects(context, options.attrs, options.simple, options.alphabetize);
             } else {
-                std::cout << getSceneInfoStr(*(context.getSceneObject(options.sceneObject)), options.simple, options.alphabetize);
+                std::cout << getSceneInfoStr(*(context.getSceneObject(options.sceneObject)), options.attrs, options.simple, options.alphabetize);
             }
         } else if (!options.sceneClass.empty()) {
             // Print just the DSO in question.
-            std::cout << getSceneInfoStr(*(context.createSceneClass(options.sceneClass)), options.simple, options.alphabetize);
+            std::cout << getSceneInfoStr(*(context.createSceneClass(options.sceneClass)), options.attrs, options.simple, options.alphabetize);
         } else {
             // Print all DSOs in the path.
             context.loadAllSceneClasses();
-            printAllSceneClasses(context, options.simple, options.alphabetize);
+            printAllSceneClasses(context, options.attrs, options.simple, options.alphabetize);
         }
     } catch (std::exception& e) {
         std::cerr << "ERROR: " << e.what() << '\n';
