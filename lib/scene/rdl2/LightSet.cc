@@ -36,6 +36,8 @@ LightSet::declare(SceneClass& sceneClass)
     auto interface = Parent::declare(sceneClass);
 
     sLightsKey = sceneClass.declareAttribute<SceneObjectVector>("lights", FLAGS_NONE, INTERFACE_LIGHT);
+    sceneClass.setMetadata(sLightsKey, "comment",
+        "List of lights that belong to this LightSet");
 
     return interface | INTERFACE_LIGHTSET;
 }
