@@ -83,7 +83,7 @@ sconsTargets = {
 
 requires = [
     'boost',
-    'jsoncpp',
+    'jsoncpp-0.6.0',
     'log4cplus-1.1.2.x',
     'lua',
     'tbb',
