@@ -148,8 +148,6 @@ AttributeKey<String> SceneVariables::sTemporaryDirectory;
 
 AttributeKey<Bool>   SceneVariables::sDebugKey;
 AttributeKey<Bool>   SceneVariables::sInfoKey;
-AttributeKey<Bool>   SceneVariables::sWarningKey;
-AttributeKey<Bool>   SceneVariables::sErrorKey;
 AttributeKey<Rgb>    SceneVariables::sFatalColor;
 AttributeKey<String> SceneVariables::sStatsFile;
 AttributeKey<Bool>   SceneVariables::sAthenaDebug;
@@ -902,10 +900,6 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sInfoKey = sceneClass.declareAttribute<Bool>("info", false);
 
-    sWarningKey = sceneClass.declareAttribute<Bool>("warning", true);
-
-    sErrorKey = sceneClass.declareAttribute<Bool>("error", true);
-
     sFatalColor = sceneClass.declareAttribute<Rgb>("fatal_color", Rgb(1.0f, 0.0f, 1.0f), {"fatal color"});
     sceneClass.setMetadata(sFatalColor, "label", "fatal color");
 
@@ -1073,8 +1067,6 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sceneClass.setGroup("Logging", sDebugKey);
     sceneClass.setGroup("Logging", sInfoKey);
-    sceneClass.setGroup("Logging", sWarningKey);
-    sceneClass.setGroup("Logging", sErrorKey);
     sceneClass.setGroup("Logging", sFatalColor);
     sceneClass.setGroup("Logging", sStatsFile);
     sceneClass.setGroup("Logging", sAthenaDebug);

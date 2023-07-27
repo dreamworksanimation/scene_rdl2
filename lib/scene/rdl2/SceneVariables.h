@@ -386,8 +386,6 @@ public:
 
     static AttributeKey<Bool> sDebugKey;
     static AttributeKey<Bool> sInfoKey;
-    static AttributeKey<Bool> sWarningKey;
-    static AttributeKey<Bool> sErrorKey;
     static AttributeKey<Rgb> sFatalColor;
     static AttributeKey<Vec3f> sFatalNormal;
     // The statsfile file path.
