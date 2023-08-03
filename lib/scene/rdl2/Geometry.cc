@@ -161,18 +161,22 @@ Geometry::declare(SceneClass& sceneClass)
 
     sShadowReceiverLabel = sceneClass.declareAttribute<String>("shadow_receiver_label", "", {"shadow receiver label"});
     sceneClass.setMetadata(sShadowReceiverLabel, SceneClass::sComment,
-        "Label used to associate Geometry objects into sets. Then, using the "
-        "[\"shadow_exclusion_mappings\"] attribute, shadows from specified geometry "
-        "parts can be suppressed from casting onto specified sets.");
+        "Label used to associate Geometry objects into ShadowReceiverSets. Using this in combination with "
+        "the [\"shadow_exclusion_mappings\"] attribute, shadows from specified geometries or their parts can "
+        "be suppressed from casting shadows onto one or more specified sets.");
     sceneClass.setGroup("Labels", sShadowReceiverLabel);
 
     sShadowExclusionMappings = sceneClass.declareAttribute<String>("shadow_exclusion_mappings", "",
                                                                    {"shadow exclusion mappings"});
     sceneClass.setMetadata(sShadowExclusionMappings, SceneClass::sComment,
-        "List of mappings of the form A:B where:\n"
-        "A is a list of names of parts to be mapped, or asterisk to map the whole geometry\n"
-        "B is a list of labels corresponding to the sets corresponding to distinct values of "
-        "[\"shadow_receiver_label\"], or asterisk to map to all such sets.");
+        "A space-separated list of mappings of the form A:B where:\n"
+        "A is a comma-separated list of names of parts of this Geometry, or an asterisk to specify "
+        "the whole geometry;\n"
+        "B is a comma-separated list of shadow receiver set labels established using the "
+        "[\"shadow_receiver_label\"] attribute, or an asterisk to specify to all such sets in the scene.\n"
+        "For each of the listed mappings, shadows from the parts specified in A will be suppressed from "
+        "casting onto any geometries in the ShadowReceiverSets specified in B.\n"
+        "**Note: no part name should appear more than once in the string, otherwise the behavior is undefined.**");
 
     sContainsCamera = sceneClass.declareAttribute<Bool>("contains_camera", false);
     sceneClass.setMetadata(sContainsCamera, SceneClass::sComment,
