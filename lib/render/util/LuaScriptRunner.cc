@@ -17,6 +17,10 @@
 #include <lua.hpp>
 #include <sys/stat.h>
 
+#if defined(JSONCPP_VERSION_MAJOR)
+#define memberName name
+#endif
+
 namespace {
 
 static int
