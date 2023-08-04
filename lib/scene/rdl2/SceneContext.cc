@@ -31,7 +31,6 @@
 #include <scene_rdl2/render/logging/logging.h>
 
 #include <tbb/concurrent_hash_map.h>
-#include <tbb/mutex.h>
 #include <tbb/parallel_for_each.h>
 
 #include <algorithm>
@@ -41,6 +40,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include <dirent.h>
 #include <errno.h>
@@ -185,7 +185,7 @@ const rdl2::Camera*
 SceneContext::getPrimaryCamera() const
 {
     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+    std::scoped_lock lock(mCreateSceneObjectMutex);
 
     if (mCameras.size() == 0) {
         return nullptr;
@@ -205,7 +205,7 @@ std::vector<const rdl2::Camera*>
 SceneContext::getCameras() const
 {
     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+    std::scoped_lock lock(mCreateSceneObjectMutex);
 
     std::vector<const rdl2::Camera*> cameras;
 
@@ -236,7 +236,7 @@ std::vector<const rdl2::Camera*>
 SceneContext::getActiveCameras(void) const
 {
     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+    std::scoped_lock lock(mCreateSceneObjectMutex);
 
     std::vector<const rdl2::Camera*> cameras;
 
@@ -447,16 +447,16 @@ SceneContext::createSceneObject(const std::string& className,
 
         // Do any type-specific setup.
         if (obj->isA<Geometry>()) {
-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+            std::scoped_lock lock(mCreateSceneObjectMutex);
             mGeometries.push_back(obj->asA<Geometry>());
         } else if (obj->isA<GeometrySet>()) {
-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+            std::scoped_lock lock(mCreateSceneObjectMutex);
             mGeometrySets.push_back(obj->asA<GeometrySet>());
         } else if (obj->isA<Camera>()) {
-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+            std::scoped_lock lock(mCreateSceneObjectMutex);
             mCameras.push_back(obj->asA<Camera>());
         } else if (obj->isA<RenderOutput>()) {
-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
+            std::scoped_lock lock(mCreateSceneObjectMutex);
             mRenderOutputs.push_back(obj->asA<RenderOutput>());
         } 
 
@@ -770,7 +770,7 @@ SceneContext::computeTimeRescalingCoeffs(float shutterOpen, float shutterClose, 
 {
     // See declaration of TimeRescalingCoeffs in Types.h for details.
 
-    tbb::mutex::scoped_lock lock(mTimeRescalingCoeffsMutex);
+    std::scoped_lock lock(mTimeRescalingCoeffsMutex);
 
     MNRY_ASSERT_REQUIRE(motionSteps.size() >= 1 && motionSteps.size() <= 2);
     if (motionSteps.size() == 1  ||  motionSteps[0] == motionSteps[1]) {
