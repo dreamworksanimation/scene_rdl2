@@ -164,8 +164,7 @@ SceneVariables::SceneVariables(const SceneClass& sceneClass, const std::string& 
 {
 }
 
-SceneObjectInterface
-SceneVariables::declare(SceneClass& sceneClass)
+SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 {
     constexpr int minIntVal = std::numeric_limits<int>::lowest();
 
@@ -184,7 +183,12 @@ SceneVariables::declare(SceneClass& sceneClass)
         SceneClass::sComment,
         "This specifies the camera object used for rendering. If no camera is specified in the scene variables, "
         "MoonRay will render using the first camera object encountered.");
+
     sDicingCamera = sceneClass.declareAttribute<SceneObject*>("dicing_camera", FLAGS_NONE, INTERFACE_CAMERA);
+    sceneClass.setMetadata(sDicingCamera,
+        SceneClass::sComment,
+        "This attribute specifies a camera to use for adaptive geometry tessellation. The rendering camera is used if "
+        "no camera is specified.");
 
     sLayer = sceneClass.declareAttribute<SceneObject*>("layer", FLAGS_NONE, INTERFACE_LAYER);
 
@@ -572,7 +576,7 @@ SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTextureFileHandleCount, "label", "texture file handles");
     sceneClass.setMetadata(sTextureFileHandleCount,
         SceneClass::sComment,
-        "maximum number of simultaneous open file handles");
+        "This setting specifies the maximum number of simultaneous open texture file handles.");
 
     sFastGeomUpdate = sceneClass.declareAttribute("fast_geometry_update", false, {"fast geometry update"});
     sceneClass.setMetadata(sFastGeomUpdate, "label", "fast geometry update");
@@ -580,6 +584,9 @@ SceneVariables::declare(SceneClass& sceneClass)
     // Checkpoint render
     sCheckpointActive = sceneClass.declareAttribute<Bool>("checkpoint_active", false, {"checkpoint active"});
     sceneClass.setMetadata(sCheckpointActive, "label", "checkpoint active");
+    sceneClass.setMetadata(sCheckpointActive,
+        SceneClass::sComment,
+        "This setting enables or disables checkpoint file writing.");
 
     sCheckpointInterval =
         sceneClass.declareAttribute<Float>("checkpoint_interval", Float(15.0f), {"checkpoint interval"});
@@ -735,7 +742,7 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sEnableDof = sceneClass.declareAttribute<Bool>("enable_dof", true, {"enable DOF"});
     sceneClass.setMetadata(sEnableDof, "label", "enable DOF");
-    sceneClass.setMetadata(sEnableDof, SceneClass::sComment, "Enable camera depth-of-field (DOF)");
+    sceneClass.setMetadata(sEnableDof, SceneClass::sComment, "This setting enables camera depth-of-field (DOF)");
 
     sEnableMaxGeomResolution =
         sceneClass.declareAttribute<Bool>("enable_max_geometry_resolution", false, {"enable max geometry resolution"});
@@ -747,13 +754,22 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sEnableDisplacement = sceneClass.declareAttribute<Bool>("enable_displacement", true, {"enable displacement"});
     sceneClass.setMetadata(sEnableDisplacement, "label", "enable displacement");
+    sceneClass.setMetadata(sEnableDisplacement,
+        SceneClass::sComment,
+        "This setting enables or disables geometry displacement.");
 
     sEnableSSS =
         sceneClass.declareAttribute<Bool>("enable_subsurface_scattering", true, {"enable subsurface scattering"});
     sceneClass.setMetadata(sEnableSSS, "label", "enable subsurface scattering");
+    sceneClass.setMetadata(sEnableSSS,
+        SceneClass::sComment,
+        "This setting enables or disables sub-surface scattering.");
 
     sEnableShadowing = sceneClass.declareAttribute<Bool>("enable_shadowing", true, {"enable shadowing"});
     sceneClass.setMetadata(sEnableShadowing, "label", "enable shadowing");
+    sceneClass.setMetadata(sEnableShadowing,
+        SceneClass::sComment,
+        "This setting enables or disables shadowing through occlusion rays.");
 
     sEnablePresenceShadows =
         sceneClass.declareAttribute<Bool>("enable_presence_shadows", false, {"enable presence shadows"});
@@ -762,6 +778,10 @@ SceneVariables::declare(SceneClass& sceneClass)
     sLightsVisibleInCameraKey =
         sceneClass.declareAttribute<Bool>("lights_visible_in_camera", false, {"lights visible in camera"});
     sceneClass.setMetadata(sLightsVisibleInCameraKey, "label", "lights visible in camera");
+    sceneClass.setMetadata(sLightsVisibleInCameraKey,
+        SceneClass::sComment,
+        "This setting globally enables or disables lights being visible in camera. Each light has its own setting "
+        "which may override this value.");
 
     sPropagateVisibilityBounceType = sceneClass.declareAttribute<Bool>("propagate_visibility_bounce_type",
         false,
@@ -897,8 +917,14 @@ SceneVariables::declare(SceneClass& sceneClass)
         "The directory where the temporary files are stored is defined by the \"tmp_dir\" scene variable.");
 
     sDebugKey = sceneClass.declareAttribute<Bool>("debug", false);
+    sceneClass.setMetadata(sDebugKey,
+        SceneClass::sComment,
+        "This setting determines whether debugging-level messages are logged.");
 
     sInfoKey = sceneClass.declareAttribute<Bool>("info", false);
+    sceneClass.setMetadata(sInfoKey,
+        SceneClass::sComment,
+        "This setting determines whether information-level messages are logged.");
 
     sFatalColor = sceneClass.declareAttribute<Rgb>("fatal_color", Rgb(1.0f, 0.0f, 1.0f), {"fatal color"});
     sceneClass.setMetadata(sFatalColor, "label", "fatal color");
@@ -908,6 +934,10 @@ SceneVariables::declare(SceneClass& sceneClass)
 
     sAthenaDebug = sceneClass.declareAttribute<Bool>("athena_debug", false, {"athena debug"});
     sceneClass.setMetadata(sAthenaDebug, "label", "athena debug");
+    sceneClass.setMetadata(sAthenaDebug,
+        SceneClass::sComment,
+        "[DreamWorks Animation internal] This setting enables sending logging results to the Athena debugging database "
+        "instead of the production database.");
 
     // "debug pixel" is defined such that a coordinate of (0, 0) maps to the left,
     // bottom of the region window (i.e. the render buffer).
@@ -1081,14 +1111,12 @@ SceneVariables::declare(SceneClass& sceneClass)
     return interface;
 }
 
-uint32_t
-SceneVariables::getRezedWidth() const
+uint32_t SceneVariables::getRezedWidth() const
 {
     return static_cast<uint32_t>(getRezedRegionWindow().width());
 }
 
-uint32_t
-SceneVariables::getRezedHeight() const
+uint32_t SceneVariables::getRezedHeight() const
 {
     return static_cast<uint32_t>(getRezedRegionWindow().height());
 }
@@ -1160,8 +1188,7 @@ HalfOpenViewport SceneVariables::getRezedSubViewport() const
     return HalfOpenViewport(minX, minY, maxX, maxY);
 }
 
-int
-SceneVariables::getMachineId() const
+int SceneVariables::getMachineId() const
 {
     int machineId = get(sMachineId);
 
@@ -1173,8 +1200,7 @@ SceneVariables::getMachineId() const
     return 0;
 }
 
-int
-SceneVariables::getNumMachines() const
+int SceneVariables::getNumMachines() const
 {
     int numMachines = get(sNumMachines);
 
@@ -1186,8 +1212,7 @@ SceneVariables::getNumMachines() const
     return 1;
 }
 
-SceneObject*
-SceneVariables::getLayer() const
+SceneObject* SceneVariables::getLayer() const
 {
     auto layerSceneObj = get(sLayer);
     if (layerSceneObj) {
@@ -1207,8 +1232,7 @@ SceneVariables::getLayer() const
     return NULL;
 }
 
-SceneObject*
-SceneVariables::getCamera() const
+SceneObject* SceneVariables::getCamera() const
 {
     auto cameraSceneObj = get(sCamera);
     if (cameraSceneObj) {
@@ -1228,8 +1252,7 @@ SceneVariables::getCamera() const
     return NULL;
 }
 
-const SceneObject*
-SceneVariables::getExrHeaderAttributes() const
+const SceneObject* SceneVariables::getExrHeaderAttributes() const
 {
     auto metadataSceneObj = get(sAttrExrHeaderAttributes);
     if (metadataSceneObj) {
@@ -1239,8 +1262,7 @@ SceneVariables::getExrHeaderAttributes() const
     return NULL;
 }
 
-bool
-SceneVariables::getDebugPixel(math::Vec2i &pixel) const
+bool SceneVariables::getDebugPixel(math::Vec2i& pixel) const
 {
     const std::vector<int>& debugPixel = get(sDebugPixel);
     if (debugPixel[0] == std::numeric_limits<int>::lowest()) { // unset
@@ -1253,8 +1275,7 @@ SceneVariables::getDebugPixel(math::Vec2i &pixel) const
     return true;
 }
 
-bool
-SceneVariables::getDebugRaysPrimaryRange(int &start, int &end) const
+bool SceneVariables::getDebugRaysPrimaryRange(int& start, int& end) const
 {
     const std::vector<int>& raysRange = get(sDebugRaysPrimaryRange);
     if (raysRange[0] == std::numeric_limits<int>::lowest()) { // unset
@@ -1267,8 +1288,7 @@ SceneVariables::getDebugRaysPrimaryRange(int &start, int &end) const
     return true;
 }
 
-bool
-SceneVariables::getDebugRaysDepthRange(int &start, int &end) const
+bool SceneVariables::getDebugRaysDepthRange(int& start, int& end) const
 {
     const std::vector<int>& raysDepthRange = get(sDebugRaysDepthRange);
     if (raysDepthRange[0] == std::numeric_limits<int>::lowest()) { // unset
@@ -1281,8 +1301,7 @@ SceneVariables::getDebugRaysDepthRange(int &start, int &end) const
     return true;
 }
 
-bool
-SceneVariables::getSubViewport(math::HalfOpenViewport& viewport) const
+bool SceneVariables::getSubViewport(math::HalfOpenViewport& viewport) const
 {
     const std::vector<int>& viewportVector = get(sSubViewport);
     if (viewportVector[0] == std::numeric_limits<int>::lowest()) { // unset
@@ -1297,18 +1316,16 @@ SceneVariables::getSubViewport(math::HalfOpenViewport& viewport) const
     return true;
 }
 
-void
-SceneVariables::disableSubViewport()
+void SceneVariables::disableSubViewport()
 {
     constexpr int minIntVal = std::numeric_limits<int>::lowest();
 
     std::vector<int> viewportVector = {minIntVal, minIntVal, minIntVal, minIntVal};
-    UpdateGuard guard(this);
+    UpdateGuard      guard(this);
     set(sSubViewport, viewportVector);
 }
 
-std::string
-SceneVariables::getTmpDir() const
+std::string SceneVariables::getTmpDir() const
 {
     std::string tmpDir = get(sTemporaryDirectory);
     if (tmpDir.empty()) {
