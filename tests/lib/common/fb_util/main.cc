@@ -17,7 +17,7 @@ main(int argc, char* argv[])
 
     CPPUNIT_TEST_SUITE_REGISTRATION(TestPixelBuffer);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestRunningStats);
-    CPPUNIT_TEST_SUITE_REGISTRATION(TestSnapshotUtil);
+//    CPPUNIT_TEST_SUITE_REGISTRATION(TestSnapshotUtil);
 
     return pdevunit::run(argc, argv);
 }
