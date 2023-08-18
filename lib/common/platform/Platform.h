@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <assert.h>
-#include <cstdlib>
+#include <cassert>
+#include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <stdexcept>
 

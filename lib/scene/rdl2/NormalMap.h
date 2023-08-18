@@ -50,7 +50,7 @@ public:
         }
     }
 
-    // Unfortuantely, this member has been made public to allow
+    // Unfortunately, this member has been made public to allow
     //  for computing its offset into the binary
     SampleNormalFunc mSampleNormalFunc;
     SampleNormalFuncv mSampleNormalFuncv;

@@ -37,13 +37,13 @@ std::vector<std::string>
 getProcessArgs()
 {
     std::vector<std::string> args;
-    
+
 #ifdef __linux__
     char cmdline[PATH_MAX];
     sprintf(cmdline, "/proc/%d/cmdline", getpid());
-    
+
     FILE* fp = fopen(cmdline, "r");
-    
+
     if (fp != NULL) {
         char c;
         char buffer[PATH_MAX];
@@ -66,7 +66,7 @@ getProcessArgs()
     proc_pidpath(pid, pathbuf, sizeof(pathbuf));
     args.push_back(pathbuf);
 #endif
-    
+
     return args;
 }
 
@@ -84,8 +84,6 @@ using log4cplus::spi::getLayoutFactoryRegistry;
 
 namespace scene_rdl2 {
 namespace logging {
-
-std::atomic<bool> LogEventRegistry::mLoggingGlobalSwitch { true };
 
 void
 initializeLogging()
@@ -133,7 +131,7 @@ initializeLogging()
 
 // Returns the default logger to use for a particular source file,
 // based on a set of rules for the studio source code repository
-// layout.  
+// layout.
 log4cplus::Logger
 getDefaultLogger(const std::string& file)
 {
@@ -156,7 +154,7 @@ getDefaultLogger(const std::string& file)
     static boost::regex RE_DSO("dso/(\\w+)/(\\w+)/");
     static boost::regex RE_CMD("cmd/(\\w+)/(\\w+)");
     boost::match_results<std::string::const_iterator> parts;
-    
+
     // First search the full filename to see if it matches by regexp to a
     // Proddev target executable. If so, associate the program with a
     // specific logger.
@@ -240,43 +238,6 @@ void
 Logger::setInfoLevel()
 {
     log4cplus::Logger::getRoot().setLogLevel(INFO_LEVEL);
-}
-
-
-void
-ObjectLogs::setNumEvents(int n)
-{
-    if (n == mNumEvents) return;
-
-    int * newEventCounts = new int [n];
-    int i = 0;
-    for (; i < std::min(n, mNumEvents); i++) {
-        newEventCounts[i] = mEventCounts[i];
-    }
-    for (; i < n; i++) {
-        newEventCounts[i] = 0;
-    }
-    mNumEvents = n;
-    delete [] mEventCounts;
-    mEventCounts = newEventCounts;
-}
-
-void
-LogEventRegistry::report(const std::string& objectName,
-                         const std::string& sceneClassName,
-                         const ObjectLogs &log) const
-{
-    if (!mLoggingGlobalSwitch) return;
-
-    for (size_t i = 0; i < mLevels.size(); i++) {
-        int c = log.getCount(LogEvent(i));
-        if (c > 0) {
-            LogLevel level = mLevels[i];
-            Logger::log(level, sceneClassName,
-                        "(\"", objectName, "\"): ", "(", c, " times) ",
-                        mDescriptions[i]);
-        }
-    }
 }
 
 } // end namespace logging
