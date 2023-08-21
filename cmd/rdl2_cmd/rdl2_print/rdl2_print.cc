@@ -28,6 +28,7 @@ struct Options
     bool attrs          = true;
     bool simple         = false;
 
+#if 0
     void print()
     {
         std::cout << "rdlFile: " << rdlFile << "\n";
@@ -38,6 +39,7 @@ struct Options
         std::cout << "attrs: " << attrs << "\n";
         std::cout << "simple: " << simple << "\n";
     }
+#endif
 };
 
 std::string
