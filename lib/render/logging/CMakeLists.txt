@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 target_sources(${component}
     PRIVATE
         ColorPatternLayout.cc
+        LogLevelAndNameFilter.cc
         LoggerMap.cc
         logging.cc
 )

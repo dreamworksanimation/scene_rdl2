@@ -7,6 +7,7 @@
 #include "logging.h"
 
 #include "ColorPatternLayout.h"
+#include "LogLevelAndNameFilter.h"
 #include "LoggerMap.h"
 
 #include <boost/format.hpp>
@@ -118,14 +119,73 @@ initializeLogging()
         }
     }
 
-    // Set the initial log level for the root logger to ERROR to
+    // Set the initial log level for the root logger to WARN to
     // avoid processing lower-level events.
     log4cplus::Logger root = log4cplus::Logger::getRoot();
-    root.setLogLevel(ERROR_LEVEL);
-    if (useDebug) {
-        root.setLogLevel(std::min(root.getLogLevel(), DEBUG_LEVEL));
-    } else if (useInfo) {
-        root.setLogLevel(std::min(root.getLogLevel(), INFO_LEVEL));
+    root.setLogLevel(WARN_LEVEL);
+
+    // The following table holds the initial settings for all
+    // active appenders that will be attached to the root logger.
+    static struct {
+        const char* name;
+        bool        logToStdErr;
+        bool        immediateFlush;
+        int         level;
+        int         threshold;
+        const char* pattern;
+    } configs[] = {
+        { "DEBUG", false, true,  DEBUG_LEVEL, OFF_LEVEL,   "DEBUG (%c{3}): %m%n" },
+        { "INFO",  false, true,  INFO_LEVEL,  OFF_LEVEL,   "Info (%c{3}): %m%n" },
+        { "WARN",  false, true,  WARN_LEVEL,  WARN_LEVEL,  "Warning (%c{3}): %m%n" },
+        { "ERROR", true,  true,  ERROR_LEVEL, ERROR_LEVEL, "Error: %m%n" },
+        { "FATAL", true,  true,  FATAL_LEVEL, FATAL_LEVEL, "Fatal: %m%n" },
+        { NULL ,   false, false, 0,    0,     NULL }
+    };
+
+    // Configure and add all of the appenders
+    for (int i = 0; configs[i].name != NULL; ++i) {
+
+        log4cplus::SharedAppenderPtr appender
+            (new log4cplus::ConsoleAppender(configs[i].logToStdErr,
+                                            configs[i].immediateFlush));
+
+// Disable deprecation warning for std::auto_ptr.   This can be
+// removed once we are using std::unique_ptr after we upgrade
+// log4cplus with CM-17036.
+#if defined(__ICC)
+        __pragma(warning(disable:1478));
+#endif
+
+        UNIQUE_PTR<log4cplus::Layout> layout(
+                new ColorPatternLayout(configs[i].pattern));
+
+#if defined(__ICC)
+        __pragma(warning(default:1478));
+#endif
+
+        // Set up a 3-element filter chain for denied loggers,
+        // allowed loggers, and a deny all for everything else.
+        // Initially the deny filter is neutral to everything.
+        log4cplus::spi::FilterPtr filter (new logging::LogLevelAndNameFilter(NOT_SET_LEVEL, false));
+        filter->appendFilter(log4cplus::spi::FilterPtr (new logging::LogLevelAndNameFilter(configs[i].level)));
+        filter->appendFilter(log4cplus::spi::FilterPtr (new log4cplus::spi::DenyAllFilter()));
+
+        appender->setName(configs[i].name);
+        appender->setLayout(MOVE_LAYOUT(layout));
+        appender->setThreshold(configs[i].threshold);
+        appender->setFilter(filter);
+
+        // Override the threshold based on the -info and -debug
+        // command line flags
+        if (configs[i].level == DEBUG_LEVEL && useDebug) {
+            appender->setThreshold(DEBUG_LEVEL);
+            root.setLogLevel(std::min(root.getLogLevel(), DEBUG_LEVEL));
+        } else if (configs[i].level == INFO_LEVEL && useInfo) {
+            appender->setThreshold(INFO_LEVEL);
+            root.setLogLevel(std::min(root.getLogLevel(), INFO_LEVEL));
+        }
+
+        root.addAppender(appender);
     }
 }
 
@@ -186,9 +246,14 @@ Logger::init()
 
 void
 outputLog(LogLevel level,
-          const std::string& s)
+    const std::string& s)
 {
-    getDefaultLogger(__FILE__).log(level, s, __FILE__, __LINE__);
+    log4cplus::Logger logger = getDefaultLogger(__FILE__);
+    if (logger.isEnabledFor(level)) {
+        std::ostringstream buf;
+        buf << s;
+        logger.forcedLog(level, buf.str(), __FILE__, __LINE__);
+    }
 }
 
 void
