@@ -22,6 +22,16 @@ class UserData: public SceneObject
 public:
     typedef SceneObject Parent;
 
+    enum Rate {
+        AUTO = 0,
+        CONSTANT,
+        PART,
+        UNIFORM,
+        VERTEX,
+        VARYING,
+        FACE_VARYING
+    };
+
     static SceneObjectInterface declare(SceneClass &sceneClass);
 
     UserData(SceneClass const &sceneClass, std::string const &name);
@@ -91,6 +101,8 @@ public:
     const Mat4fVector& getMat4fValues0() const;
     const Mat4fVector& getMat4fValues1() const;
 
+    int getRate() const;
+
 private:
     static AttributeKey<String> sAttrBoolKey;
     static AttributeKey<BoolVector> sAttrBoolValues;
@@ -120,6 +132,8 @@ private:
     static AttributeKey<String> sAttrMat4fKey;
     static AttributeKey<Mat4fVector> sAttrMat4fValues0;
     static AttributeKey<Mat4fVector> sAttrMat4fValues1;
+
+    static AttributeKey<Int> sAttrRateKey;
 };
 
 template<>

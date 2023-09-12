@@ -8,6 +8,8 @@
 namespace scene_rdl2 {
 namespace rdl2 {
 
+AttributeKey<Int> UserData::sAttrRateKey;
+
 AttributeKey<String> UserData::sAttrBoolKey;
 AttributeKey<BoolVector> UserData::sAttrBoolValues;
 
@@ -138,6 +140,18 @@ UserData::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sAttrMat4fValues1, "label", "mat4f values 1");
     sceneClass.setMetadata(sAttrMat4fValues1, SceneClass::sComment,
         "mat4f type user data values for motion step 1");
+
+    sAttrRateKey = sceneClass.declareAttribute<Int>("rate", 0, FLAGS_ENUMERABLE, INTERFACE_GENERIC, { "rate" });
+    sceneClass.setMetadata(sAttrRateKey, "label", "rate");
+    sceneClass.setEnumValue(sAttrRateKey, 0, "auto");
+    sceneClass.setEnumValue(sAttrRateKey, 1, "constant");
+    sceneClass.setEnumValue(sAttrRateKey, 2, "part");
+    sceneClass.setEnumValue(sAttrRateKey, 3, "uniform");
+    sceneClass.setEnumValue(sAttrRateKey, 4, "vertex");
+    sceneClass.setEnumValue(sAttrRateKey, 5, "varying");
+    sceneClass.setEnumValue(sAttrRateKey, 6, "face varying");
+    sceneClass.setMetadata(sAttrRateKey, "comment",
+            "The rate of the data.  Auto mode will guess the rate by comparing the number of values to component(i.e. part, face. vertex) counts.");
 
     return interface | INTERFACE_USERDATA;
 }
@@ -507,6 +521,12 @@ const Mat4fVector&
 UserData::getMat4fValues1() const
 {
     return get(sAttrMat4fValues1);
+}
+
+int
+UserData::getRate() const
+{
+    return get(sAttrRateKey);
 }
 
 
