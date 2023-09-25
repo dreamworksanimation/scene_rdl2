@@ -23,7 +23,7 @@ std::string
 CacheEnqueue::show() const
 {
     return str_util::stringCat("CacheEnqueue {\n",
-                               str_util::addIndent(ValueContainerEnq::show("")), '\n',
+                               str_util::addIndent(ValueContainerEnqueue::show("")), '\n',
                                "  mRuntimeVerify:", str_util::boolStr(mRuntimeVerify), '\n',
                                "}");
 }
@@ -32,7 +32,7 @@ std::string
 CacheEnqueue::showDebug() const
 {
     return str_util::stringCat("CacheEnqueue {\n",
-                               str_util::addIndent(ValueContainerEnq::showDebug()), '\n',
+                               str_util::addIndent(ValueContainerEnqueue::showDebug()), '\n',
                                "  mRuntimeVerify:", str_util::boolStr(mRuntimeVerify), '\n',
                                "}");
 }

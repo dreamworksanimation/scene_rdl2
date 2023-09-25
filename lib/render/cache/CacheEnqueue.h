@@ -2,35 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
+#include "ValueContainerEnqueue.h"
 
 #include <vector>
 
 namespace scene_rdl2 {
 namespace cache {
 
-class CacheEnqueue : private rdl2::ValueContainerEnq
+class CacheEnqueue : private ValueContainerEnqueue
 {
 public:
-    using rdl2::ValueContainerEnq::enq;         // template
-    using rdl2::ValueContainerEnq::enqBool;
-    using rdl2::ValueContainerEnq::enqFloat;
-    using rdl2::ValueContainerEnq::enqFloat12;
-    using rdl2::ValueContainerEnq::enqString;
-    using rdl2::ValueContainerEnq::enqByteData;
-    using rdl2::ValueContainerEnq::enqAlignPad;
-    using rdl2::ValueContainerEnq::enqVector;   // template
-    using rdl2::ValueContainerEnq::enqVLInt;    // 32bit
-    using rdl2::ValueContainerEnq::enqVLUInt;
-    using rdl2::ValueContainerEnq::enqVLLong;   // 64bit
-    using rdl2::ValueContainerEnq::enqVLULong;
-    using rdl2::ValueContainerEnq::enqVLSizeT;  // = enqVLULong
-    using rdl2::ValueContainerEnq::enqReserveMem;
-    using rdl2::ValueContainerEnq::finalize;
-    using rdl2::ValueContainerEnq::currentSize;
+    using ValueContainerEnqueue::enq;         // template
+    using ValueContainerEnqueue::enqBool;
+    using ValueContainerEnqueue::enqChar;
+    using ValueContainerEnqueue::enqFloat;
+    using ValueContainerEnqueue::enqFloat12;
+    using ValueContainerEnqueue::enqDouble;
+    using ValueContainerEnqueue::enqString;
+    using ValueContainerEnqueue::enqByteData;
+    using ValueContainerEnqueue::enqAlignPad;
+    using ValueContainerEnqueue::enqVector;   // template
+    using ValueContainerEnqueue::enqVLInt;    // 32bit
+    using ValueContainerEnqueue::enqVLUInt;
+    using ValueContainerEnqueue::enqVLLong;   // 64bit
+    using ValueContainerEnqueue::enqVLULong;
+    using ValueContainerEnqueue::enqVLSizeT;  // = enqVLULong
+    using ValueContainerEnqueue::enqReserveMem;
+    using ValueContainerEnqueue::finalize;
+    using ValueContainerEnqueue::currentSize;
 
     explicit CacheEnqueue(std::string *bytes) :
-        rdl2::ValueContainerEnq(bytes),
+        ValueContainerEnqueue(bytes),
         mRuntimeVerify(false)
     {}
 

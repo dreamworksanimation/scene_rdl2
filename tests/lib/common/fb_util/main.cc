@@ -1,7 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-
 #include "TestPixelBuffer.h"
 #include "TestRunningStats.h"
 #include "TestSnapshotUtil.h"
@@ -17,8 +15,7 @@ main(int argc, char* argv[])
 
     CPPUNIT_TEST_SUITE_REGISTRATION(TestPixelBuffer);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestRunningStats);
-//    CPPUNIT_TEST_SUITE_REGISTRATION(TestSnapshotUtil);
+    CPPUNIT_TEST_SUITE_REGISTRATION(TestSnapshotUtil);
 
     return pdevunit::run(argc, argv);
 }
-

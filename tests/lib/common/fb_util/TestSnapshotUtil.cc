@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "TestSnapshotUtil.h"
 
+#include <scene_rdl2/common/fb_util/SnapshotDeltaTestUtil.h>
+
 #include <scene_rdl2/common/fb_util/SnapshotUtil.h>
 #include <scene_rdl2/common/rec_time/RecTime.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <algorithm>
 #include <functional>
+#include <iomanip>
 #include <vector>
+#include <stdlib.h> // posix_memalign
 
 // If comment out following directive, all unitTest do timing test.
 // Each unittest needs almost 128x longer execution cost.
@@ -41,53 +45,99 @@ TestSnapshotUtil::testHeatMapWeight()
     setupRealBuff(orgV, 1, 0.3f); // 30% black pix, 70% random value
     setupWeightBuff(orgW, 0.3f); // 30% zero weight, 70% random value
 
-    std::vector<double> dstV(orgV);
-    std::vector<float> dstW(orgW);
-    std::vector<double> srcV(orgV);
-    std::vector<float> srcW(orgW);
-    std::vector<double> tgtV(orgV);
-    std::vector<float> tgtW(orgW);
+    using TestUtil = SnapshotDeltaTestUtil<double, float>;
+
+    void* dstV = TestUtil::allocVecValueAlign(orgV);
+    void* dstW = TestUtil::allocVecWeightAlign(orgW);
+    void* srcV = TestUtil::allocVecValueAlign(orgV);
+    void* srcW = TestUtil::allocVecWeightAlign(orgW);
+    void* tgtV = TestUtil::allocVecValueAlign(orgV);
+    void* tgtW = TestUtil::allocVecWeightAlign(orgW);
+    uintptr_t dstVAddr = reinterpret_cast<uintptr_t>(dstV);
+    uintptr_t dstWAddr = reinterpret_cast<uintptr_t>(dstW);
+    uintptr_t srcVAddr = reinterpret_cast<uintptr_t>(srcV);
+    uintptr_t srcWAddr = reinterpret_cast<uintptr_t>(srcW);
+    uintptr_t tgtVAddr = reinterpret_cast<uintptr_t>(tgtV);
+    uintptr_t tgtWAddr = reinterpret_cast<uintptr_t>(tgtW);
+
+    if (!TestUtil::compareVecValue(dstV, orgV) || !TestUtil::compareVecWeight(dstW, orgW) ||
+        !TestUtil::compareVecValue(srcV, orgV) || !TestUtil::compareVecWeight(srcW, orgW) ||
+        !TestUtil::compareVecValue(tgtV, orgV) || !TestUtil::compareVecWeight(tgtW, orgW)) {
+        CPPUNIT_ASSERT(">> TestSnapshotUtil.cc testHeatMapWeight compareVec{Value,Weight}() failed\n" && false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight compareVec{Value,Wieght}() OK\n";
+    }
 
     std::vector<int> updatePixIdArray;
     updateBuff(0.6f, // update 60% pix
                w,
                h,
                [&](const int pixOffset) { // updatePixelFunc
-                   return updatePix(srcV, srcW, pixOffset, 1);
+                   return updatePix<double>(srcV, srcW, pixOffset, 1);
                },
                [&](const int pixOffset) { // updateTargetFunc
-                   copyPix(tgtV, tgtW, srcV, srcW, pixOffset, 1);
+                   copyPix<double>(tgtV, tgtW, srcV, srcW, pixOffset, 1);
                },
                updatePixIdArray);
     /*
     std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight() "
               << analyzeBuff(1, orgV, orgW, srcV, srcW) << '\n'; // useful debug dump message
     */
+    if (!TestUtil::verifyTgtValWeight(orgV, orgW, srcV, srcW, tgtV, tgtW)) {
+        CPPUNIT_ASSERT(">> TestSnapshotUtil.cc testHeatMapWeight verifyTgtValWeight() failed" && false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight verfyTgtValWeight() OK\n";
+    }
 
     snapshotTimingCompare
         (w,
          h,
          [&]() { // resetDataFunc
-            dstV = orgV;
-            dstW = orgW;
+            memcpy(dstV, &orgV[0], orgV.size() * sizeof(double));
+            memcpy(dstW, &orgW[0], orgW.size() * sizeof(float));
          },
          [&](int offsetItem) { // snapshotTileFuncA
-            return fb_util::SnapshotUtil::snapshotTileHeatMapWeight
-                ((uint64_t *)((uintptr_t)(&dstV[0]) + offsetItem * sizeof(double)),
-                 (uint32_t *)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float)),
-                 (uint64_t *)((uintptr_t)(&srcV[0]) + offsetItem * sizeof(double)),
-                 (uint32_t *)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float)));
+             uint64_t* dstVPtr = reinterpret_cast<uint64_t*>(dstVAddr + offsetItem * sizeof(double));
+             uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+             uint64_t* srcVPtr = reinterpret_cast<uint64_t*>(srcVAddr + offsetItem * sizeof(double));
+             uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
+             return fb_util::SnapshotUtil::snapshotTileHeatMapWeight_SIMD(dstVPtr, dstWPtr, srcVPtr, srcWPtr);
          },
          [&](int offsetItem) { // snapshotTileFuncB
-            return fb_util::SnapshotUtil::snapshotTileHeatMapWeight_SISD
-                ((uint64_t *)((uintptr_t)(&dstV[0]) + offsetItem * sizeof(double)),
-                 (uint32_t *)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float)),
-                 (uint64_t *)((uintptr_t)(&srcV[0]) + offsetItem * sizeof(double)),
-                 (uint32_t *)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float)));
+             uint64_t* dstVPtr = reinterpret_cast<uint64_t*>(dstVAddr + offsetItem * sizeof(double));
+             uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+             uint64_t* srcVPtr = reinterpret_cast<uint64_t*>(srcVAddr + offsetItem * sizeof(double));
+             uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
+             return fb_util::SnapshotUtil::snapshotTileHeatMapWeight_SISD(dstVPtr, dstWPtr, srcVPtr, srcWPtr);
          },
-         [&](std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
-             return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstV == tgtV) && (dstW == tgtW);
+         [&](const std::string& msg, std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
+             bool flag = true;
+             if (!verifyPixMask(updatePixIdArray, pixMaskBuff)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight verifyPixMask() failed\n";
+                 flag = false;
+             }
+             size_t numPix = orgW.size();
+             if (!TestUtil::compareResult(numPix, 1, dstV, dstW, tgtV, tgtW)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight compareResult() failed\n";
+                 flag = false;
+             }
+             /* useful debug info
+             if (!flag) {
+                 // std::cerr << TestUtil::analyzePixResult(w, h, 1, dstV, dstW, tgtV, tgtW) << '\n';
+                 if (!TestUtil::saveAllTiles("./testHMapWgt.dat", w, h, 1, orgV, orgW, srcV, srcW)) {
+                     std::cerr << ">> TestSnapshotUtil.cc testHeatMapWeight() saveAllTiles() failed\n";
+                 }
+             }
+             */
+             return flag;
          });
+
+    free(dstV);
+    free(dstW);
+    free(srcV);
+    free(srcW);
+    free(tgtV);
+    free(tgtW);
 }
 
 void
@@ -99,46 +149,82 @@ TestSnapshotUtil::testWeight()
     std::vector<float> orgW(w * h);
     setupWeightBuff(orgW, 0.3f); // 30% zero weight 70% random value
 
-    std::vector<float> dstW(orgW);
-    std::vector<float> srcW(orgW);
-    std::vector<float> tgtW(orgW);
+    using TestUtil = SnapshotDeltaTestUtil<float, float>;
+
+    void* dstW = TestUtil::allocVecWeightAlign(orgW);
+    void* srcW = TestUtil::allocVecWeightAlign(orgW);
+    void* tgtW = TestUtil::allocVecWeightAlign(orgW);
+    uintptr_t dstWAddr = reinterpret_cast<uintptr_t>(dstW);
+    uintptr_t srcWAddr = reinterpret_cast<uintptr_t>(srcW);
+    uintptr_t tgtWAddr = reinterpret_cast<uintptr_t>(tgtW);
     
+    if (!TestUtil::compareVecValue(dstW, orgW) ||
+        !TestUtil::compareVecValue(srcW, orgW) ||
+        !TestUtil::compareVecValue(tgtW, orgW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testWeight compareVecValue() failed\n";
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testWeight compareVecValue() OK\n";
+    }
+
+    float* srcWptr = static_cast<float*>(srcW);
+    float* tgtWptr = static_cast<float*>(tgtW);
+
     std::vector<int> updatePixIdArray;
     updateBuff(0.6f, // update 60% pix
                w,
                h,
                [&](const int pixOffset) { // updatePixelFunc
-                   srcW[pixOffset] += getNon0RandReal01(); // weight value is only increased and never decreased
+                   srcWptr[pixOffset] += getNon0RandReal01(); // weight value is only increased and never decreased
                    return true;
                },
                [&](const int pixOffset) { // updateTargetFunc 
-                   tgtW[pixOffset] = srcW[pixOffset];
+                   tgtWptr[pixOffset] = srcWptr[pixOffset];
                },
                updatePixIdArray);
     /*
     std::cerr << ">> TestSnapshotUtil.cc testWeight() "
               << analyzeWeightBuff(orgW, srcW) << '\n'; // useful debug dump message
     */
+    if (!TestUtil::verifyTgtWeight(orgW, srcW, tgtW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testWeight verifyTgtMaskVal() failed\n";
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testWeight verifyTgtMaskVal() OK\n";
+    }
 
     snapshotTimingCompare
         (w,
          h,
          [&]() { // resetDataFunc
-            dstW = orgW;
+            // dstW = orgW; // ORIG
+            memcpy(dstW, &orgW[0], orgW.size() * sizeof(float));
          },
          [&](int offsetItem) { // snapshotTileFuncA
-            return fb_util::SnapshotUtil::snapshotTileWeightBuffer
-                ((uint32_t *)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float)),
-                 (uint32_t *)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float)));
+            uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+            uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
+            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SIMD(dstWPtr, srcWPtr);
          },
          [&](int offsetItem) { // snapshotTileFuncB
-            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SISD
-                ((uint32_t *)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float)),
-                 (uint32_t *)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float)));
+            uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+            uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
+            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SISD(dstWPtr, srcWPtr);
          },
-         [&](std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
-             return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstW == tgtW);
+         [&](const std::string& msg, std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
+             bool flag = true;
+             if (!verifyPixMask(updatePixIdArray, pixMaskBuff)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testWeight() verifyPixMask() failed\n";
+                 flag = false;
+             }
+             size_t numPix = w * h;
+             if (!TestUtil::compareResult(numPix, dstW, tgtW)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testWeight() compareResult() failed\n";
+                 flag = false;
+             }
+             return flag;
          });
+
+    free(dstW);
+    free(srcW);
+    free(tgtW);
 }
 
 void
@@ -147,71 +233,105 @@ TestSnapshotUtil::testWeightMask()
     int w = sTileReso * 240; // = 1920
     int h = sTileReso * 135; // = 1080
 
-    std::vector<float> orgV(w * h);
-    setupRealBuff(orgV, 1, 0.3f); // 30% black pix, 70% random value
+    std::vector<float> orgW(w * h);
+    setupRealBuff(orgW, 1, 0.3f); // 30% black pix, 70% random value
 
-    std::vector<float> dstV(orgV);
-    std::vector<float> srcV(orgV);
-    std::vector<float> tgtV(orgV);
+    using TestUtil = SnapshotDeltaTestUtil<float, float>;
+
+    void* dstW = TestUtil::allocVecWeightAlign(orgW);
+    void* srcW = TestUtil::allocVecWeightAlign(orgW);
+    void* tgtW = TestUtil::allocVecWeightAlign(orgW);
+    uintptr_t dstWAddr = reinterpret_cast<uintptr_t>(dstW);
+    uintptr_t srcWAddr = reinterpret_cast<uintptr_t>(srcW);
+    uintptr_t tgtWAddr = reinterpret_cast<uintptr_t>(tgtW);
+    
+    if (!TestUtil::compareVecValue(dstW, orgW) ||
+        !TestUtil::compareVecValue(srcW, orgW) ||
+        !TestUtil::compareVecValue(tgtW, orgW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testWeightMask compareVecValue() failed\n";
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testWeightMask compareVecValue() OK\n";
+    }
 
     int tileTotal = (w / sTileReso) * (h / sTileReso);
     std::vector<uint64_t> dstPixMaskBuff(tileTotal);
     std::vector<uint64_t> srcPixMaskBuff(tileTotal);
-    setupPixMaskBuff(0.2, // 20% empty
-                     0.2, // 20% full
-                     dstPixMaskBuff);
-    setupPixMaskBuff(0.3, // 30% empty
-                     0.1, // 10% full
-                     srcPixMaskBuff);
+    setupPixMaskBuff(dstPixMaskBuff,
+                     0.2,  // 20% empty
+                     0.2); // 20% full
+    setupPixMaskBuff(srcPixMaskBuff,
+                     0.3,  // 30% empty
+                     0.1); // 10% full
+
+    float* srcWptr = static_cast<float*>(srcW);
+    float* tgtWptr = static_cast<float*>(tgtW);
 
     std::vector<int> updatePixIdArray;
     updateBuff2(srcPixMaskBuff,
                 [&](const int pixOffset) { // updatePixelFunc
-                    srcV[pixOffset] += getNon0RandReal01();
+                    srcWptr[pixOffset] += getNon0RandReal01();
                     return true;
                 },
                 [&](const int pixOffset) { // updateTargetFunc
-                    tgtV[pixOffset] = srcV[pixOffset];
+                    tgtWptr[pixOffset] = srcWptr[pixOffset];
                 },
                 updatePixIdArray);
     /*
     std::cerr << ">> TestSnapshotUtil.cc testWeightMask() "
-              << analyzeWeightBuff(orgV, srcV) << '\n'; // useful debug dump message
+              << analyzeWeightBuff(orgW, srcW) << '\n'; // useful debug dump message
     */
+    if (!TestUtil::verifyTgtWeight(orgW, srcW, tgtW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testWeightMask verifyTgtMaskVal() failed\n";
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testWeightMask verifyTgtMaskVal() OK\n";
+    }
 
     snapshotTimingCompare
         (w,
          h,
          [&]() { // resetDataFunc
-            dstV = orgV;
+            memcpy(dstW, &orgW[0], orgW.size() * sizeof(float));
          },
          [&](int offsetItem) { // snapshotTileFuncA
+            uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+            uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
             int tileId = offsetItem / (sTileReso * sTileReso);
-            return fb_util::SnapshotUtil::snapshotTileWeightBuffer
-                ((uint32_t *)((uintptr_t)&dstV[0] + offsetItem * sizeof(float)),
-                 dstPixMaskBuff[tileId],
-                 (uint32_t *)((uintptr_t)&srcV[0] + offsetItem * sizeof(float)),
-                 srcPixMaskBuff[tileId]);
+            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SIMD(dstWPtr, dstPixMaskBuff[tileId],
+                                                                        srcWPtr, srcPixMaskBuff[tileId]);
          },
          [&](int offsetItem) { // snapshotTileFuncB
+            uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+            uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
             int tileId = offsetItem / (sTileReso * sTileReso);
-            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SISD
-                ((uint32_t *)((uintptr_t)&dstV[0] + offsetItem * sizeof(float)),
-                 dstPixMaskBuff[tileId],
-                 (uint32_t *)((uintptr_t)&srcV[0] + offsetItem * sizeof(float)),
-                 srcPixMaskBuff[tileId]);
+            return fb_util::SnapshotUtil::snapshotTileWeightBuffer_SISD(dstWPtr, dstPixMaskBuff[tileId],
+                                                                        srcWPtr, srcPixMaskBuff[tileId]);
          },
-         [&](std::vector<uint64_t> &pixMaskBuff) -> bool { // verifyFunc
-             return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstV == tgtV);
+         [&](const std::string& msg, std::vector<uint64_t> &pixMaskBuff) -> bool { // verifyFunc
+             bool flag = true;
+             if (!verifyPixMask(updatePixIdArray, pixMaskBuff)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testWeightMask() verifyPixMask() failed\n";
+                 flag = false;
+             }
+             size_t numPix = w * h;
+             if (!TestUtil::compareResult(numPix, dstW, tgtW)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testWeightMask() compareResult() failed\n";
+                 flag = false;
+             }
+             return flag;
          });
+
+    free(dstW);
+    free(srcW);
+    free(tgtW);
 }
 
 void
 TestSnapshotUtil::testFloatWeight()
 {
-    testFloatNWeight(1,
+    testFloatNWeight("testFloatWeight",
+                     1,
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
-                         return fb_util::SnapshotUtil::snapshotTileFloatWeight
+                         return fb_util::SnapshotUtil::snapshotTileFloatWeight_SIMD
                              (dstVPtr, dstWPtr, srcVPtr, srcWPtr);
                      },
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
@@ -226,7 +346,7 @@ TestSnapshotUtil::testFloatNumSample()
     testFloatNNumSample(1,
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
                             uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask) {
-                            return fb_util::SnapshotUtil::snapshotTileFloatNumSample
+                            return fb_util::SnapshotUtil::snapshotTileFloatNumSample_SIMD
                                 (dstVPtr, dstNPtr, dstPixMask, srcVPtr, srcNPtr, srcPixMask);
                         },
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
@@ -239,9 +359,10 @@ TestSnapshotUtil::testFloatNumSample()
 void
 TestSnapshotUtil::testFloat2Weight()
 {
-    testFloatNWeight(2,
+    testFloatNWeight("testFloat2Weight",
+                     2,
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
-                         return fb_util::SnapshotUtil::snapshotTileFloat2Weight
+                         return fb_util::SnapshotUtil::snapshotTileFloat2Weight_SIMD
                              (dstVPtr, dstWPtr, srcVPtr, srcWPtr);
                      },
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
@@ -256,7 +377,7 @@ TestSnapshotUtil::testFloat2NumSample()
     testFloatNNumSample(2,
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
                             uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask) {
-                            return fb_util::SnapshotUtil::snapshotTileFloat2NumSample
+                            return fb_util::SnapshotUtil::snapshotTileFloat2NumSample_SIMD
                                 (dstVPtr, dstNPtr, dstPixMask, srcVPtr, srcNPtr, srcPixMask);
                         },
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
@@ -269,9 +390,10 @@ TestSnapshotUtil::testFloat2NumSample()
 void
 TestSnapshotUtil::testFloat3Weight()
 {
-    testFloatNWeight(3,
+    testFloatNWeight("testFloat3Weight",
+                     3,
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
-                         return fb_util::SnapshotUtil::snapshotTileFloat3Weight
+                         return fb_util::SnapshotUtil::snapshotTileFloat3Weight_SIMD
                              (dstVPtr, dstWPtr, srcVPtr, srcWPtr);
                      },
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
@@ -286,7 +408,7 @@ TestSnapshotUtil::testFloat3NumSample()
     testFloatNNumSample(3,
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
                             uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask) {
-                            return fb_util::SnapshotUtil::snapshotTileFloat3NumSample
+                            return fb_util::SnapshotUtil::snapshotTileFloat3NumSample_SIMD
                                 (dstVPtr, dstNPtr, dstPixMask, srcVPtr, srcNPtr, srcPixMask);
                         },
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
@@ -299,9 +421,10 @@ TestSnapshotUtil::testFloat3NumSample()
 void
 TestSnapshotUtil::testFloat4Weight()
 {
-    testFloatNWeight(4,
+    testFloatNWeight("testFloat4Weight",
+                     4,
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
-                         return fb_util::SnapshotUtil::snapshotTileFloat4Weight
+                         return fb_util::SnapshotUtil::snapshotTileFloat4Weight_SIMD
                              (dstVPtr, dstWPtr, srcVPtr, srcWPtr);
                      },
                      [&](uint32_t* dstVPtr, uint32_t* dstWPtr, uint32_t* srcVPtr, uint32_t* srcWPtr) {
@@ -316,7 +439,7 @@ TestSnapshotUtil::testFloat4NumSample()
     testFloatNNumSample(4,
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
                             uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask) {
-                            return fb_util::SnapshotUtil::snapshotTileFloat4NumSample
+                            return fb_util::SnapshotUtil::snapshotTileFloat4NumSample_SIMD
                                 (dstVPtr, dstNPtr, dstPixMask, srcVPtr, srcNPtr, srcPixMask);
                         },
                         [&](uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
@@ -329,7 +452,8 @@ TestSnapshotUtil::testFloat4NumSample()
 //------------------------------------------------------------------------------------------    
 
 void
-TestSnapshotUtil::testFloatNWeight(const int pixDim,
+TestSnapshotUtil::testFloatNWeight(const std::string& testName,
+                                   const int pixDim,
                                    const TestSnapshotTileFunc& snapshotTileFuncA,
                                    const TestSnapshotTileFunc& snapshotTileFuncB)
 {
@@ -341,53 +465,107 @@ TestSnapshotUtil::testFloatNWeight(const int pixDim,
     setupRealBuff(orgV, pixDim, 0.3f); // 30% black pix, 70% random value
     setupWeightBuff(orgW, 0.3f); // 30% zero weight, 70% random value
 
-    std::vector<float> dstV(orgV);
-    std::vector<float> dstW(orgW);
-    std::vector<float> srcV(orgV);
-    std::vector<float> srcW(orgW);
-    std::vector<float> tgtV(orgV);
-    std::vector<float> tgtW(orgW);
+    using TestUtil = SnapshotDeltaTestUtil<float, float>;
+
+    void* dstV = TestUtil::allocVecValueAlign(orgV);
+    void* dstW = TestUtil::allocVecWeightAlign(orgW);
+    void* srcV = TestUtil::allocVecValueAlign(orgV);
+    void* srcW = TestUtil::allocVecWeightAlign(orgW);
+    void* tgtV = TestUtil::allocVecValueAlign(orgV);
+    void* tgtW = TestUtil::allocVecWeightAlign(orgW);
+    uintptr_t dstVAddr = reinterpret_cast<uintptr_t>(dstV);
+    uintptr_t dstWAddr = reinterpret_cast<uintptr_t>(dstW);
+    uintptr_t srcVAddr = reinterpret_cast<uintptr_t>(srcV);
+    uintptr_t srcWAddr = reinterpret_cast<uintptr_t>(srcW);
+
+    if (!TestUtil::compareVecValue(dstV, orgV) || !TestUtil::compareVecWeight(dstW, orgW) ||
+        !TestUtil::compareVecValue(srcV, orgV) || !TestUtil::compareVecWeight(srcW, orgW) ||
+        !TestUtil::compareVecValue(tgtV, orgV) || !TestUtil::compareVecWeight(tgtW, orgW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testName:" << testName << " testFloatNWeight compareVecMem() failed";
+        CPPUNIT_ASSERT(false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testName:" << testName
+        //           << " testFloatNWeight compareVecMem() OK\n";
+    }
 
     std::vector<int> updatePixIdArray;
     updateBuff(0.6f, // update 60% pix
                w,
                h,
                [&](const int pixOffset) { // updatePixelFunc
-                   return updatePix(srcV, srcW, pixOffset, pixDim);
+                   return updatePix<float>(srcV, srcW, pixOffset, pixDim);
                },
                [&](const int pixOffset) { // updateTargetFunc
-                   copyPix(tgtV, tgtW, srcV, srcW, pixOffset, pixDim);
+                   copyPix<float>(tgtV, tgtW, srcV, srcW, pixOffset, pixDim);
                },
                updatePixIdArray);
     /*
     std::cerr << ">> TestSnapshotUtil.cc testFloatNWeight() "
               << analyzeBuff(pixDim, orgV, orgW, srcV, srcW) << '\n'; // useful debug dump message
     */
+    if (!TestUtil::verifyTgtValWeight(orgV, orgW, srcV, srcW, tgtV, tgtW)) {
+        std::cerr << ">> TestSnapshotUtil.cc testName:" << testName << " testFloatNWeight verifyTgtValWeight() failed";
+        CPPUNIT_ASSERT(false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testName:" << testName
+        //           << " testFloatNWeight verifyTgtValWeight() OK\n";
+    }
 
     snapshotTimingCompare
         (w,
          h,
          [&]() { // resetDataFunc
-            dstV = orgV;
-            dstW = orgW;
+            memcpy(dstV, &orgV[0], orgV.size() * sizeof(float));
+            memcpy(dstW, &orgW[0], orgW.size() * sizeof(float));
          },
          [&](int offsetItem) { // snapshotTileFuncA
-             uint32_t* dstVPtr = (uint32_t*)((uintptr_t)(&dstV[0]) + offsetItem * sizeof(float) * pixDim);
-             uint32_t* dstWPtr = (uint32_t*)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float));
-             uint32_t* srcVPtr = (uint32_t*)((uintptr_t)(&srcV[0]) + offsetItem * sizeof(float) * pixDim);
-             uint32_t* srcWPtr = (uint32_t*)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float));
+             uint32_t* dstVPtr = reinterpret_cast<uint32_t*>(dstVAddr + offsetItem * sizeof(float) * pixDim);
+             uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+             uint32_t* srcVPtr = reinterpret_cast<uint32_t*>(srcVAddr + offsetItem * sizeof(float) * pixDim);
+             uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
              return snapshotTileFuncA(dstVPtr, dstWPtr, srcVPtr, srcWPtr);
          },
          [&](int offsetItem) { // snapshotTileFuncB
-             uint32_t* dstVPtr = (uint32_t*)((uintptr_t)(&dstV[0]) + offsetItem * sizeof(float) * pixDim);
-             uint32_t* dstWPtr = (uint32_t*)((uintptr_t)(&dstW[0]) + offsetItem * sizeof(float));
-             uint32_t* srcVPtr = (uint32_t*)((uintptr_t)(&srcV[0]) + offsetItem * sizeof(float) * pixDim);
-             uint32_t* srcWPtr = (uint32_t*)((uintptr_t)(&srcW[0]) + offsetItem * sizeof(float));
+             uint32_t* dstVPtr = reinterpret_cast<uint32_t*>(dstVAddr + offsetItem * sizeof(float) * pixDim);
+             uint32_t* dstWPtr = reinterpret_cast<uint32_t*>(dstWAddr + offsetItem * sizeof(float));
+             uint32_t* srcVPtr = reinterpret_cast<uint32_t*>(srcVAddr + offsetItem * sizeof(float) * pixDim);
+             uint32_t* srcWPtr = reinterpret_cast<uint32_t*>(srcWAddr + offsetItem * sizeof(float));
              return snapshotTileFuncB(dstVPtr, dstWPtr, srcVPtr, srcWPtr);
          },
-         [&](std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
-             return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstV == tgtV) && (dstW == tgtW);
+         [&](const std::string& msg, std::vector<uint64_t>& pixMaskBuff) { // verifyFunc
+             // return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstV == tgtV) && (dstW == tgtW);
+             bool flag = true;
+             if (!verifyPixMask(updatePixIdArray, pixMaskBuff)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testFloatNWeight()"
+                           << " testName:" << testName << " testFunc:" << msg
+                           << " verifyPixMask() failed.\n";
+                 flag = false;
+             }
+             size_t numPix = orgW.size();
+             size_t numChan = orgV.size() / numPix;
+             if (!TestUtil::compareResult(numPix, numChan, dstV, dstW, tgtV, tgtW)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testFloatNWeight()"
+                           << " testName:" << testName << " testFunc:" << msg
+                           << " compareResult() failed.\n";
+                 flag = false;
+             }
+             /* useful debug procedure for dumping data to the disk
+             if (!flag) {
+                 std::cerr << TestUtil::analyzePixResult(w, h, numChan, dstV, dstW, tgtV, tgtW) << '\n';
+                 if (!TestUtil::saveAllTiles("./testFNWgt.dat", w, h, numChan, orgV, orgW, srcV, srcW)) {
+                     std::cerr << ">> TestSnapshotUtil.cc testFloatNWeight() saveAllTiles() failed\n";
+                 }
+             }
+             */
+             return flag;
          });
+
+    free(dstV);
+    free(dstW);
+    free(srcV);
+    free(srcW);
+    free(tgtV);
+    free(tgtW);
 }
 
 void
@@ -403,65 +581,102 @@ TestSnapshotUtil::testFloatNNumSample(const int pixDim,
     setupRealBuff(orgV, pixDim, 0.3f); // 30% black pix, 70% random value
     setupNumBuff(orgN, 0.3f); // 30% zero weight, 70% random value
 
-    std::vector<float> dstV(orgV);
-    std::vector<unsigned int> dstN(orgN);
-    std::vector<float> srcV(orgV);
-    std::vector<unsigned int> srcN(orgN);
-    std::vector<float> tgtV(orgV);
-    std::vector<unsigned int> tgtN(orgN);
+    using TestUtil = SnapshotDeltaTestUtil<float, unsigned int>;
+
+    void* dstV = TestUtil::allocVecValueAlign(orgV);
+    void* dstN = TestUtil::allocVecWeightAlign(orgN);
+    void* srcV = TestUtil::allocVecValueAlign(orgV);
+    void* srcN = TestUtil::allocVecWeightAlign(orgN);
+    void* tgtV = TestUtil::allocVecValueAlign(orgV);
+    void* tgtN = TestUtil::allocVecWeightAlign(orgN);
+    uintptr_t dstVAddr = reinterpret_cast<uintptr_t>(dstV);
+    uintptr_t dstNAddr = reinterpret_cast<uintptr_t>(dstN);
+    uintptr_t srcVAddr = reinterpret_cast<uintptr_t>(srcV);
+    uintptr_t srcNAddr = reinterpret_cast<uintptr_t>(srcN);
+
+    if (!TestUtil::compareVecValue(dstV, orgV) || !TestUtil::compareVecWeight(dstN, orgN) ||
+        !TestUtil::compareVecValue(srcV, orgV) || !TestUtil::compareVecWeight(srcN, orgN) ||
+        !TestUtil::compareVecValue(tgtV, orgV) || !TestUtil::compareVecWeight(tgtN, orgN)) {
+        CPPUNIT_ASSERT(">> TestSnapshotUtil.cc testFloatNNumSample compareVec{Value,Weight}() failed\n" && false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testFloatNNumSample compareVec{Value,Weight}() OK\n";
+    }
 
     int tileTotal = (w / sTileReso) * (h / sTileReso);
     std::vector<uint64_t> dstPixMaskBuff(tileTotal);
     std::vector<uint64_t> srcPixMaskBuff(tileTotal);
-    setupPixMaskBuff(0.2, // 20% empty
-                     0.2, // 20% full
-                     dstPixMaskBuff);
-    setupPixMaskBuff(0.3, // 30% empty
-                     0.1, // 10% full
-                     srcPixMaskBuff);
+    setupPixMaskBuff(dstPixMaskBuff,
+                     0.2,  // 20% empty
+                     0.2); // 20% full
+    setupPixMaskBuff(srcPixMaskBuff,
+                     0.3,  // 30% empty
+                     0.1); // 10% full
 
     std::vector<int> updatePixIdArray;
     updateBuff2(srcPixMaskBuff,
                 [&](const int pixOffset) { // updatePixelFunc
-                    return updatePix2(srcV, srcN, pixOffset, pixDim);
+                    return updatePix2<float>(srcV, srcN, pixOffset, pixDim);
                 },
                 [&](const int pixOffset) { // updateTargetFunc
-                    return copyPix2(tgtV, tgtN, srcV, srcN, pixOffset, pixDim);
+                    return copyPix2<float>(tgtV, tgtN, srcV, srcN, pixOffset, pixDim);
                 },
                 updatePixIdArray);
     /*
     std::cerr << ">> TestSnapshotUtil.cc testFloatNNumSample() "
               << analyzeBuff2(pixDim, orgV, orgN, srcV, srcN) << '\n'; // useful debug dump message
     */
+    if (!TestUtil::verifyTgtValWeight(orgV, orgN, srcV, srcN, tgtV, tgtN)) {
+        CPPUNIT_ASSERT(">> TestSnapshotUtil.cc testFloatNNumSample verifyTgtValWeight() failed\n" && false);
+    } else {
+        // std::cerr << ">> TestSnapshotUtil.cc testFloatNNumSample verifyTgtValWeight() OK\n";
+    }
 
     snapshotTimingCompare
         (w,
          h,
          [&]() { // resetDataFunc
-            dstV = orgV;
-            dstN = orgN;
+            memcpy(dstV, &orgV[0], orgV.size() * sizeof(float));
+            memcpy(dstN, &orgN[0], orgN.size() * sizeof(unsigned int));
          },
          [&](int offsetItem) { // snapshotTileFuncA
-            uint32_t* dstVPtr = (uint32_t*)((uintptr_t)&(dstV[0]) + offsetItem * sizeof(float) * pixDim);
-            uint32_t* dstNPtr = (uint32_t*)((uintptr_t)&(dstN[0]) + offsetItem * sizeof(unsigned int));
-            uint32_t* srcVPtr = (uint32_t*)((uintptr_t)&(srcV[0]) + offsetItem * sizeof(float) * pixDim);
-            uint32_t* srcNPtr = (uint32_t*)((uintptr_t)&(srcN[0]) + offsetItem * sizeof(unsigned int));
+            uint32_t* dstVPtr = reinterpret_cast<uint32_t*>(dstVAddr + offsetItem * sizeof(float) * pixDim);
+            uint32_t* dstNPtr = reinterpret_cast<uint32_t*>(dstNAddr + offsetItem * sizeof(unsigned int));
+            uint32_t* srcVPtr = reinterpret_cast<uint32_t*>(srcVAddr + offsetItem * sizeof(float) * pixDim);
+            uint32_t* srcNPtr = reinterpret_cast<uint32_t*>(srcNAddr + offsetItem * sizeof(unsigned int));
             int tileId = offsetItem / (sTileReso * sTileReso);
             return snapshotTileFuncA(dstVPtr, dstNPtr, dstPixMaskBuff[tileId],
                                      srcVPtr, srcNPtr, srcPixMaskBuff[tileId]);
          },
          [&](int offsetItem) { // snapshotTileFuncB
-            uint32_t* dstVPtr = (uint32_t*)((uintptr_t)&(dstV[0]) + offsetItem * sizeof(float) * pixDim);
-            uint32_t* dstNPtr = (uint32_t*)((uintptr_t)&(dstN[0]) + offsetItem * sizeof(unsigned int));
-            uint32_t* srcVPtr = (uint32_t*)((uintptr_t)&(srcV[0]) + offsetItem * sizeof(float) * pixDim);
-            uint32_t* srcNPtr = (uint32_t*)((uintptr_t)&(srcN[0]) + offsetItem * sizeof(unsigned int));
+            uint32_t* dstVPtr = reinterpret_cast<uint32_t*>(dstVAddr + offsetItem * sizeof(float) * pixDim);
+            uint32_t* dstNPtr = reinterpret_cast<uint32_t*>(dstNAddr + offsetItem * sizeof(unsigned int));
+            uint32_t* srcVPtr = reinterpret_cast<uint32_t*>(srcVAddr + offsetItem * sizeof(float) * pixDim);
+            uint32_t* srcNPtr = reinterpret_cast<uint32_t*>(srcNAddr + offsetItem * sizeof(unsigned int));
             int tileId = offsetItem / (sTileReso * sTileReso);
             return snapshotTileFuncB(dstVPtr, dstNPtr, dstPixMaskBuff[tileId],
                                      srcVPtr, srcNPtr, srcPixMaskBuff[tileId]);
          },
-         [&](std::vector<uint64_t> &pixMaskBuff) { // verifyFunc
-             return verifyPixMask(updatePixIdArray, pixMaskBuff) && (dstV == tgtV) && (dstN == tgtN);
+         [&](const std::string& msg, std::vector<uint64_t> &pixMaskBuff) { // verifyFunc
+             bool flag = true;
+             if (!verifyPixMask(updatePixIdArray, pixMaskBuff)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testFloatNNumSample() verifyPixMask() failed\n";
+                 flag = false;
+             }
+             size_t numPix = orgN.size();
+             size_t numChan = orgV.size() / numPix;
+             if (!TestUtil::compareResult(numPix, numChan, dstV, dstN, tgtV, tgtN)) {
+                 std::cerr << ">> TestSnapshotUtil.cc testFloatNNumSample() compareResult() failed\n";
+                 flag = false;
+             }
+             return flag;
          });
+
+    free(dstV);
+    free(dstN);
+    free(srcV);
+    free(srcN);
+    free(tgtV);
+    free(tgtN);
 }
 
 template <typename T>
@@ -473,10 +688,19 @@ TestSnapshotUtil::setupBuffRandom(std::vector<T>& buff) const
 {
     std::random_device rnd;
     std::mt19937 mt(rnd());
-    std::uniform_real_distribution<> randVal(0.001, 1.0);
+    std::uniform_real_distribution<> randVal(0.0, 1.0);
+
+    auto getNonZeroRandomVal = [&]() {
+        T val;
+        for (int i = 0; i < 10; ++i) { // We try to get non zero random value 10x 
+            val = static_cast<T>(randVal(mt));
+            if (val > static_cast<T>(0.0)) return val;
+        }
+        return static_cast<T>(0.001); // unlikely be here.
+    };
 
     for (size_t i = 0; i < buff.size(); ++i) {
-        buff[i] = static_cast<T>(randVal(mt));
+        buff[i] = getNonZeroRandomVal();
     }
 }
 
@@ -538,9 +762,9 @@ TestSnapshotUtil::setupNumBuff(std::vector<unsigned int>& buff,
 }
 
 void
-TestSnapshotUtil::setupPixMaskBuff(float emptyMaskFraction,
-                                   float fullMaskFraction,
-                                   std::vector<uint64_t> &buff) const
+TestSnapshotUtil::setupPixMaskBuff(std::vector<uint64_t> &buff,
+                                   float emptyMaskFraction,
+                                   float fullMaskFraction) const
 {
     std::random_device rnd;
     std::mt19937 mt(rnd());
@@ -614,7 +838,7 @@ TestSnapshotUtil::updateBuff(const float updatePixFraction,
         int pixOffset = pixOffsetArray[id];
         if (updatePixelFunc(pixOffset)) {
             updatePixIdArray.push_back(pixOffset); // updated pixel
-            updateTargetFunc(pixOffset);     // update target buff and weight data
+            updateTargetFunc(pixOffset); // update target buff and weight data
         }
     }
 
@@ -625,8 +849,8 @@ TestSnapshotUtil::updateBuff(const float updatePixFraction,
 
 template <typename T>
 bool
-TestSnapshotUtil::updatePix(std::vector<T>& pixBuff, 
-                            std::vector<float>& weightBuff,
+TestSnapshotUtil::updatePix(void* pixBuffIn,
+                            void* weightBuffIn,
                             const int pixOffset,
                             const int pixDim)
 {
@@ -642,6 +866,9 @@ TestSnapshotUtil::updatePix(std::vector<T>& pixBuff,
         // unlikely to be here
         return origVal + ((origVal > static_cast<T>(0.5)) ? static_cast<T>(-0.1) : static_cast<T>(0.1));
     };
+
+    T* pixBuff = static_cast<T*>(pixBuffIn);
+    float* weightBuff = static_cast<float*>(weightBuffIn);
 
     //
     // keep original condition
@@ -687,8 +914,8 @@ TestSnapshotUtil::updatePix(std::vector<T>& pixBuff,
           
 template <typename T>
 bool
-TestSnapshotUtil::updatePix2(std::vector<T>& pixBuff,
-                             std::vector<unsigned int>& numBuff,
+TestSnapshotUtil::updatePix2(void* pixBuffIn,
+                             void* numBuffIn,
                              const int pixOffset,
                              const int pixDim)
 {
@@ -711,6 +938,9 @@ TestSnapshotUtil::updatePix2(std::vector<T>& pixBuff,
         }
         return 123; // unlikely to be here
     };
+
+    T* pixBuff = static_cast<T*>(pixBuffIn);
+    unsigned int* numBuff = static_cast<unsigned int*>(numBuffIn);
 
     //
     // keep original condition
@@ -743,7 +973,7 @@ TestSnapshotUtil::updatePix2(std::vector<T>& pixBuff,
     //
     auto activePixTest = [&]() {
         int currNumSample = numBuff[pixOffset];
-        if (currNumSample == 0.0f) return false; // early exit : non active pixel because numSample is ZERO
+        if (currNumSample == 0) return false; // early exit : non active pixel because numSample is ZERO
 
         if (origNumSample != currNumSample) return true; // active pixel
         for (int chanId = 0; chanId < pixDim; ++chanId) {
@@ -756,36 +986,46 @@ TestSnapshotUtil::updatePix2(std::vector<T>& pixBuff,
 
 template <typename T>
 void
-TestSnapshotUtil::copyPix(std::vector<T>& destBuff,
-                          std::vector<float>& destWeight,
-                          const std::vector<T>& srcBuff,
-                          const std::vector<float>& srcWeight,
+TestSnapshotUtil::copyPix(void* dstBuffIn,
+                          void* dstWeightIn,
+                          const void* srcBuffIn,
+                          const void* srcWeightIn,
                           const int pixOffset,
                           const int pixDim) const
 {
+    T* dstBuff = static_cast<T*>(dstBuffIn);
+    float* dstWeight = static_cast<float*>(dstWeightIn);
+    const T* srcBuff = static_cast<const T*>(srcBuffIn);
+    const float* srcWeight = static_cast<const float*>(srcWeightIn);
+
     size_t offset = pixOffset * pixDim;
     for (size_t chanId = 0; chanId < pixDim; ++chanId) {
-        destBuff[offset] = srcBuff[offset];
+        dstBuff[offset] = srcBuff[offset];
         offset++;
     }
-    destWeight[pixOffset] = srcWeight[pixOffset];
+    dstWeight[pixOffset] = srcWeight[pixOffset];
 }
 
 template <typename T>
 void
-TestSnapshotUtil::copyPix2(std::vector<T>& destBuff,
-                           std::vector<unsigned int>& destNumBuff,
-                           const std::vector<T>& srcBuff,
-                           const std::vector<unsigned int>& srcNumBuff,
+TestSnapshotUtil::copyPix2(void* dstBuffIn,
+                           void* dstNumBuffIn,
+                           const void* srcBuffIn,
+                           const void* srcNumBuffIn,
                            const int pixOffset,
                            const int pixDim) const
 {
+    T* dstBuff = static_cast<T*>(dstBuffIn);
+    unsigned int* dstNumBuff = static_cast<unsigned int*>(dstNumBuffIn);
+    const T* srcBuff = static_cast<const T*>(srcBuffIn);
+    const unsigned int* srcNumBuff = static_cast<const unsigned int*>(srcNumBuffIn);
+
     size_t offset = pixOffset * pixDim;
     for (size_t chanId = 0; chanId < pixDim; ++chanId) {
-        destBuff[offset] = srcBuff[offset];
+        dstBuff[offset] = srcBuff[offset];
         offset++;
     }
-    destNumBuff[pixOffset] = srcNumBuff[pixOffset];
+    dstNumBuff[pixOffset] = srcNumBuff[pixOffset];
 }
 
 void
@@ -1013,7 +1253,7 @@ void
 TestSnapshotUtil::snapshotTileLoop(const int w, // should be tile aligned resolution
                                    const int h, // should be tile aligned resolution
                                    std::vector<uint64_t> &pixMaskBuff,
-                                   std::function<uint64_t(int offsetItem)> snapshotTileFunc) const
+                                   const std::function<uint64_t(int offsetItem)>& snapshotTileFunc) const
 {
     for (int tileYId = 0; tileYId < h / sTileReso; ++tileYId) {
         for (int tileXId = 0; tileXId < w / sTileReso; ++tileXId) {
@@ -1030,7 +1270,8 @@ TestSnapshotUtil::snapshotTimingCompare(const int w, // should be tile aligned r
                                         std::function<void()> resetDataFunc,
                                         const std::function<uint64_t(int offsetItem)>& snapshotTileFuncA,
                                         const std::function<uint64_t(int offsetItem)>& snapshotTileFuncB,
-                                        const std::function<bool(std::vector<uint64_t> &)>& verifyFunc) const
+                                        const std::function<bool(const std::string& msg,
+                                                                 std::vector<uint64_t> &)>& verifyFunc) const
 {
 #ifdef TIMING_TEST
     int timingTestLoopMax = 128; // for performance test
@@ -1054,7 +1295,7 @@ TestSnapshotUtil::snapshotTimingCompare(const int w, // should be tile aligned r
         timeA += recTime.end();
     }
     timeA /= static_cast<float>(timingTestLoopMax);
-    CPPUNIT_ASSERT(verifyFunc(pixMaskBuff));
+    CPPUNIT_ASSERT(verifyFunc("testFuncA", pixMaskBuff));
 
     pixMaskBuff.clear();
     pixMaskBuff.resize(tileTotal, static_cast<uint64_t>(0x0));
@@ -1068,7 +1309,7 @@ TestSnapshotUtil::snapshotTimingCompare(const int w, // should be tile aligned r
         timeB += recTime.end();
     }
     timeB /= static_cast<float>(timingTestLoopMax);
-    CPPUNIT_ASSERT(verifyFunc(pixMaskBuff));
+    CPPUNIT_ASSERT(verifyFunc("testFuncB", pixMaskBuff));
 
 #ifdef TIMING_TEST  
     std::cerr << "timeA:" << timeA * 1000.0f << "ms (" << timeB / timeA << "x) "

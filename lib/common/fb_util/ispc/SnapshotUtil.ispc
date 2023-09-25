@@ -2,6 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <scene_rdl2/common/platform/Platform.isph>
 
+//
+// We have 3 different types of implementations for ISPC version. All the same results but different
+// performances. IMPL_FULLBITOP is the best result so far but we keep all code for future testing on
+// different compiler environment.
+//
+// We hove chosen IMPL_FULLBITOP based on several different timing test run on
+// Intel Xeon Gold 6140 2.3GHz by GCC9.3, ISPC1.20 @ Sep/15/2023
+//    
+//#define IMPL_HYBRID // original
+#define IMPL_FULLBITOP // full bit operation
+//#define IMPL_NAIVELOGICAL // naive logical
+
 export uniform uint64_t
 snapshotTileHeatMapWeight(uniform int64 dstVBuff[],
                           uniform int   dstWBuff[],
@@ -19,9 +31,19 @@ snapshotTileHeatMapWeight(uniform int64 dstVBuff[],
         int64 srcV = srcVBuff[offset];
         int   srcW = srcWBuff[offset];
 
-        int64 srcWFlag = (srcW) ? ~(int64)0x0 : (int64)0x0;
-        int activeMask = ((srcW - dstW) | (srcV - dstV)) & srcWFlag;
+#ifdef IMPL_HYBRID
+        int64 activeMask = ((int64)(srcW - dstW) | (srcV - dstV)) && (int64)srcW;
         if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
+        int64 srcWFlag = (srcW) ? ~(int64)0x0 : (int64)0x0;
+        int64 activeMask = ((int64)(srcW - dstW) | (srcV - dstV)) & srcWFlag;
+        if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = (((srcW - dstW) != 0x0) || ((srcV - dstV) != (int64)0x0)) && srcW; 
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             dstVBuff[offset] = srcV;
             dstWBuff[offset] = srcW;
 
@@ -44,8 +66,18 @@ snapshotTileWeightBuffer(uniform int dstBuff[],
         int dst = dstBuff[offset];
         int src = srcBuff[offset];
 
+#ifdef IMPL_HYBRID
+        int activeMask = (src - dst) && src;
+        if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         int activeMask = (src - dst) & ((src) ? ~0x0 : 0x0);
         if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = ((src - dst) != 0x0) && src;
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             dstBuff[offset] = src;
 
             mask |= ((uint64_t)(lanemask()) << (loopId * programCount));
@@ -71,8 +103,18 @@ snapshotTileFloatWeight(uniform int dstVBuff[],
         int srcV = srcVBuff[offset];
         int srcW = srcWBuff[offset];
 
+#ifdef IMPL_HYBRID
+        int activeMask = ((srcV - dstV) | (srcW - dstW)) && srcW;
+        if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         int activeMask = ((srcV - dstV) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = (((srcV - dstV) != 0x0) || ((srcW - dstW) != 0x0)) && srcW;
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             dstVBuff[offset] = srcV;
             dstWBuff[offset] = srcW;
 
@@ -113,8 +155,18 @@ snapshotTileFloatNumSample(uniform int dstVBuff[],
                 int srcN = srcNBuff[offset + programIndex];
                             
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
+#ifdef IMPL_HYBRID
+                int activeMask = ((srcV - dstV) | (srcN - dstN) | freshPixCondition) && srcN;
+                if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
                 int activeMask = ((srcV - dstV) | (srcN - dstN) | freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+                bool activeFlag = ((srcV - dstV) != 0x0 || (srcN - dstN) != 0x0 || freshPixCondition) && srcN;
+                if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
                     dstVBuff[offset + programIndex] = srcV;
                     dstNBuff[offset + programIndex] = srcN;
 
@@ -149,8 +201,18 @@ snapshotTileFloat2Weight(uniform int dstVaBuff[],
         int srcVb = srcVbBuff[offset];
         int srcW  = srcWBuff[offset];
 
+#ifdef IMPL_HYBRID
+        int activeMask = ((srcVa - dstVa) | (srcVb - dstVb) | (srcW - dstW)) && srcW;
+        if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         int activeMask = ((srcVa - dstVa) | (srcVb - dstVb) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = ((srcVa - dstVa) != 0x0 || (srcVb - dstVb) != 0x0 || (srcW - dstW) != 0x0) && srcW;
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             mask |= (uint64_t)0x1 << offset;
 
             dstWBuff[offset] = srcWBuff[offset];
@@ -197,6 +259,17 @@ snapshotTileFloat2Weight(uniform int   dstVBuff[],
         int srcWb = srcW >> 32;
 
         bool active = false;
+#ifdef IMPL_HYBRID
+        if (((srcR - dstR) | (srcG - dstG) | (srcWa - dstWa)) && srcWa) {
+            mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
+            active = true;
+        }
+        if (((srcB - dstB) | (srcA - dstA) | (srcWb - dstWb)) && srcWb) {
+            mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
+            active = true;
+        }
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         if (((srcR - dstR) | (srcG - dstG) | (srcWa - dstWa)) & ((srcWa) ? ~0x0 : 0x0)) {
             mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
             active = true;
@@ -205,6 +278,17 @@ snapshotTileFloat2Weight(uniform int   dstVBuff[],
             mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
             active = true;
         }
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        if (((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 | (srcWa - dstWa) != 0x0) && srcWa) {
+            mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
+            active = true;
+        }
+        if (((srcB - dstB) != 0x0 || (srcA - dstA) != 0x0 | (srcWb - dstWb) != 0x0) && srcWb) {
+            mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
+            active = true;
+        }
+#endif // end IMPL_NAIVELOGICAL
         if (active) {
             soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
             dstWBuff[offset + programIndex] = srcW;
@@ -263,6 +347,17 @@ snapshotTileFloat2NumSample(uniform int   dstVBuff[],
                 int srcNb = srcN >> 32;
 
                 bool active = false;
+#ifdef IMPL_HYBRID
+                if (((srcR - dstR) | (srcG - dstG) | (srcNa - dstNa)) && srcNa) {
+                    mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
+                    active = true;
+                }
+                if (((srcB - dstB) | (srcA - dstA) | (srcNb - dstNb)) && srcNb) {
+                    mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
+                    active = true;
+                }
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
                 if (((srcR - dstR) | (srcG - dstG) | (srcNa - dstNa)) & ((srcNa) ? ~0x0 : 0x0)) {
                     mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
                     active = true;
@@ -271,6 +366,17 @@ snapshotTileFloat2NumSample(uniform int   dstVBuff[],
                     mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
                     active = true;
                 }
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+                if (((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 || (srcNa - dstNa) != 0x0) && srcNa) {
+                    mask |= (uint64_t)0x1 << ((offset + programIndex) * 2);
+                    active = true;
+                }
+                if (((srcB - dstB) != 0x0 || (srcA - dstA) != 0x0 || (srcNb - dstNb) != 0x0) && srcNb) {
+                    mask |= (uint64_t)0x1 << ((offset + programIndex) * 2 + 1);
+                    active = true;
+                }
+#endif // end IMPL_NAIVELOGICAL
                 if (active) {
                     soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
                     dstNBuff[offset + programIndex] = srcN;
@@ -302,8 +408,18 @@ snapshotTileFloat3Weight(uniform int dstCBuff[],
         aos_to_soa3(&srcCBuff[offsetC], &srcR, &srcG, &srcB);
         int srcW = srcWBuff[offsetW + programIndex];
 
+#ifdef IMPL_HYBRID
+        int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcW - dstW)) && srcW;
+        if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = ((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 || (srcB - dstB) != 0x0 || (srcW - dstW) != 0x0) && srcW;
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             soa_to_aos3(srcR, srcG, srcB, &dstCBuff[offsetC]);
             dstWBuff[offsetW + programIndex] = srcW;
 
@@ -346,8 +462,19 @@ snapshotTileFloat3NumSample(uniform int dstVBuff[],
                 int srcN = srcNBuff[offsetN + programIndex];
                             
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
+#ifdef IMPL_HYBRID
+                int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcN - dstN) | freshPixCondition) && srcN;
+                if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
                 int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcN - dstN) | freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+                bool activeFlag = ((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 ||
+                                   (srcB - dstB) != 0x0 || (srcN - dstN) != 0x0 || freshPixCondition) && srcN;
+                if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
                     soa_to_aos3(srcR, srcG, srcB, &dstVBuff[offsetV]);
                     dstNBuff[offsetN + programIndex] = srcN;
 
@@ -380,8 +507,20 @@ snapshotTileFloat4Weight(uniform int dstVBuff[],
         aos_to_soa4(&srcVBuff[offsetV], &srcR, &srcG, &srcB, &srcA);
         int srcW = srcWBuff[offsetW + programIndex];
 
+#ifdef IMPL_HYBRID
+        int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcW - dstW)) && srcW;
+        if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
         int activeMask = ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcW - dstW)) & ((srcW) ? ~0x0 : 0x0);
         if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+        bool activeFlag = ((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 ||
+                           (srcB - dstB) != 0x0 || (srcA - dstA) != 0x0 ||
+                           (srcW - dstW) != 0x0) && srcW;
+        if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
             soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
             dstWBuff[offsetW + programIndex] = srcW;
 
@@ -424,10 +563,25 @@ snapshotTileFloat4NumSample(uniform int dstVBuff[],
                 int srcN = srcNBuff[offsetN + programIndex];
                             
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
+#ifdef IMPL_HYBRID
+                int activeMask =
+                    ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcN - dstN) |
+                     freshPixCondition) && srcN;
+                if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
                 int activeMask =
                     ((srcR - dstR) | (srcG - dstG) | (srcB - dstB) | (srcA - dstA) | (srcN - dstN) |
                      freshPixCondition) & ((srcN) ? ~0x0 : 0x0);
                 if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+                bool activeFlag =
+                    ((srcR - dstR) != 0x0 || (srcG - dstG) != 0x0 ||
+                     (srcB - dstB) != 0x0 || (srcA - dstA) != 0x0 || (srcN - dstN) != 0x0 ||
+                     freshPixCondition) && srcN;
+                if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
                     soa_to_aos4(srcR, srcG, srcB, srcA, &dstVBuff[offsetV]);
                     dstNBuff[offsetN + programIndex] = srcN;
 
@@ -465,8 +619,18 @@ snapshotTileUInt32WithMask(uniform int dstVBuff[],
                 int srcV = srcVBuff[offset + programIndex];
 
                 int freshPixCondition = !(currDstMask & (int)(0x1 << programIndex));
+#ifdef IMPL_HYBRID
+                int activeMask = ((srcV - dstV) | freshPixCondition) && srcV;
+                if (activeMask) {
+#endif // end IMPL_HYBRID
+#ifdef IMPL_FULLBITOP
                 int activeMask = ((srcV - dstV) | freshPixCondition) & ((srcV) ? ~0x0 : 0x0);
                 if (activeMask) {
+#endif // end IMPL_FULLBITOP
+#ifdef IMPL_NAIVELOGICAL
+                bool activeFlag = ((srcV - dstV) != 0x0 || freshPixCondition) && srcV;
+                if (activeFlag) {
+#endif // end IMPL_NAIVELOGICAL
                     dstVBuff[offset + programIndex] = srcV;
 
                     mask |= ((uint64_t)(lanemask()) << offset);

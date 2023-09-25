@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TestCacheUtil.h"
 
 namespace scene_rdl2 {
@@ -21,7 +18,7 @@ TestCacheUtil::testIntVectorCA()
     testVector("testIntVectorCA",
                [&](CacheEnqueue &cEnq) -> size_t { // enqFunc
                    CacheUtil::enqIntVector(cEnq, vec);
-                   return (rdl2::ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
+                   return (ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
                            sizeof(int) * vec.size());
                },
                [&](CacheDequeue &cDeq) { // non-setAddrOnly mode deq test
@@ -47,7 +44,7 @@ TestCacheUtil::testUIntVectorCA()
     testVector("testUIntVectorCA",
                [&](CacheEnqueue &cEnq) -> size_t { // enqFunc
                    CacheUtil::enqUIntVector(cEnq, vec);
-                   return (rdl2::ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
+                   return (ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
                            sizeof(int) * vec.size());
                },
                [&](CacheDequeue &cDeq) { // non-setAddrOnly mode deq test
@@ -73,7 +70,7 @@ TestCacheUtil::testLongVectorCA()
     testVector("testLongVectorCA",
                [&](CacheEnqueue &cEnq) -> size_t { // enqFunc
                    CacheUtil::enqLongVector(cEnq, vec);
-                   return (rdl2::ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
+                   return (ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
                            sizeof(long) * vec.size());
                },
                [&](CacheDequeue &cDeq) { // non-setAddrOnly mode deq test
@@ -99,7 +96,7 @@ TestCacheUtil::testFloatVectorCA()
     testVector("testFloatVectorCA",
                [&](CacheEnqueue &cEnq) -> size_t { // enqFunc
                    CacheUtil::enqFloatVector(cEnq, vec);
-                   return (rdl2::ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
+                   return (ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
                            sizeof(float) * vec.size());
                },
                [&](CacheDequeue &cDeq) { // non-setAddrOnly mode deq test
@@ -116,4 +113,3 @@ TestCacheUtil::testFloatVectorCA()
 } // namespace unittest
 } // namespace cache
 } // namespace scene_rdl2
-

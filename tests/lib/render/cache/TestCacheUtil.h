@@ -1,7 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-
 #pragma once
 
 #include <scene_rdl2/render/cache/CacheUtil.h>
@@ -81,12 +79,10 @@ protected:
     template <typename T>
     bool compareVectorAddr(const T &a, const uintptr_t srcAddr) {
         return ((uintptr_t)a.data() ==
-                (srcAddr + rdl2::ValueContainerUtil::variableLengthEncodingSize(a.size())));
+                (srcAddr + ValueContainerUtil::variableLengthEncodingSize(a.size())));
     }
 };
 
 } // namespace unittest
 } // namespace cache
 } // namespace scene_rdl2
-
-

@@ -13,6 +13,9 @@ target_sources(${component}
     PRIVATE
         CacheDequeue.cc
         CacheEnqueue.cc
+	ValueContainerDequeue.cc
+	ValueContainerEnqueue.cc
+	ValueContainerUtils.cc
 )
 
 set_property(TARGET ${component}
@@ -21,6 +24,9 @@ set_property(TARGET ${component}
         CacheDequeue.h
         CacheEnqueue.h
         CacheUtil.h
+	ValueContainerDequeue.h
+	ValueContainerEnqueue.h
+	ValueContainerUtils.h
 )
 
 target_include_directories(${component}
@@ -32,7 +38,6 @@ target_include_directories(${component}
 target_link_libraries(${component}
     PUBLIC
         ${PROJECT_NAME}::render_util
-        ${PROJECT_NAME}::scene_rdl2
 )
 
 # If at Dreamworks add a SConscript stub file so others can use this library.

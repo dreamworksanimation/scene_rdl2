@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 //
@@ -76,8 +73,11 @@ public:
                                               uint32_t *dstW,        // heatMap weight (w) = 4byte * 8 * 8 
                                               const uint64_t *srcV,  // heatMap buffer (v) = 8byte * 8 * 8
                                               const uint32_t *srcW); // heatMap weight (w) = 4byte * 8 * 8
-    // for testing purpose
     static uint64_t snapshotTileHeatMapWeight_SISD(uint64_t *dstV,        // heatMap buffer (v) = 8byte * 8 * 8
+                                                   uint32_t *dstW,        // heatMap weight (w) = 4byte * 8 * 8 
+                                                   const uint64_t *srcV,  // heatMap buffer (v) = 8byte * 8 * 8
+                                                   const uint32_t *srcW); // heatMap weight (w) = 4byte * 8 * 8
+    static uint64_t snapshotTileHeatMapWeight_SIMD(uint64_t *dstV,        // heatMap buffer (v) = 8byte * 8 * 8
                                                    uint32_t *dstW,        // heatMap weight (w) = 4byte * 8 * 8 
                                                    const uint64_t *srcV,  // heatMap buffer (v) = 8byte * 8 * 8
                                                    const uint32_t *srcW); // heatMap weight (w) = 4byte * 8 * 8
@@ -99,8 +99,9 @@ public:
     // update destination buffer and return active pixel mask for this tile
     static uint64_t snapshotTileWeightBuffer(uint32_t *dst,        // weight buffer (v) = 4byte * 8 * 8
                                              const uint32_t *src); // weight buffer (v) = 4byte * 8 * 8
-    // for testing purpose
     static uint64_t snapshotTileWeightBuffer_SISD(uint32_t *dst,        // weight buffer (v) = 4byte * 8 * 8
+                                                  const uint32_t *src); // weight buffer (v) = 4byte * 8 * 8
+    static uint64_t snapshotTileWeightBuffer_SIMD(uint32_t *dst,        // weight buffer (v) = 4byte * 8 * 8
                                                   const uint32_t *src); // weight buffer (v) = 4byte * 8 * 8
 
     // make snapshot for weightBuffer data
@@ -111,12 +112,17 @@ public:
                                              const uint64_t srcTileMask) { // src tileMask  (m) = 8byte (64bit)
         return snapshotTileUInt32WithMask(dst, dstTileMask, src, srcTileMask);
     }
-    // for testing purpose
     static uint64_t snapshotTileWeightBuffer_SISD(uint32_t *dst,                // weight buffer (v) = 4byte * 8 * 8
                                                   const uint64_t dstTileMask,   // dst tileMask  (m) = 8byte (64bit)
                                                   const uint32_t *src,          // weight buff   (v) = 4byte * 8 * 8
                                                   const uint64_t srcTileMask) { // src tileMask  (m) = 8byte (64bit)
         return snapshotTileUInt32WithMask_SISD(dst, dstTileMask, src, srcTileMask);
+    }
+    static uint64_t snapshotTileWeightBuffer_SIMD(uint32_t *dst,                // weight buffer (v) = 4byte * 8 * 8
+                                                  const uint64_t dstTileMask,   // dst tileMask  (m) = 8byte (64bit)
+                                                  const uint32_t *src,          // weight buff   (v) = 4byte * 8 * 8
+                                                  const uint64_t srcTileMask) { // src tileMask  (m) = 8byte (64bit)
+        return snapshotTileUInt32WithMask_SIMD(dst, dstTileMask, src, srcTileMask);
     }
 
     //------------------------------
@@ -129,8 +135,11 @@ public:
                                             uint32_t *dstW,        // weight buffer (w) = 4byte * 8 * 8
                                             const uint32_t *srcV,  // float  buffer (x) = 4byte * 8 * 8
                                             const uint32_t *srcW); // weight buffer (w) = 4byte * 8 * 8
-    // for testing purpose
     static uint64_t snapshotTileFloatWeight_SISD(uint32_t *dstV,        // float  buffer (x) = 4byte * 8 * 8
+                                                 uint32_t *dstW,        // weight buffer (w) = 4byte * 8 * 8
+                                                 const uint32_t *srcV,  // float  buffer (x) = 4byte * 8 * 8
+                                                 const uint32_t *srcW); // weight buffer (w) = 4byte * 8 * 8
+    static uint64_t snapshotTileFloatWeight_SIMD(uint32_t *dstV,        // float  buffer (x) = 4byte * 8 * 8
                                                  uint32_t *dstW,        // weight buffer (w) = 4byte * 8 * 8
                                                  const uint32_t *srcV,  // float  buffer (x) = 4byte * 8 * 8
                                                  const uint32_t *srcW); // weight buffer (w) = 4byte * 8 * 8
@@ -143,8 +152,13 @@ public:
                                                const uint32_t *srcV,        // float  buffer (x) = 4byte * 8 * 8
                                                const uint32_t *srcN,        // numSample     (n) = 4byte * 8 * 8
                                                const uint64_t srcTileMask); // src tileMask  (m) = 8byte (64bit)
-    // for testing purpose
     static uint64_t snapshotTileFloatNumSample_SISD(uint32_t *dstV,              // float  buffer (x) = 4byte * 8 * 8
+                                                    uint32_t *dstN,              // numSample     (n) = 4byte * 8 * 8
+                                                    const uint64_t dstTileMask,  // dst tileMask  (m) = 8byte (64bit)
+                                                    const uint32_t *srcV,        // float  buffer (x) = 4byte * 8 * 8
+                                                    const uint32_t *srcN,        // numSample     (n) = 4byte * 8 * 8
+                                                    const uint64_t srcTileMask); // src tileMask  (m) = 8byte (64bit)
+    static uint64_t snapshotTileFloatNumSample_SIMD(uint32_t *dstV,              // float  buffer (x) = 4byte * 8 * 8
                                                     uint32_t *dstN,              // numSample     (n) = 4byte * 8 * 8
                                                     const uint64_t dstTileMask,  // dst tileMask  (m) = 8byte (64bit)
                                                     const uint32_t *srcV,        // float  buffer (x) = 4byte * 8 * 8
@@ -159,8 +173,11 @@ public:
                                              uint32_t *dstW,        // weight buffer (w)   = 4byte * 8 * 8
                                              const uint32_t *srcV,  // float2 buffer (x,y) = 8byte * 8 * 8
                                              const uint32_t *srcW); // weight buffer (w)   = 4byte * 8 * 8
-    // for testing purpose
     static uint64_t snapshotTileFloat2Weight_SISD(uint32_t *dstV,        // float2 buffer (x,y) = 8byte * 8 * 8
+                                                  uint32_t *dstW,        // weight buffer (w)   = 4byte * 8 * 8
+                                                  const uint32_t *srcV,  // float2 buffer (x,y) = 8byte * 8 * 8
+                                                  const uint32_t *srcW); // weight buffer (w)   = 4byte * 8 * 8
+    static uint64_t snapshotTileFloat2Weight_SIMD(uint32_t *dstV,        // float2 buffer (x,y) = 8byte * 8 * 8
                                                   uint32_t *dstW,        // weight buffer (w)   = 4byte * 8 * 8
                                                   const uint32_t *srcV,  // float2 buffer (x,y) = 8byte * 8 * 8
                                                   const uint32_t *srcW); // weight buffer (w)   = 4byte * 8 * 8
@@ -173,8 +190,13 @@ public:
                                                 const uint32_t *srcV,        // float2 buffer (x,y) = 8byte * 8 * 8
                                                 const uint32_t *srcN,        // numSample     (n)   = 4byte * 8 * 8
                                                 const uint64_t srcTileMask); // src tileMask  (m)   = 8byte (64bit)
-    // for testing purpose
     static uint64_t snapshotTileFloat2NumSample_SISD(uint32_t *dstV,              // float2 buffer (x,y) = 8byte * 8 * 8
+                                                     uint32_t *dstN,              // numSample     (n)   = 4byte * 8 * 8
+                                                     const uint64_t dstTileMask,  // dst tileMask  (m)   = 8byte (64bit)
+                                                     const uint32_t *srcV,        // float2 buffer (x,y) = 8byte * 8 * 8
+                                                     const uint32_t *srcN,        // numSample     (n)   = 4byte * 8 * 8
+                                                     const uint64_t srcTileMask); // src tileMask  (m)   = 8byte (64bit)
+    static uint64_t snapshotTileFloat2NumSample_SIMD(uint32_t *dstV,              // float2 buffer (x,y) = 8byte * 8 * 8
                                                      uint32_t *dstN,              // numSample     (n)   = 4byte * 8 * 8
                                                      const uint64_t dstTileMask,  // dst tileMask  (m)   = 8byte (64bit)
                                                      const uint32_t *srcV,        // float2 buffer (x,y) = 8byte * 8 * 8
@@ -189,8 +211,11 @@ public:
                                              uint32_t *dstW,        // weight buffer (w)     =  4byte * 8 * 8
                                              const uint32_t *srcV,  // float3 buffer (x,y,z) = 12byte * 8 * 8
                                              const uint32_t *srcW); // weight buffer (w)     =  4byte * 8 * 8
-    // for testing purpose
     static uint64_t snapshotTileFloat3Weight_SISD(uint32_t *dstV,        // float3 buffer (x,y,z) = 12byte * 8 * 8
+                                                  uint32_t *dstW,        // weight buffer (w)     =  4byte * 8 * 8
+                                                  const uint32_t *srcV,  // float3 buffer (x,y,z) = 12byte * 8 * 8
+                                                  const uint32_t *srcW); // weight buffer (w)     =  4byte * 8 * 8
+    static uint64_t snapshotTileFloat3Weight_SIMD(uint32_t *dstV,        // float3 buffer (x,y,z) = 12byte * 8 * 8
                                                   uint32_t *dstW,        // weight buffer (w)     =  4byte * 8 * 8
                                                   const uint32_t *srcV,  // float3 buffer (x,y,z) = 12byte * 8 * 8
                                                   const uint32_t *srcW); // weight buffer (w)     =  4byte * 8 * 8
@@ -203,8 +228,13 @@ public:
                                                 const uint32_t *srcV,        // float3 buffer (x,y,z) = 12byte * 8 * 8
                                                 const uint32_t *srcN,        // numSample     (n)     =  4byte * 8 * 8
                                                 const uint64_t srcTileMask); // src tileMask  (m)     =  8byte (64bit)
-    // for testing purpose
     static uint64_t snapshotTileFloat3NumSample_SISD(uint32_t *dstV,              // float3 buffer (x,y,z) = 12byte * 8 * 8
+                                                     uint32_t *dstN,              // numSample     (n)     =  4byte * 8 * 8
+                                                     const uint64_t dstTileMask,  // dst tileMask  (m)     =  8byte (64bit)
+                                                     const uint32_t *srcV,        // float3 buffer (x,y,z) = 12byte * 8 * 8
+                                                     const uint32_t *srcN,        // numSample     (n)     =  4byte * 8 * 8
+                                                     const uint64_t srcTileMask); // src tileMask  (m)     =  8byte (64bit)
+    static uint64_t snapshotTileFloat3NumSample_SIMD(uint32_t *dstV,              // float3 buffer (x,y,z) = 12byte * 8 * 8
                                                      uint32_t *dstN,              // numSample     (n)     =  4byte * 8 * 8
                                                      const uint64_t dstTileMask,  // dst tileMask  (m)     =  8byte (64bit)
                                                      const uint32_t *srcV,        // float3 buffer (x,y,z) = 12byte * 8 * 8
@@ -219,8 +249,11 @@ public:
                                              uint32_t *dstW,        // weight buffer (w)       =  4byte * 8 * 8
                                              const uint32_t *srcV,  // float4 buffer (x,y,z,a) = 16byte * 8 * 8
                                              const uint32_t *srcW); // weight buffer (w)       =  4byte * 8 * 8
-    // for testing porpose
     static uint64_t snapshotTileFloat4Weight_SISD(uint32_t *dstV,        // float4 buffer (x,y,z,a) = 16byte * 8 * 8
+                                                  uint32_t *dstW,        // weight buffer (w)       =  4byte * 8 * 8
+                                                  const uint32_t *srcV,  // float4 buffer (x,y,z,a) = 16byte * 8 * 8
+                                                  const uint32_t *srcW); // weight buffer (w)       =  4byte * 8 * 8
+    static uint64_t snapshotTileFloat4Weight_SIMD(uint32_t *dstV,        // float4 buffer (x,y,z,a) = 16byte * 8 * 8
                                                   uint32_t *dstW,        // weight buffer (w)       =  4byte * 8 * 8
                                                   const uint32_t *srcV,  // float4 buffer (x,y,z,a) = 16byte * 8 * 8
                                                   const uint32_t *srcW); // weight buffer (w)       =  4byte * 8 * 8
@@ -233,8 +266,13 @@ public:
                                                 const uint32_t *srcV,        // float3 buffer (x,y,z,a) = 16byte * 8 * 8
                                                 const uint32_t *srcN,        // numSample     (n)       =  4byte * 8 * 8
                                                 const uint64_t srcTileMask); // src tileMask  (m)       =  8byte (64bit)
-    // for testing purpose
     static uint64_t snapshotTileFloat4NumSample_SISD(uint32_t *dstV,              // float4 buffer (x,y,z,a) = 16byte * 8 * 8
+                                                     uint32_t *dstN,              // numSample     (n)       =  4byte * 8 * 8
+                                                     const uint64_t dstTileMask,  // dst tileMask  (m)       =  8byte (64bit)
+                                                     const uint32_t *srcV,        // float3 buffer (x,y,z,a) = 16byte * 8 * 8
+                                                     const uint32_t *srcN,        // numSample     (n)       =  4byte * 8 * 8
+                                                     const uint64_t srcTileMask); // src tileMask  (m)       =  8byte (64bit)
+    static uint64_t snapshotTileFloat4NumSample_SIMD(uint32_t *dstV,              // float4 buffer (x,y,z,a) = 16byte * 8 * 8
                                                      uint32_t *dstN,              // numSample     (n)       =  4byte * 8 * 8
                                                      const uint64_t dstTileMask,  // dst tileMask  (m)       =  8byte (64bit)
                                                      const uint32_t *srcV,        // float3 buffer (x,y,z,a) = 16byte * 8 * 8
@@ -250,10 +288,13 @@ protected:
                                                     const uint64_t dstTileMask,  // dst tileMask (m) = 8byte (64bit)
                                                     const uint32_t *src,         // uint32 buff  (v) = 4byte * 8 * 8
                                                     const uint64_t srcTileMask); // src tileMask (m) = 8byte (64bit)
+    static uint64_t snapshotTileUInt32WithMask_SIMD(uint32_t *dst,               // uint32 buff  (v) = 4byte * 8 * 8
+                                                    const uint64_t dstTileMask,  // dst tileMask (m) = 8byte (64bit)
+                                                    const uint32_t *src,         // uint32 buff  (v) = 4byte * 8 * 8
+                                                    const uint64_t srcTileMask); // src tileMask (m) = 8byte (64bit)
 
     static std::string showMask(const uint64_t mask64);
 }; // SnapshotUtil
 
 } // namespace fb_util
 } // namespace scene_rdl2
-

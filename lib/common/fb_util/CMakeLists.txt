@@ -19,6 +19,7 @@ target_sources(${component}
         ReGammaC2FLUT.cc
         ReSrgbC2F.cc
         ReSrgbC2FLUT.cc
+	SnapshotDeltaTestUtil.cc
         SnapshotUtil.cc
         SrgbF2C.cc
         SrgbF2CLUT.cc
@@ -54,6 +55,8 @@ target_include_directories(${component}
 )
 
 target_link_libraries(${component}
+    PRIVATE
+        ${PROJECT_NAME}::render_cache
     PUBLIC
         ${PROJECT_NAME}::common_platform
         ${PROJECT_NAME}::common_math

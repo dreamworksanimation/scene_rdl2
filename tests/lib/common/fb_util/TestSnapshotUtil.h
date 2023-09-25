@@ -44,12 +44,15 @@ public:
     CPPUNIT_TEST_SUITE_END();
 
 private:
-    using TestSnapshotTileFunc = std::function<uint64_t(uint32_t* dstVPtr, uint32_t* dstWPtr,
-                                                        uint32_t* srcVPtr, uint32_t* srcWPtr)>;
-    using TestSnapshotTileFunc2 = std::function<uint64_t(uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
-                                                         uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask)>;
+    using TestSnapshotTileFunc =
+        std::function<uint64_t(uint32_t* dstVPtr, uint32_t* dstWPtr,
+                               uint32_t* srcVPtr, uint32_t* srcWPtr)>;
+    using TestSnapshotTileFunc2 =
+        std::function<uint64_t(uint32_t* dstVPtr, uint32_t* dstNPtr, uint64_t dstPixMask,
+                               uint32_t* srcVPtr, uint32_t* srcNPtr, uint64_t srcPixMask)>;
 
-    void testFloatNWeight(const int pixDim,
+    void testFloatNWeight(const std::string& testName,
+                          const int pixDim,
                           const TestSnapshotTileFunc& snapshotTileFuncA,
                           const TestSnapshotTileFunc& snapshotTileFuncB);
     void testFloatNNumSample(const int pixDim,
@@ -64,7 +67,7 @@ private:
                                              const int pixDim, const float zeroWeightPixFraction) const;
     void setupWeightBuff(std::vector<float>& buff, const float zeroWeightPixFraction) const;
     void setupNumBuff(std::vector<unsigned int>& buff, const float zeroWeightPixFraction) const;
-    void setupPixMaskBuff(float emptyMaskFraction, float fullMaskFraction, std::vector<uint64_t> &buff) const;
+    void setupPixMaskBuff(std::vector<uint64_t>& buff, float emptyMaskFraction, float fullMaskFraction) const;
 
     void updateBuff(const float updatePixFraction,
                     const int w, // should be tile aligned resolution
@@ -77,28 +80,28 @@ private:
                      const std::function<void(const int pixOffset)>& updateTargetFunc,
                      std::vector<int>& updatePixIdArray) const;
     template <typename T>
-    bool updatePix(std::vector<T>& pixBuff,
-                   std::vector<float>& wieghtBuff,
+    bool updatePix(void* pixBuffIn,
+                   void* weightBuffIn,
                    const int pixOffset,
                    const int pixDim);
     template <typename T>
-    bool updatePix2(std::vector<T>& pixBuff,
-                    std::vector<unsigned int>& numBuff,
+    bool updatePix2(void* pixBuffIn,
+                    void* weightBuffIn,
                     const int pixOffset,
                     const int pixDim);
 
     template <typename T>
-    void copyPix(std::vector<T>& destBuff,
-                 std::vector<float>& destWeight,
-                 const std::vector<T>& srcBuff,
-                 const std::vector<float>& srcWeight,
+    void copyPix(void* destBuffIn,
+                 void* destWeightIn,
+                 const void* srcBuffIn,
+                 const void* srcWeightIn,
                  const int pixOffset,
                  const int pixDim) const;
     template <typename T>
-    void copyPix2(std::vector<T>& destBuff,
-                  std::vector<unsigned int>& destNumBuff,
-                  const std::vector<T>& srcBuff,
-                  const std::vector<unsigned int>& srcNumBuff,
+    void copyPix2(void* dstBuffIn,
+                  void* dstNumBuffIn,
+                  const void* srcBuffIn,
+                  const void* srcNumBuffIn,
                   const int pixOffset,
                   const int pixDim) const;
 
@@ -120,13 +123,14 @@ private:
     void snapshotTileLoop(const int w, // should be tile aligned resolution
                           const int h, // should be tile aligned resolution
                           std::vector<uint64_t> &pixMaskBuff,
-                          std::function<uint64_t(int offsetItem)> snapshotTileFunc) const;
+                          const std::function<uint64_t(int offsetItem)>& snapshotTileFunc) const;
     void snapshotTimingCompare(const int w, // should be tile aligned resolution
                                const int h, // should be tile aligned resolution
                                std::function<void()> resetDataFunc,
                                const std::function<uint64_t(int offsetItem)>& snapshotTileFuncA,
                                const std::function<uint64_t(int offsetItem)>& snapshotTileFuncB,
-                               const std::function<bool(std::vector<uint64_t>&)>& verifyFunc) const;
+                               const std::function<bool(const std::string& msg,
+                                                        std::vector<uint64_t>&)>& verifyFunc) const;
     bool verifyPixMask(std::vector<int> &updatePixIdArray, std::vector<uint64_t> &pixMaskBuff) const;
 
     std::string showTile(int tileId, int offsetItem,
@@ -159,4 +163,3 @@ private:
 } // namespace unittest
 } // namespace fb_util
 } // namespace scene_rdl2
-
