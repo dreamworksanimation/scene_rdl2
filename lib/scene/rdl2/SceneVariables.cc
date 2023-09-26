@@ -847,6 +847,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sBatchTileOrder, 5, "random");
     sceneClass.setEnumValue(sBatchTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sBatchTileOrder, 7, "spiral rect");
+    sceneClass.setEnumValue(sBatchTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sBatchTileOrder,
         SceneClass::sComment,
         "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for batch rendering, "
@@ -867,6 +868,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sProgressiveTileOrder, 5, "random");
     sceneClass.setEnumValue(sProgressiveTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sProgressiveTileOrder, 7, "spiral rect");
+    sceneClass.setEnumValue(sProgressiveTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sProgressiveTileOrder,
         SceneClass::sComment,
         "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for progressive "
@@ -887,6 +889,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sCheckpointTileOrder, 5, "random");
     sceneClass.setEnumValue(sCheckpointTileOrder, 6, "spiral square");
     sceneClass.setEnumValue(sCheckpointTileOrder, 7, "spiral rect");
+    sceneClass.setEnumValue(sCheckpointTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sCheckpointTileOrder,
         SceneClass::sComment,
         "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for checkpoint "

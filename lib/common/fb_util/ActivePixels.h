@@ -65,7 +65,7 @@ public:
     finline bool orOp(const ActivePixels &src); // OR bit operation
     void orOp(const unsigned tileId, const uint64_t mask) { mTiles[tileId] |= mask; }
 
-    bool getActivePixelCondition(const unsigned sx, const unsigned sy) const;
+    bool isActivePixel(const unsigned sx, const unsigned sy) const;
 
     std::string show(const std::string &hd) const;
     std::string showFullInfo(const std::string &hd) const;

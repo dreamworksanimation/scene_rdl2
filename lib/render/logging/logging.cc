@@ -246,14 +246,9 @@ Logger::init()
 
 void
 outputLog(LogLevel level,
-    const std::string& s)
+          const std::string& s)
 {
-    log4cplus::Logger logger = getDefaultLogger(__FILE__);
-    if (logger.isEnabledFor(level)) {
-        std::ostringstream buf;
-        buf << s;
-        logger.forcedLog(level, buf.str(), __FILE__, __LINE__);
-    }
+    getDefaultLogger(__FILE__).log(level, s, __FILE__, __LINE__);
 }
 
 void

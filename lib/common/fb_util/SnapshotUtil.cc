@@ -276,7 +276,7 @@ SnapshotUtil::snapshotTileHeatMapWeight_SISD(uint64_t* dstV,
                  (static_cast<uint64_t>(currSrcWPtr[0] - currDstWPtr[0]) != static_cast<uint64_t>(0x0))) &&
                 currSrcWPtr[0];
             if (activeFlag) {
-#endif // end NEWB
+#endif // end IMPL_NAIVELOGICAL
                 // update data
                 currDstVPtr[0] = currSrcVPtr[0];
                 currDstWPtr[0] = currSrcWPtr[0];
@@ -523,8 +523,8 @@ SnapshotUtil::snapshotTileFloatNumSample_SISD(uint32_t* dstV,
         uint64_t currDstTileMask = dstTileMask >> offset;
 
         const uint32_t* currSrcV = srcV + offset;
-        uint32_t*       currDstV = dstV + offset;
         const uint32_t* currSrcN = srcN + offset;
+        uint32_t*       currDstV = dstV + offset;
         uint32_t*       currDstN = dstN + offset;
 
         uint64_t currSrcTileScanlineMask = currSrcTileMask & static_cast<uint64_t>(0xff); // get one scanline mask

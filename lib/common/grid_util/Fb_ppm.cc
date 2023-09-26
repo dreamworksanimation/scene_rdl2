@@ -16,7 +16,7 @@ Fb::saveBeautyActivePixelsPPM(const std::string& filename,
     return savePPMMain("saveBeautyActivePixelsPPM",
                        filename,
                        [&](int u, int v, unsigned char c[3]) {
-                           c[0] = (getPixRenderBufferActivePixels(u, v)) ? 255 : 0;
+                           c[0] = (isActivePixelRenderBuffer(u, v)) ? 255 : 0;
                            c[1] = c[0];
                            c[2] = c[0];
                        },

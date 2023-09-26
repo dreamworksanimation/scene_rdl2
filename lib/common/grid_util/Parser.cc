@@ -301,9 +301,9 @@ Parser::optList(const bool sort) const
     if (offsetShortMsg + minimumShortMsgLen < totalMaxLen) {
         // Compute the length of max shortMessage. If shortMessage is more than
         // this limitation, output as multiple lines.
-        shortMsgMaxLen = (totalMaxLen -
-                          2 /* one indentation (i.e. = 2 spaces) */ -
-                          offsetShortMsg);
+        shortMsgMaxLen = (totalMaxLen
+                          - 2                // one indentation (i.e. = 2 spaces)
+                          - offsetShortMsg);
     } else {
         // We give up multiple line output and simply output whole shortMessage as single line
     }

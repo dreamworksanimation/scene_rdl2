@@ -153,26 +153,30 @@ public:
     // RGBA + numSample : float * 4 + u_int
     static bool
     decode(const bool renderBufferOdd,                // in
-           const void *addr,                          // in
+           const void* addr,                          // in
            const size_t dataSize,                     // in
            bool storeNumSampleData,                   // in
-           ActivePixels &activePixels,                // out : includes orig w, h + tile aligned w, h
-           RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned reso : init internal
-           NumSampleBuffer &numSampleBufferTiled,     // out : tile aligned reso : init internal
-           CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-           FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-           unsigned char *sha1HashDigest = 0x0);
+           ActivePixels& activePixels,                // out : includes orig w, h + tile aligned w, h
+           RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned reso : init internal
+           NumSampleBuffer& numSampleBufferTiled,     // out : tile aligned reso : init internal
+           CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+           FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+           bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                      //                       empty data (=false)
+           unsigned char* sha1HashDigest = 0x0);
 
     // RGBA : float * 4
     static bool
     decode(const bool renderBufferOdd,                // in
-           const void *addr,                          // in
+           const void* addr,                          // in
            const size_t dataSize,                     // in
-           ActivePixels &activePixels,                // out : includes orig w, h + tile aligned w, h
-           RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
-           CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-           FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-           unsigned char *sha1HashDigest = 0x0);
+           ActivePixels& activePixels,                // out : includes orig w, h + tile aligned w, h
+           RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
+           CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+           FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+           bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                      //                       empty data (=false)
+           unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -190,13 +194,15 @@ public:
                     const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
 
     static bool
-    decodePixelInfo(const void *addr,                         // in
+    decodePixelInfo(const void* addr,                         // in
                     const size_t dataSize,                    // in
-                    ActivePixels &activePixels,               // out : includes orig w,h + tile aligned w,h
-                    PixelInfoBuffer &pixelInfoBufferTiled,    // out : tile aligned reso : init internal
-                    CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                    FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                    unsigned char *sha1HashDigest = 0x0);
+                    ActivePixels& activePixels,               // out : includes orig w,h + tile aligned w,h
+                    PixelInfoBuffer& pixelInfoBufferTiled,    // out : tile aligned reso : init internal
+                    CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                    FinePassPrecision& finePassPrecision,     // out : minimum fine pass precision
+                    bool& activeDecodeAction,                 // out : decode result : some data (=true) or
+                                                              //                       empty data (=false)
+                    unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -226,22 +232,26 @@ public:
     // Sec + numSample : float * 1 + u_int
     // no precision related argument because heatMap always uses H16
     static bool
-    decodeHeatMap(const void *addr,                          // in
+    decodeHeatMap(const void* addr,                          // in
                   const size_t dataSize,                     // in
                   bool storeNumSampleData,                   // in : store numSampleData condition
-                  ActivePixels &activePixels,                // out : includes orig w,h + tile aligned w,h
-                  FloatBuffer &heatMapSecBufferTiled,        // out : tile aligned reso : init internal
-                  NumSampleBuffer &heatMapNumSampleBufTiled, // out : tile aligned reso : init internal
-                  unsigned char *sha1HashDigest = 0x0);
+                  ActivePixels& activePixels,                // out : includes orig w,h + tile aligned w,h
+                  FloatBuffer& heatMapSecBufferTiled,        // out : tile aligned reso : init internal
+                  NumSampleBuffer& heatMapNumSampleBufTiled, // out : tile aligned reso : init internal
+                  bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                             //                       empty data (=false)
+                  unsigned char* sha1HashDigest = 0x0);
 
     // Sec : float * 1
     // no precision related argument because heatMap always uses H16
     static bool
-    decodeHeatMap(const void *addr,                          // in
+    decodeHeatMap(const void* addr,                          // in
                   const size_t dataSize,                     // in
-                  ActivePixels &activePixels,                // out : includes orig w, h + tile aligned w, h
-                  FloatBuffer &normalizedHeatMapSecBufTiled, // out : tile aligned reso : init internal
-                  unsigned char *sha1HashDigest = 0x0);
+                  ActivePixels& activePixels,                // out : includes orig w, h + tile aligned w, h
+                  FloatBuffer& normalizedHeatMapSecBufTiled, // out : tile aligned reso : init internal
+                  bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                             //                       empty data (=false)
+                  unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -259,13 +269,15 @@ public:
                        const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
 
     static bool
-    decodeWeightBuffer(const void *addr,               // in
+    decodeWeightBuffer(const void* addr,               // in
                        const size_t dataSize,          // in
-                       ActivePixels &activePixels,     // out : includes orig w, h + tile aligned w, h
-                       FloatBuffer &weightBufferTiled, // out : tile aligned reso : init internal
-                       CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                       FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                       unsigned char *sha1HashDigest = 0x0);
+                       ActivePixels& activePixels,     // out : includes orig w, h + tile aligned w, h
+                       FloatBuffer& weightBufferTiled, // out : tile aligned reso : init internal
+                       CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                       FinePassPrecision& finePassPrecision,     // out : minimum fine pass precision
+                       bool& activeDecodeAction,                 // out : decode result : some data (=true) or
+                                                                 //                       empty data (=false)
+                       unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -309,12 +321,14 @@ public:
     // or
     // VariableValue(float1|float2|float3|float4)             : float * (1|2|3|4)
     static bool
-    decodeRenderOutput(const void *addr,           // in
+    decodeRenderOutput(const void* addr,           // in
                        const size_t dataSize,      // in
                        bool storeNumSampleData,    // in : store numSampleData condition
-                       ActivePixels &activePixels, // out
-                       FbAovShPtr &fbAov,          // out : allocate memory if needed internally
-                       unsigned char *sha1HashDigest = 0x0);
+                       ActivePixels& activePixels, // out
+                       FbAovShPtr& fbAov,          // out : allocate memory if needed internally
+                       bool& activeDecodeAction,   // out : decode result : some data (=true) or
+                                                   //                       empty data (=false)
+                       unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //

@@ -39,6 +39,7 @@ target_sources(${component}
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
+	ShmFootmark.cc
         SockUtil.cc
         TlSvr.cc
 )
@@ -65,6 +66,7 @@ set_property(TARGET ${component}
         RenderPrepStats.h
         RunLenBitTable.h
         Sha1Util.h
+	ShmFootmark.h
         SockUtil.h
         TlSvr.h
 )

@@ -19,7 +19,37 @@
 #include <iomanip>
 #include <openssl/sha.h>
 
+//
+// DEBUG_MODE directive activates debug message.
+// If DEBUG_SHMFOOTMARK_MODE is disable, all debug messages go to cerr (but this makes a huge impact on the
+// timing of PackTiles encode/decode execution).
+// If DEBUG_SHMFOOTMARK_MODE enable, all debug messages are stored in shared memory by using ShmFootmark.
+// This has much less impact than cerr information dump in terms of timing.
+// Currently, DEBUG_SHMFOOTMARK_MODE only supports single thread runs. You have to make sure all PackTiles
+// operation is running by single thread before use this mode. (We have several different directives for
+// single thread run on the caller side of PackTiles operation.)
+//    
 //#define DEBUG_MODE
+//#define DEBUG_SHMFOOTMARK_MODE
+
+//
+// Using the following directives under DEBUG_MODE, we can selectively on or off for debug messages.
+//    
+//#define DEBUG_FOOTMARK_DECODEMAIN
+//#define DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+//#define DEBUG_FOOTMARK_DECODE_A
+//#define DEBUG_FOOTMARK_DECODE_B
+//#define DEBUG_FOOTMARK_DECODE_PIXELINFO
+//#define DEBUG_FOOTMARK_DECODE_HEATMAP_A
+//#define DEBUG_FOOTMARK_DECODE_HEATMAP_B
+//#define DEBUG_FOOTMARK_DECODE_WEIGHT
+//#define DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+//#define DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+//#define DEBUG_FOOTMARK_NORMALIZEDRENDERBUFFER
+
+#ifdef DEBUG_MODE
+#include <scene_rdl2/common/grid_util/ShmFootmark.h>
+#endif // end DEBUG_MODE
 
 #ifdef __INTEL_COMPILER
 // We don't need any include for half float instructions
@@ -33,12 +63,17 @@
 // use sRGB conversion if LOWPRECISION_8BIT_GAMMA22 is commented out.
 #define LOWPRECISION_8BIT_GAMMA22 // lowprecision float to 8bit with gamma 2.2 conversion
 
-#ifdef DEBUG_MODE
-static bool gDebugMode = false;
-#endif // end DEBUG_MODE
-
 namespace scene_rdl2 {
 namespace grid_util {
+
+#ifdef DEBUG_MODE
+static bool gDebugMode = false;
+#ifdef DEBUG_SHMFOOTMARK_MODE
+// We only have a single ShmFootmark at this moment. This means this debug logic only supports
+// a single-thread environment.
+static std::shared_ptr<ShmFootmark> gStrFootmark;
+#endif // end DEBUG_SHMFOOTMARK_MODE
+#endif // end DEBUG_MODE
 
 //
 // Regarding precision control. currently we are using UC8 (8bit precision),
@@ -118,26 +153,30 @@ public:
     // RGBA + numSample : float * 4 + u_int
     template <bool renderBufferOdd>
     static bool
-    decode(const void *addr,                          // in
+    decode(const void* addr,                          // in
            const size_t dataSize,                     // in
            bool storeNumSampleData,                   // in
-           ActivePixels &activePixels,                // out : includes orig w, h + tile aligned w, h
-           RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
-           NumSampleBuffer &numSampleBufferTiled,     // out : tile aligned resolution : init internal
-           CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-           FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-           unsigned char *sha1HashDigest = 0x0);
+           ActivePixels& activePixels,                // out : includes orig w, h + tile aligned w, h
+           RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
+           NumSampleBuffer& numSampleBufferTiled,     // out : tile aligned resolution : init internal
+           CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+           FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+           bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                      //                       empty data (=false)
+           unsigned char* sha1HashDigest = 0x0);
 
     // RGBA : float * 4
     template <bool renderBufferOdd>
     static bool
-    decode(const void *addr,                          // in
+    decode(const void* addr,                          // in
            const size_t dataSize,                     // in
-           ActivePixels &activePixels,                // out : includes orig w, h + tile aligned w, h
-           RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
-           CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-           FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-           unsigned char *sha1HashDigest = 0x0);
+           ActivePixels& activePixels,                // out : includes orig w, h + tile aligned w, h
+           RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned resolution : init internal
+           CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+           FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+           bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                      //                       empty data (=false)
+           unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -155,13 +194,15 @@ public:
                     const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
 
     static bool
-    decodePixelInfo(const void *addr,                         // in
+    decodePixelInfo(const void* addr,                         // in
                     const size_t dataSize,                    // in
-                    ActivePixels &activePixels,               // out : includes orig w, h + tile aligned w, h
-                    PixelInfoBuffer &pixelInfoBufferTiled,    // out : tile aligned reso : init internal
-                    CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                    FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                    unsigned char *sha1HashDigest = 0x0);
+                    ActivePixels& activePixels,               // out : includes orig w, h + tile aligned w, h
+                    PixelInfoBuffer& pixelInfoBufferTiled,    // out : tile aligned reso : init internal
+                    CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                    FinePassPrecision& finePassPrecision,     // out : minimum fine pass precision
+                    bool& activeDecodeAction,                 // out : decode result : some data (=true) or
+                                                              //                       empty data (=false)
+                    unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -191,22 +232,26 @@ public:
     // Sec + numSample : float * 1 + u_int
     // no precision related argument because heatMap always uses H16
     static bool
-    decodeHeatMap(const void *addr,                          // in
+    decodeHeatMap(const void* addr,                          // in
                   const size_t dataSize,                     // in
                   bool storeNumSampleData,                   // in:numSampleData store condition
-                  ActivePixels &activePixels,                // out:includes orig w,h + tile aligned w,h
-                  FloatBuffer &heatMapSecBufferTiled,        // out:tile aligned reso : init internal
-                  NumSampleBuffer &heatMapNumSampleBufTiled, // out:tile aligned reso : init internal
-                  unsigned char *sha1HashDigest = 0x0);
+                  ActivePixels& activePixels,                // out:includes orig w,h + tile aligned w,h
+                  FloatBuffer& heatMapSecBufferTiled,        // out:tile aligned reso : init internal
+                  NumSampleBuffer& heatMapNumSampleBufTiled, // out:tile aligned reso : init internal
+                  bool& activeDecodeAction,                  // out:decode result : some data (=true) or
+                                                             //                     empty data (=false)
+                  unsigned char* sha1HashDigest = 0x0);
 
     // Sec : float * 1
     // no precision related argument because heatMap always uses H16
     static bool
-    decodeHeatMap(const void *addr,                          // in
+    decodeHeatMap(const void* addr,                          // in
                   const size_t dataSize,                     // in
-                  ActivePixels &activePixels,                // out:includes orig w,h + tile aligned w,h
-                  FloatBuffer &normalizedHeatMapSecBufTiled, // out:tile aligned reso : init internal
-                  unsigned char *sha1HashDigest = 0x0);
+                  ActivePixels& activePixels,                // out:includes orig w,h + tile aligned w,h
+                  FloatBuffer& normalizedHeatMapSecBufTiled, // out:tile aligned reso : init internal
+                  bool& activeDecodeAction,                  // out:decode result : some data (=true) or
+                                                             //                     empty data (=false)
+                  unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -224,13 +269,15 @@ public:
                        const EnqFormatVer enqFormatVer = EnqFormatVer::VER2);
 
     static bool
-    decodeWeightBuffer(const void *addr,               // in
+    decodeWeightBuffer(const void* addr,               // in
                        const size_t dataSize,          // in
-                       ActivePixels &activePixels,     // out : includes orig w, h + tile aligned w, h
-                       FloatBuffer &weightBufferTiled, // out tile aligned reso : init internal
-                       CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                       FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                       unsigned char *sha1HashDigest = 0x0);
+                       ActivePixels& activePixels,     // out : includes orig w, h + tile aligned w, h
+                       FloatBuffer& weightBufferTiled, // out tile aligned reso : init internal
+                       CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                       FinePassPrecision& finePassPrecision, // out : minimum fine pass precision
+                       bool& activeDecodeAction,       // out : decode result : some data (=true) or
+                                                       //                       empty data (=false)
+                       unsigned char* sha1HashDigest = 0x0);
 
     //------------------------------
     //
@@ -279,6 +326,8 @@ public:
                        bool storeNumSampleData,     // in : store numSampleData condition
                        ActivePixels &activePixels,  // out
                        FbAovShPtr &fbAov,           // out : allocate memory if needed internally
+                       bool& activeDecodeAction,    // out : decode result : some data (=true) or
+                                                    //                       empty data (=false)                       
                        unsigned char *sha1HashDigest = 0x0);
 
     //------------------------------
@@ -343,7 +392,7 @@ public:
     static void encodeActivePixels(const ActivePixels &activePixels, VContainerEnq &vContainerEnq);
     static void decodeActivePixels(VContainerDeq &vContainerDeq, ActivePixels &activePixels);
 
-protected:
+private:
     using Vec4f = math::Vec4<float>;
 
     //------------------------------
@@ -728,92 +777,117 @@ protected:
     }
 
     template <typename F>
-    static bool decodeMain(const void *addr,
+    static bool decodeMain(const void* addr,
                            const size_t dataSize,
-                           ActivePixels &activePixels,
-                           unsigned char *sha1HashDigest,
-                           F deqTilePixelBlockFunc) {
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() start\n";
-#       endif // end DEBUG_MODE
+                           ActivePixels& activePixels,
+                           unsigned char* sha1HashDigest,
+                           F deqTilePixelBlockFunc,
+                           bool& activeDecodeAction) {
+#       ifdef DEBUG_FOOTMARK_DECODEMAIN
+        debugFootmark([]() { return ">> PackTiles.cc decodeMain() start"; });
+        debugFootmarkPush();
+#       endif // end DEBUG_FOOTMARK_DECODEMAIN
+        {
+            //------------------------------
+            //
+            // read SHA1 hash
+            //
+            const unsigned char *currAddr = static_cast<const unsigned char *>(addr);
+            unsigned char dummySha1HashDigest[HASH_SIZE];
+            unsigned char *dstHash = (sha1HashDigest) ? sha1HashDigest : dummySha1HashDigest;
+            memcpy(static_cast<void *>(dstHash), static_cast<const void *>(currAddr), HASH_SIZE);
+            currAddr += HASH_SIZE;
 
-        //------------------------------
-        //
-        // read SHA1 hash
-        //
-        const unsigned char *currAddr = static_cast<const unsigned char *>(addr);
-        unsigned char dummySha1HashDigest[HASH_SIZE];
-        unsigned char *dstHash = (sha1HashDigest) ? sha1HashDigest : dummySha1HashDigest;
-        memcpy(static_cast<void *>(dstHash), static_cast<const void *>(currAddr), HASH_SIZE);
-        currAddr += HASH_SIZE;
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() passA"; });
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
 
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passA\n";
-#       endif // end DEBUG_MODE
+            //------------------------------
+            //
+            // data decode
+            //
+            VContainerDeq vContainerDeq(static_cast<const void *>(currAddr), dataSize - HASH_SIZE);
 
-        //------------------------------
-        //
-        // data decode
-        //
-        VContainerDeq vContainerDeq(static_cast<const void *>(currAddr), dataSize - HASH_SIZE);
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() passB"; });
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
 
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passB\n";
-#       endif // end DEBUG_MODE
+            unsigned formatVersion;
+            unsigned activeTileTotal, activePixelTotal;
+            DataType currDataType;
+            FbReferenceType currReferenceType;
+            unsigned width, height;
+            float defaultValue;
+            PrecisionMode precisionMode;
+            bool closestFilterStatus;
+            CoarsePassPrecision coarsePassPrecision;
+            FinePassPrecision finePassPrecision;
+            if (!deqHeaderBlock(vContainerDeq,
+                                formatVersion,
+                                currDataType, currReferenceType,
+                                width, height, activeTileTotal, activePixelTotal, defaultValue,
+                                precisionMode,
+                                closestFilterStatus,
+                                coarsePassPrecision, finePassPrecision)) {
+                activeDecodeAction = false;
+#               ifdef DEBUG_FOOTMARK_DECODEMAIN
+                debugFootmarkPop();
+#               endif // end DEBUG_FOOTMARK_DECODEMAIN
+                return false;    // unknown format version or memory issue
+            }
 
-        unsigned formatVersion;
-        unsigned activeTileTotal, activePixelTotal;
-        DataType currDataType;
-        FbReferenceType currReferenceType;
-        unsigned width, height;
-        float defaultValue;
-        PrecisionMode precisionMode;
-        bool closestFilterStatus;
-        CoarsePassPrecision coarsePassPrecision;
-        FinePassPrecision finePassPrecision;
-        if (!deqHeaderBlock(vContainerDeq,
-                            formatVersion,
-                            currDataType, currReferenceType,
-                            width, height, activeTileTotal, activePixelTotal, defaultValue,
-                            precisionMode,
-                            closestFilterStatus,
-                            coarsePassPrecision, finePassPrecision)) {
-            return false;    // unknown format version or memory issue
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() passC"; });
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
+
+            try {
+                activePixels.init(width, height);
+            }
+            catch (...) {
+                activeDecodeAction = false;
+#               ifdef DEBUG_FOOTMARK_DECODEMAIN
+                debugFootmarkPop();
+#               endif // end DEBUG_FOOTMARK_DECODEMAIN
+                return false;           // could not allocate internal memory
+            }
+            activePixels.reset();       // we need reset activePixels information
+
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() passD"; });
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
+
+            if (!deqTileMaskBlock(vContainerDeq, formatVersion, activeTileTotal, activePixels)) {
+#               ifdef DEBUG_FOOTMARK_DECODEMAIN
+                debugFootmarkPop();
+                debugFootmark([]() { return ">> PackTiles.cc decodeMain() finish no-data condition"; });
+#               endif // end DEBUG_FOOTMARK_DECODEMAIN
+                activeDecodeAction = false; // non active decode condition
+                return true;       // decode tileMaskBlock returns no-data condition
+            }
+
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() before deqTilePixelBlockFunc()"; });
+            debugFootmarkPush();
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
+            if (!deqTilePixelBlockFunc(currDataType, defaultValue, precisionMode, closestFilterStatus,
+                                       coarsePassPrecision, finePassPrecision,
+                                       vContainerDeq)) {
+                activeDecodeAction = false;
+#               ifdef DEBUG_FOOTMARK_DECODEMAIN
+                debugFootmarkPop();
+#               endif // end DEBUG_FOOTMARK_DECODEMAIN
+                return false;
+            }
+#           ifdef DEBUG_FOOTMARK_DECODEMAIN
+            debugFootmarkPop();
+            debugFootmark([]() { return ">> PackTiles.cc decodeMain() after deqTilePixelBlockFunc()"; });
+#           endif // end DEBUG_FOOTMARK_DECODEMAIN
         }
-
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passC\n";
-#       endif // end DEBUG_MODE
-
-        try {
-            activePixels.init(width, height);
-        }
-        catch (...) {
-            return false;           // could not allocate internal memory
-        }
-        activePixels.reset();       // we need reset activePixels information
-
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passD\n";
-#       endif // end DEBUG_MODE
-
-        if (!deqTileMaskBlock(vContainerDeq, formatVersion, activeTileTotal, activePixels)) {
-            return true;       // decode tileMaskBlock returns no-data condition
-        }
-
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() passE\n";
-#       endif // end DEBUG_MODE
-
-        if (!deqTilePixelBlockFunc(currDataType, defaultValue, precisionMode, closestFilterStatus,
-                                   coarsePassPrecision, finePassPrecision,
-                                   vContainerDeq)) {
-            return false;
-        }
-
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTiles.cc decodeMain() finish\n";
-#       endif // end DEBUG_MODE
+#       ifdef DEBUG_FOOTMARK_DECODEMAIN
+        debugFootmarkPop();
+        debugFootmark([]() { return ">> PackTiles.cc decodeMain() finish"; });
+#       endif // end DEBUG_FOOTMARK_DECODEMAIN
+        activeDecodeAction = true; // Yes we decoded some data
 
         return true;
     }
@@ -1037,11 +1111,11 @@ protected:
     }
 
     template <typename B, typename UC8, typename H16, typename F32>
-    static void deqTilePixelBlockValSample(VContainerDeq &vContainerDeq,
+    static void deqTilePixelBlockValSample(VContainerDeq& vContainerDeq,
                                            const PrecisionMode precisionMode,
-                                           const ActivePixels &activePixels,
-                                           B &normalizedBufferTiled,
-                                           NumSampleBuffer &numSampleBufferTiled,
+                                           const ActivePixels& activePixels,
+                                           B& normalizedBufferTiled,
+                                           NumSampleBuffer& numSampleBufferTiled,
                                            bool storeNumSampleData,
                                            UC8 funcLowPrecision,
                                            H16 funcHalfPrecision,
@@ -1049,81 +1123,109 @@ protected:
     // If you set storeNumSampleData = false, numSample information is decoded but not stored into
     // numSampleBufferTiled.
     {
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() start\n";
-#       endif // end DEBUG_MODE
-
+#       ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+        debugFootmark([]() {
+                return ">> PackTiles.cc deqTilePixelBlockValSample() start";
+            });
+        debugFootmarkPush();
+#       endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+        
         // precisionMode should be better if branched here instead of inside activeTileCrawler
         switch (precisionMode) {
         case PackTiles::PrecisionMode::UC8 :
             //
             // 8bit precision
             //
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() UC8 before activeTileCrawler\n";
-#           endif // end DEBUG_MODE
-            activeTileCrawler(activePixels,
-                              [&](uint64_t mask, unsigned pixelOffset) { // func
-                              auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
-                              unsigned int *__restrict dstNumSample =
-                                  (storeNumSampleData) ?
-                                  (numSampleBufferTiled.getData() + pixelOffset) :
-                                  nullptr;
-                              deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
-                                               funcLowPrecision);
-                              });
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() UC8 after activeTileCrawler\n";
-#           endif // end DEBUG_MODE
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() UC8 before activeTileCrawler()";
+                });
+            debugFootmarkPush();
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            {
+                activeTileCrawler(activePixels,
+                                  [&](uint64_t mask, unsigned pixelOffset) { // func
+                                      auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
+                                      unsigned int *__restrict dstNumSample =
+                                          (storeNumSampleData) ?
+                                          (numSampleBufferTiled.getData() + pixelOffset) :
+                                          nullptr;
+                                      deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
+                                                       funcLowPrecision);
+                                  });
+            }
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmarkPop();
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() UC8 after activeTileCrawler()";
+                });
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
             break;
         case PackTiles::PrecisionMode::H16 :
             //
             // 16bit half precision
             //
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() H16 before activeTileCrawler\n";
-#           endif // end DEBUG_MODE
-            activeTileCrawler(activePixels,
-                              [&](uint64_t mask, unsigned pixelOffset) { // func
-                              auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
-                              unsigned int *__restrict dstNumSample =
-                                  (storeNumSampleData) ?
-                                  (numSampleBufferTiled.getData() + pixelOffset) :
-                                  nullptr;
-                              deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
-                                               funcHalfPrecision);
-                              });
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() H16 after activeTileCrawler\n";
-#           endif // end DEBUG_MODE
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() H16 before activeTileCrawler()";
+                });
+            debugFootmarkPush();
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            {
+                activeTileCrawler(activePixels,
+                                  [&](uint64_t mask, unsigned pixelOffset) { // func
+                                      auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
+                                      unsigned int *__restrict dstNumSample =
+                                          (storeNumSampleData) ?
+                                          (numSampleBufferTiled.getData() + pixelOffset) :
+                                          nullptr;
+                                      deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
+                                                       funcHalfPrecision);
+                                  });
+            }
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmarkPop();
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() H16 after activeTileCrawler()";
+                });
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
             break;
         case PackTiles::PrecisionMode::F32 :
             //
             // 32bit full float precision
             //
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() F32 before activeTileCrawler\n";
-#           endif // end DEBUG_MODE
-            activeTileCrawler(activePixels,
-                              [&](uint64_t mask, unsigned pixelOffset) { // func
-                                  auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
-                                  unsigned int *__restrict dstNumSample =
-                                      (storeNumSampleData) ?
-                                      (numSampleBufferTiled.getData() + pixelOffset) :
-                                      nullptr;
-                                  deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
-                                                   funcFullPrecision);
-                              });
-#           ifdef DEBUG_MODE
-            if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() F32 after activeTileCrawler\n";
-#           endif // end DEBUG_MODE
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() F32 before activeTileCrawler()";
+                });
+            debugFootmarkPush();
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            {
+                activeTileCrawler(activePixels,
+                                  [&](uint64_t mask, unsigned pixelOffset) { // func
+                                      auto *__restrict dst = normalizedBufferTiled.getData() + pixelOffset;
+                                      unsigned int *__restrict dstNumSample =
+                                          (storeNumSampleData) ?
+                                          (numSampleBufferTiled.getData() + pixelOffset) :
+                                          nullptr;
+                                      deqTileValSample(vContainerDeq, mask, dst, dstNumSample,
+                                                       funcFullPrecision);
+                                  });
+            }
+#           ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+            debugFootmarkPop();
+            debugFootmark([]() {
+                    return ">> PackTiles.cc deqTilePixelBlockValSample() F32 after activeTileCrawler()";
+                });
+#           endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
             break;
         default :
             break;
         }
-#       ifdef DEBUG_MODE
-        if (gDebugMode) std::cerr << ">> PackTile.cc deqTilePixelBlockValSample() finish\n";
-#       endif // end DEBUG_MODE
+#       ifdef DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
+        debugFootmarkPop();
+        debugFootmark([]() { return ">> PackTiles.cc deqTilePixelBlockValSample() finish"; });
+#       endif // end DEBUG_FOOTMARK_DEQTILEPIXELBLOCKVALSAMPLE
     }
 
     template <typename B, typename UC8, typename H16, typename F32>
@@ -1399,6 +1501,65 @@ protected:
                                           size_t &ver2Size,
                                           float &ver1SinglePixPosInfoAveSize,
                                           float &ver2SinglePixPosInfoAveSize);
+    
+#   ifdef DEBUG_SHMFOOTMARK_MODE
+    static void setupFootmark()
+    {
+        if (!gStrFootmark) {
+            gStrFootmark = std::make_shared<ShmFootmark>("PackTile");
+        }
+    }
+#   endif // end DEBUG_SHMFOOTMARK_MODE
+
+    template <typename F>    
+    static void debugFootmark(F strGenFunc)
+    {
+#       ifdef DEBUG_MODE
+        if (gDebugMode) {
+            std::string str = strGenFunc();
+#           ifdef DEBUG_SHMFOOTMARK_MODE
+            setupFootmark();
+            gStrFootmark->set(str);
+#           else  // else DEBUG_SHMFOOTMARK_MODE
+            std::cerr << str << '\n';
+#           endif // end else DEBUG_SHMFOOTMARK_MODE
+        }
+#       endif // end DEBUG_MODE
+    }
+
+    template <typename F>
+    static void debugFootmarkAdd(F strGenFunc)
+    {
+#       ifdef DEBUG_MODE
+        if (gDebugMode) {
+            std::string str = strGenFunc();
+#           ifdef DEBUG_SHMFOOTMARK_MODE
+            setupFootmark();
+            gStrFootmark->add(str);
+#           else  // else DEBUG_SHMFOOTMARK_MODE
+            std::cerr << str << '\n';
+#           endif // end else DEBUG_SHMFOOTMARK_MODE
+        }
+#       endif // end DEBUG_MODE
+    }
+
+    static void debugFootmarkPush()
+    {
+#       ifdef DEBUG_MODE
+#       ifdef DEBUG_SHMFOOTMARK_MODE
+        if (gDebugMode) gStrFootmark->push();
+#       endif // end  DEBUG_SHMFOOTMARK_MODE
+#       endif // end DEBUG_MODE
+    }
+
+    static void debugFootmarkPop()
+    {
+#       ifdef DEBUG_MODE
+#       ifdef DEBUG_SHMFOOTMARK_MODE
+        if (gDebugMode) gStrFootmark->pop();
+#       endif // end  DEBUG_SHMFOOTMARK_MODE
+#       endif // end DEBUG_MODE
+    }
 }; // class PackTilesImpl
 
 // static function
@@ -1637,15 +1798,16 @@ PackTilesImpl::encode(const ActivePixels& activePixels,
 // static function
 template <bool renderBufferOdd>
 bool
-PackTilesImpl::decode(const void *addr,
+PackTilesImpl::decode(const void* addr,
                       const size_t dataSize,
                       bool storeNumSampleData,
-                      ActivePixels &activePixels,
-                      RenderBuffer &normalizedRenderBufferTiled,
-                      NumSampleBuffer &numSampleBufferTiled,
-                      CoarsePassPrecision &coarsePassPrecision,
-                      FinePassPrecision &finePassPrecision,
-                      unsigned char *sha1HashDigest)
+                      ActivePixels& activePixels,
+                      RenderBuffer& normalizedRenderBufferTiled,
+                      NumSampleBuffer& numSampleBufferTiled,
+                      CoarsePassPrecision& coarsePassPrecision,
+                      FinePassPrecision& finePassPrecision,
+                      bool& activeDecodeAction,
+                      unsigned char* sha1HashDigest)
 //
 // RenderBuffer (beauty/alpha), RenderBufferOdd (beautyAux/alphaAux)
 //
@@ -1667,96 +1829,119 @@ PackTilesImpl::decode(const void *addr,
 // anywhere.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/, const PrecisionMode precisionMode,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision currCoarsePassPrecision,
-                          FinePassPrecision currFinePassPrecision,
-                          VContainerDeq &vContainerDeq) -> bool { // deqTilePixelBlockFunc
-#                         ifdef DEBUG_MODE
-                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc start\n";
-#                         endif // end DEBUG_MODE
+#   ifdef DEBUG_FOOTMARK_DECODE_A
+    debugFootmark([]() { return ">> PackTiles.cc decodeMain() start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_A
 
-                          coarsePassPrecision = currCoarsePassPrecision;
-                          finePassPrecision = currFinePassPrecision;
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/, const PrecisionMode precisionMode,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision currCoarsePassPrecision,
+                       FinePassPrecision currFinePassPrecision,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          if (renderBufferOdd) {
-                              if (dataType != DataType::BEAUTYODD_WITH_NUMSAMPLE) return false;
-                          } else {
-                              if (dataType != DataType::BEAUTY_WITH_NUMSAMPLE) return false;
-                          }
-                          // normalizedRenderBufferTiled is resized and clear if size changed by
-                          // message itself. Basically retrieved info from message is accumulated into
-                          // normalizedRenderBufferTiled and numSampleBufferTiled
+#                      ifdef DEBUG_FOOTMARK_DECODE_A
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decode()/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_A
+                       {
+                           coarsePassPrecision = currCoarsePassPrecision;
+                           finePassPrecision = currFinePassPrecision;
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+                           if (renderBufferOdd) {
+                               if (dataType != DataType::BEAUTYODD_WITH_NUMSAMPLE) return false;
+                           } else {
+                               if (dataType != DataType::BEAUTY_WITH_NUMSAMPLE) return false;
+                           }
+                           // normalizedRenderBufferTiled is resized and clear if size changed by
+                           // message itself. Basically retrieved info from message is accumulated into
+                           // normalizedRenderBufferTiled and numSampleBufferTiled
 
-#                         ifdef DEBUG_MODE
-                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc passA\n";
-#                         endif // end DEBUG_MODE
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-
-                          if (normalizedRenderBufferTiled.getWidth() != alignedWidth ||
-                              normalizedRenderBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              normalizedRenderBufferTiled.init(alignedWidth, alignedHeight);
-                              normalizedRenderBufferTiled.clear();
-                          }
-                          if (storeNumSampleData) {
-                              if (numSampleBufferTiled.getWidth() != alignedWidth ||
-                                  numSampleBufferTiled.getHeight() != alignedHeight) {
-                                  // resize and clear if size is changed
-                                  numSampleBufferTiled.init(alignedWidth, alignedHeight);
-                                  numSampleBufferTiled.clear();
-                              }
-                          }
-
-#                         ifdef DEBUG_MODE
-                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc passB\n";
-#                         endif // end DEBUG_MODE
-
-                          deqTilePixelBlockValSample
-                              (vContainerDeq,
-                               precisionMode,
-                               activePixels,
-                               normalizedRenderBufferTiled,
-                               numSampleBufferTiled,
-                               storeNumSampleData,
-                               [&](RenderColor &v, unsigned int &numSample) { // lowPrecision
-                                  v = deqLowPrecisionVec4f(vContainerDeq);
-                                  numSample = vContainerDeq.deqVLUInt();
-                               },
-                               [&](RenderColor &v, unsigned int &numSample) { // halfPrecision
-                                  v = deqHalfPrecisionVec4f(vContainerDeq);
-                                  numSample = vContainerDeq.deqVLUInt();
-                               },
-                               [&](RenderColor &v, unsigned int &numSample) { // fullPrecision
-                                   v = vContainerDeq.deqVec4f();
-                                   numSample = vContainerDeq.deqVLUInt();
+#                          ifdef DEBUG_FOOTMARK_DECODE_A
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decode()/deqTilePixelBlockFunc passA";
                                });
+#                          endif // end DEBUG_FOOTMARK_DECODE_A
 
-#                         ifdef DEBUG_MODE
-                          if (gDebugMode) std::cerr << ">> PackTile.cc decode/deqTilePixelBlockFunc finish\n";
-#                         endif // end DEBUG_MODE
+                           if (normalizedRenderBufferTiled.getWidth() != alignedWidth ||
+                               normalizedRenderBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               normalizedRenderBufferTiled.init(alignedWidth, alignedHeight);
+                               normalizedRenderBufferTiled.clear();
+                           }
+                           if (storeNumSampleData) {
+                               if (numSampleBufferTiled.getWidth() != alignedWidth ||
+                                   numSampleBufferTiled.getHeight() != alignedHeight) {
+                                   // resize and clear if size is changed
+                                   numSampleBufferTiled.init(alignedWidth, alignedHeight);
+                                   numSampleBufferTiled.clear();
+                               }
+                           }
 
-                          return true;
-                      });
+#                          ifdef DEBUG_FOOTMARK_DECODE_A
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decode()/deqTilePixelBlockFunc passB";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_A
+
+                           deqTilePixelBlockValSample
+                               (vContainerDeq,
+                                precisionMode,
+                                activePixels,
+                                normalizedRenderBufferTiled,
+                                numSampleBufferTiled,
+                                storeNumSampleData,
+                                [&](RenderColor& v, unsigned int& numSample) { // lowPrecision
+                                   v = deqLowPrecisionVec4f(vContainerDeq);
+                                   numSample = vContainerDeq.deqVLUInt();
+                                },
+                                [&](RenderColor& v, unsigned int& numSample) { // halfPrecision
+                                    v = deqHalfPrecisionVec4f(vContainerDeq);
+                                    numSample = vContainerDeq.deqVLUInt();
+                                },
+                                [&](RenderColor& v, unsigned int& numSample) { // fullPrecision
+                                    v = vContainerDeq.deqVec4f();
+                                    numSample = vContainerDeq.deqVLUInt();
+                                });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_A
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decode()/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_A
+                       return true;
+                   },
+                   activeDecodeAction);
+
+#   ifdef DEBUG_FOOTMARK_DECODE_A
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodeMain() finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_A
+    return flag;
 }
 
 // static function
 template <bool renderBufferOdd>
 bool
-PackTilesImpl::decode(const void *addr,
+PackTilesImpl::decode(const void* addr,
                       const size_t dataSize,
-                      ActivePixels &activePixels,
-                      RenderBuffer &normalizedRenderBufferTiled,
-                      CoarsePassPrecision &coarsePassPrecision,
-                      FinePassPrecision &finePassPrecision,
-                      unsigned char *sha1HashDigest)
+                      ActivePixels& activePixels,
+                      RenderBuffer& normalizedRenderBufferTiled,
+                      CoarsePassPrecision& coarsePassPrecision,
+                      FinePassPrecision& finePassPrecision,
+                      bool& activeDecodeAction,
+                      unsigned char* sha1HashDigest)
 //
 // for Client : RenderBuffer (beauty/alpha), RenderBufferOdd (beautyAux/alphaAux)
 //
@@ -1774,53 +1959,86 @@ PackTilesImpl::decode(const void *addr,
 // internally.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/, const PrecisionMode precisionMode,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision currCoarsePassPrecision,
-                          FinePassPrecision currFinePassPrecision,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_B
+    debugFootmark([]() { return ">> PackTiles.cc decode()-B start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_B
 
-                          coarsePassPrecision = currCoarsePassPrecision;
-                          finePassPrecision = currFinePassPrecision;
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/, const PrecisionMode precisionMode,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision currCoarsePassPrecision,
+                       FinePassPrecision currFinePassPrecision,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          if (renderBufferOdd) {
-                              if (dataType != DataType::BEAUTYODD) return false;
-                          } else {
-                              if (dataType != DataType::BEAUTY) return false;
-                          }
-                          // normalizedRenderBufferTiled is resized and clear if size changed by
-                          // message itself. Basically retrieved info from message is accumulated into
-                          // normalizedRenderBufferTiled
+#                      ifdef DEBUG_FOOTMARK_DECODE_B
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decode()-B/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_B
+                       {
+                           coarsePassPrecision = currCoarsePassPrecision;
+                           finePassPrecision = currFinePassPrecision;
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+                           if (renderBufferOdd) {
+                               if (dataType != DataType::BEAUTYODD) return false;
+                           } else {
+                               if (dataType != DataType::BEAUTY) return false;
+                           }
+                           // normalizedRenderBufferTiled is resized and clear if size changed by
+                           // message itself. Basically retrieved info from message is accumulated into
+                           // normalizedRenderBufferTiled
 
-                          if (normalizedRenderBufferTiled.getWidth() != alignedWidth ||
-                              normalizedRenderBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              normalizedRenderBufferTiled.init(alignedWidth, alignedHeight);
-                              normalizedRenderBufferTiled.clear();
-                          }
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-                          deqTilePixelBlockVal(vContainerDeq,
-                                               precisionMode,
-                                               activePixels,
-                                               normalizedRenderBufferTiled,
-                                               [&](RenderColor &v) { // lowPrecision
-                                                   v = deqLowPrecisionVec4f(vContainerDeq);
-                                               },
-                                               [&](RenderColor &v) { // halfPrecision
-                                                   v = deqHalfPrecisionVec4f(vContainerDeq);
-                                               },
-                                               [&](RenderColor &v) { // fullPrecision
-                                                   v = vContainerDeq.deqVec4f();
-                                               });
-                          return true;
-                      });
+                           if (normalizedRenderBufferTiled.getWidth() != alignedWidth ||
+                               normalizedRenderBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               normalizedRenderBufferTiled.init(alignedWidth, alignedHeight);
+                               normalizedRenderBufferTiled.clear();
+                           }
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_B
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decode()-B/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_B
+
+                           deqTilePixelBlockVal(vContainerDeq,
+                                                precisionMode,
+                                                activePixels,
+                                                normalizedRenderBufferTiled,
+                                                [&](RenderColor& v) { // lowPrecision
+                                                    v = deqLowPrecisionVec4f(vContainerDeq);
+                                                },
+                                                [&](RenderColor& v) { // halfPrecision
+                                                    v = deqHalfPrecisionVec4f(vContainerDeq);
+                                                },
+                                                [&](RenderColor& v) { // fullPrecision
+                                                    v = vContainerDeq.deqVec4f();
+                                                });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_B
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decode()-B/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_B
+                       return true;
+                   },
+                   activeDecodeAction);
+
+#   ifdef DEBUG_FOOTMARK_DECODE_B
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decode()-B finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_B
+    return flag;
 }
 
 // static function
@@ -2038,13 +2256,14 @@ PackTilesImpl::encodePixelInfo(const ActivePixels &activePixels,
 
 // static function
 bool
-PackTilesImpl::decodePixelInfo(const void *addr,
+PackTilesImpl::decodePixelInfo(const void* addr,
                                const size_t dataSize,
-                               ActivePixels &activePixels,
-                               PixelInfoBuffer &pixelInfoBufferTiled,
-                               CoarsePassPrecision &coarsePassPrecision,
-                               FinePassPrecision &finePassPrecision,
-                               unsigned char *sha1HashDigest)
+                               ActivePixels& activePixels,
+                               PixelInfoBuffer& pixelInfoBufferTiled,
+                               CoarsePassPrecision& coarsePassPrecision,
+                               FinePassPrecision& finePassPrecision,
+                               bool& activeDecodeAction,
+                               unsigned char* sha1HashDigest)
 //
 // return activePixels : incudes original w, h and tile aligned w, h
 // return pixelInfoBufferTiled : tile aligned resolution
@@ -2058,47 +2277,79 @@ PackTilesImpl::decodePixelInfo(const void *addr,
 // internally.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/,
-                          const PrecisionMode /*precisionMode*/,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision currCoarsePassPrecision,
-                          FinePassPrecision currFinePassPrecision,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_PIXELINFO
+    debugFootmark([]() { return ">> PackTiles.cc decodePixelInfo() start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_PIXELINFO
 
-                          coarsePassPrecision = currCoarsePassPrecision;
-                          finePassPrecision = currFinePassPrecision;
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/,
+                       const PrecisionMode /*precisionMode*/,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision currCoarsePassPrecision,
+                       FinePassPrecision currFinePassPrecision,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          if (dataType != DataType::PIXELINFO) return false;
-                          // pixelInfoBufferTiled is resized and clear if size changed by message itself.
-                          // Basically retrieved info from message is accumulated into
-                          // pixelInfoBufferTiled
+#                      ifdef DEBUG_FOOTMARK_DECODE_PIXELINFO
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodePixelInfo()/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_PIXELINFO
+                       {                          
+                           coarsePassPrecision = currCoarsePassPrecision;
+                           finePassPrecision = currFinePassPrecision;
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+                           if (dataType != DataType::PIXELINFO) return false;
+                           // pixelInfoBufferTiled is resized and clear if size changed by message itself.
+                           // Basically retrieved info from message is accumulated into
+                           // pixelInfoBufferTiled
 
-                          if (pixelInfoBufferTiled.getWidth() != alignedWidth ||
-                              pixelInfoBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              pixelInfoBufferTiled.init(alignedWidth, alignedHeight);
-                              pixelInfoBufferTiled.clear();
-                          }
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-                          activeTileCrawler
-                              (activePixels,
-                               [&](uint64_t mask, unsigned pixelOffset) { // func
-                                  PixelInfo *__restrict dst =
-                                      pixelInfoBufferTiled.getData() + pixelOffset;
-                                  deqTileVal(vContainerDeq, mask, reinterpret_cast<float *>(dst),
-                                             [&](float &v) { // deqfunc
-                                                 vContainerDeq.deqFloat(v);
-                                             });
-                              });
-                          return true;
-                      });
+                           if (pixelInfoBufferTiled.getWidth() != alignedWidth ||
+                               pixelInfoBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               pixelInfoBufferTiled.init(alignedWidth, alignedHeight);
+                               pixelInfoBufferTiled.clear();
+                           }
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_PIXELINFO
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decodePixelInfo()/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_PIXELINFO
+
+                           activeTileCrawler
+                               (activePixels,
+                                [&](uint64_t mask, unsigned pixelOffset) { // func
+                                   PixelInfo *__restrict dst =
+                                       pixelInfoBufferTiled.getData() + pixelOffset;
+                                   deqTileVal(vContainerDeq, mask, reinterpret_cast<float *>(dst),
+                                              [&](float& v) { // deqfunc
+                                                  vContainerDeq.deqFloat(v);
+                                              });
+                               });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_PIXELINFO
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodePixelInfo()/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_PIXELINFO
+                       return true;
+                   },
+                   activeDecodeAction);
+#   ifdef DEBUG_FOOTMARK_DECODE_PIXELINFO    
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodePixelInfo() finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_PIXELINFO    
+    return flag;
 }
 
 //------------------------------------------------------------------------------
@@ -2239,13 +2490,14 @@ PackTilesImpl::encodeHeatMap(const ActivePixels &activePixels,
 
 // static function
 bool
-PackTilesImpl::decodeHeatMap(const void *addr,
+PackTilesImpl::decodeHeatMap(const void* addr,
                              const size_t dataSize,
                              bool storeNumSampleData,
-                             ActivePixels &activePixels,
-                             FloatBuffer &normalizedHeatMapSecBufferTiled, // normalized
-                             NumSampleBuffer &heatMapNumSampleBufferTiled,
-                             unsigned char *sha1HashDigest)
+                             ActivePixels& activePixels,
+                             FloatBuffer& normalizedHeatMapSecBufferTiled, // normalized
+                             NumSampleBuffer& heatMapNumSampleBufferTiled,
+                             bool& activeDecodeAction,
+                             unsigned char* sha1HashDigest)
 //
 // sec + numSample : float * 1 + u_int
 //
@@ -2264,65 +2516,98 @@ PackTilesImpl::decodeHeatMap(const void *addr,
 // normalizedHeatMapSecBufferTiled/heatMapNumSampleBufferTiled are reset internally.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/,
-                          const PrecisionMode /*precisionMode*/,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision /*currCoarsePassPrecision*/,
-                          FinePassPrecision /*currFinePassPrecision */,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_A
+    debugFootmark([]() { return ">> PackTiles.cc decodeHeatMap() start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_A
+    
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/,
+                       const PrecisionMode /*precisionMode*/,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision /*currCoarsePassPrecision*/,
+                       FinePassPrecision /*currFinePassPrecision */,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          if (dataType != DataType::HEATMAP_WITH_NUMSAMPLE) return false;
-                          // normalizedHeatMapSecBufferTiled/heatMapNumSampleBufferTiled are resized and
-                          // clear if size changed by message itself.
-                          // Basically retrieved info from message is accumulated into
-                          // normalizedHeatMapSecBufferTiled and heatMapNumSampleBufferTiled
+#                      ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_A
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeHeatMap()/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_A
+                       {
+                           if (dataType != DataType::HEATMAP_WITH_NUMSAMPLE) return false;
+                           // normalizedHeatMapSecBufferTiled/heatMapNumSampleBufferTiled are resized and
+                           // clear if size changed by message itself.
+                           // Basically retrieved info from message is accumulated into
+                           // normalizedHeatMapSecBufferTiled and heatMapNumSampleBufferTiled
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-                          if (normalizedHeatMapSecBufferTiled.getWidth() != alignedWidth ||
-                              normalizedHeatMapSecBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              normalizedHeatMapSecBufferTiled.init(alignedWidth, alignedHeight);
-                              normalizedHeatMapSecBufferTiled.clear();
-                          }
-                          if (heatMapNumSampleBufferTiled.getWidth() != alignedWidth ||
-                              heatMapNumSampleBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              heatMapNumSampleBufferTiled.init(alignedWidth, alignedHeight);
-                              heatMapNumSampleBufferTiled.clear();
-                          }
+                           if (normalizedHeatMapSecBufferTiled.getWidth() != alignedWidth ||
+                               normalizedHeatMapSecBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               normalizedHeatMapSecBufferTiled.init(alignedWidth, alignedHeight);
+                               normalizedHeatMapSecBufferTiled.clear();
+                           }
+                           if (heatMapNumSampleBufferTiled.getWidth() != alignedWidth ||
+                               heatMapNumSampleBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               heatMapNumSampleBufferTiled.init(alignedWidth, alignedHeight);
+                               heatMapNumSampleBufferTiled.clear();
+                           }
 
-                          activeTileCrawler
-                              (activePixels,
-                               [&](uint64_t mask, unsigned pixelOffset) { // func
-                                  float *__restrict dstSec =
-                                      normalizedHeatMapSecBufferTiled.getData() + pixelOffset;
-                                  unsigned int *__restrict dstNumSample =
-                                      (storeNumSampleData) ?
-                                      (heatMapNumSampleBufferTiled.getData() + pixelOffset) :
-                                      nullptr;
-                                  deqTileValSample(vContainerDeq, mask , dstSec, dstNumSample,
-                                                   [&](float &v, unsigned int &numSample) { // deqfunc
-                                                       vContainerDeq.deqFloat(v);
-                                                       vContainerDeq.deqVLUInt(numSample);
-                                                   });
-                              });
-                          return true;
-                      });
+#                          ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_A
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decodeHeatMap()/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_A
+
+                           activeTileCrawler
+                               (activePixels,
+                                [&](uint64_t mask, unsigned pixelOffset) { // func
+                                   float *__restrict dstSec =
+                                       normalizedHeatMapSecBufferTiled.getData() + pixelOffset;
+                                   unsigned int *__restrict dstNumSample =
+                                       (storeNumSampleData) ?
+                                       (heatMapNumSampleBufferTiled.getData() + pixelOffset) :
+                                       nullptr;
+                                   deqTileValSample(vContainerDeq, mask, dstSec, dstNumSample,
+                                                    [&](float& v, unsigned int& numSample) { // deqfunc
+                                                        vContainerDeq.deqFloat(v);
+                                                        vContainerDeq.deqVLUInt(numSample);
+                                                    });
+                               });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_A
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeHeatMap()/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_A
+                       return true;
+                   },
+                   activeDecodeAction);
+#   ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_A
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodeHeatMap() finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_A
+    return flag;
 }
 
 // static function
 bool
-PackTilesImpl::decodeHeatMap(const void *addr,
+PackTilesImpl::decodeHeatMap(const void* addr,
                              const size_t dataSize,
-                             ActivePixels &activePixels,
-                             FloatBuffer &normalizedHeatMapSecBufferTiled, // normalized
-                             unsigned char *sha1HashDigest)
+                             ActivePixels& activePixels,
+                             FloatBuffer& normalizedHeatMapSecBufferTiled, // normalized
+                             bool& activeDecodeAction,
+                             unsigned char* sha1HashDigest)
 //
 // sec : float * 1
 //
@@ -2339,45 +2624,77 @@ PackTilesImpl::decodeHeatMap(const void *addr,
 // is reset internally.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/,
-                          const PrecisionMode /*precisionMode*/,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision /*currCoarsePassPrecision*/,
-                          FinePassPrecision /*currFinePassPrecision */,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_B
+    debugFootmark([]() { return ">> PackTiles.cc decodeHeatMap()-B start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_B
 
-                          if (dataType != DataType::HEATMAP) return false;
-                          // normalizedHeatMapSecBufferTiled/heatMapNumSampleBufferTiled are resized and
-                          // clear if size changed by message itself.
-                          // Basically retrieved info from message is accumulated into
-                          // normalizedHeatMapSecBufferTiled and heatMapNumSampleBufferTiled
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/,
+                       const PrecisionMode /*precisionMode*/,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision /*currCoarsePassPrecision*/,
+                       FinePassPrecision /*currFinePassPrecision */,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+#                      ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_B
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeHeatMap()-B/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_B
+                       {
+                           if (dataType != DataType::HEATMAP) return false;
+                           // normalizedHeatMapSecBufferTiled is resized and
+                           // clear if size changed by message itself.
+                           // Basically retrieved info from message is accumulated into
+                           // normalizedHeatMapSecBufferTiled
 
-                          if (normalizedHeatMapSecBufferTiled.getWidth() != alignedWidth ||
-                              normalizedHeatMapSecBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              normalizedHeatMapSecBufferTiled.init(alignedWidth, alignedHeight);
-                              normalizedHeatMapSecBufferTiled.clear();
-                          }
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-                          activeTileCrawler
-                              (activePixels,
-                               [&](uint64_t mask, unsigned pixelOffset) {
-                                  float *__restrict dstSec =
-                                      normalizedHeatMapSecBufferTiled.getData() + pixelOffset;
-                                  deqTileVal(vContainerDeq, mask, dstSec,
-                                             [&](float &v) { // deqfunc
-                                                 vContainerDeq.deqFloat(v);
-                                             });
-                              });
-                          return true;
-                      });
+                           if (normalizedHeatMapSecBufferTiled.getWidth() != alignedWidth ||
+                               normalizedHeatMapSecBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               normalizedHeatMapSecBufferTiled.init(alignedWidth, alignedHeight);
+                               normalizedHeatMapSecBufferTiled.clear();
+                           }
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_B
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decodeHeatMap()-B/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_B
+
+                           activeTileCrawler
+                               (activePixels,
+                                [&](uint64_t mask, unsigned pixelOffset) {
+                                   float *__restrict dstSec =
+                                       normalizedHeatMapSecBufferTiled.getData() + pixelOffset;
+                                   deqTileVal(vContainerDeq, mask, dstSec,
+                                              [&](float& v) { // deqfunc
+                                                  vContainerDeq.deqFloat(v);
+                                              });
+                               });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_B
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeHeatMap()-B/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_B
+                       return true;
+                   },
+                   activeDecodeAction);
+#   ifdef DEBUG_FOOTMARK_DECODE_HEATMAP_B
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodeHeatMap()-B finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_HEATMAP_B
+    return flag;
 }
 
 //------------------------------------------------------------------------------
@@ -2440,13 +2757,14 @@ PackTilesImpl::encodeWeightBuffer(const ActivePixels &activePixels,
 
 // static function
 bool
-PackTilesImpl::decodeWeightBuffer(const void *addr,
+PackTilesImpl::decodeWeightBuffer(const void* addr,
                                   const size_t dataSize,
-                                  ActivePixels &activePixels,
-                                  FloatBuffer &weightBufferTiled,
-                                  CoarsePassPrecision &coarsePassPrecision,
-                                  FinePassPrecision &finePassPrecision,
-                                  unsigned char *sha1HashDigest)
+                                  ActivePixels& activePixels,
+                                  FloatBuffer& weightBufferTiled,
+                                  CoarsePassPrecision& coarsePassPrecision,
+                                  FinePassPrecision& finePassPrecision,
+                                  bool& activeDecodeAction,
+                                  unsigned char* sha1HashDigest)
 //
 // return activePixels : incudes original w, h and tile aligned w, h
 // return weightBufferTiled : tile aligned resolution
@@ -2459,49 +2777,81 @@ PackTilesImpl::decodeWeightBuffer(const void *addr,
 // Only exception is that if we get resolution change situation, weightBufferTiled is reset internally.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float /*defaultValue*/,
-                          const PrecisionMode precisionMode,
-                          bool /*closestFilterStatus*/,
-                          CoarsePassPrecision currCoarsePassPrecision,
-                          FinePassPrecision currFinePassPrecision,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_WEIGHT
+    debugFootmark([]() { return ">> PackTiles.cc decodeWeightBuffer() start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_WEIGHT
 
-                          coarsePassPrecision = currCoarsePassPrecision;
-                          finePassPrecision = currFinePassPrecision;
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float /*defaultValue*/,
+                       const PrecisionMode precisionMode,
+                       bool /*closestFilterStatus*/,
+                       CoarsePassPrecision currCoarsePassPrecision,
+                       FinePassPrecision currFinePassPrecision,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          if (dataType != DataType::WEIGHT) return false;
-                          // weightBufferTiled is resized and clear if size changed by message itself.
-                          // Basically retrieved info from message is accumulated into weightBufferTiled
+#                      ifdef DEBUG_FOOTMARK_DECODE_WEIGHT
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeWeightBuffer()/deqTilePixelBlockFunc start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_WEIGHT
+                       {
+                           coarsePassPrecision = currCoarsePassPrecision;
+                           finePassPrecision = currFinePassPrecision;
 
-                          unsigned alignedWidth = activePixels.getAlignedWidth();
-                          unsigned alignedHeight = activePixels.getAlignedHeight();
+                           if (dataType != DataType::WEIGHT) return false;
+                           // weightBufferTiled is resized and clear if size changed by message itself.
+                           // Basically retrieved info from message is accumulated into weightBufferTiled
 
-                          if (weightBufferTiled.getWidth() != alignedWidth ||
-                              weightBufferTiled.getHeight() != alignedHeight) {
-                              // resize and clear if size is changed
-                              weightBufferTiled.init(alignedWidth, alignedHeight);
-                              weightBufferTiled.clear();
-                          }
+                           unsigned alignedWidth = activePixels.getAlignedWidth();
+                           unsigned alignedHeight = activePixels.getAlignedHeight();
 
-                          deqTilePixelBlockVal(vContainerDeq,
-                                               precisionMode,
-                                               activePixels,
-                                               weightBufferTiled,
-                                               [&](float &v) { // lowPrecision
-                                                   v = deqLowPrecisionFloat(vContainerDeq);
-                                               },
-                                               [&](float &v) { // halfPrecision
-                                                   v = deqHalfPrecisionFloat(vContainerDeq);
-                                               },
-                                               [&](float &v) { // fullPrecision
-                                                   v = vContainerDeq.deqFloat();
-                                               });
-                          return true;
-                      });
+                           if (weightBufferTiled.getWidth() != alignedWidth ||
+                               weightBufferTiled.getHeight() != alignedHeight) {
+                               // resize and clear if size is changed
+                               weightBufferTiled.init(alignedWidth, alignedHeight);
+                               weightBufferTiled.clear();
+                           }
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_WEIGHT
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decodeWeightBuffer()/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_WEIGHT
+
+                           deqTilePixelBlockVal(vContainerDeq,
+                                                precisionMode,
+                                                activePixels,
+                                                weightBufferTiled,
+                                                [&](float& v) { // lowPrecision
+                                                    v = deqLowPrecisionFloat(vContainerDeq);
+                                                },
+                                                [&](float& v) { // halfPrecision
+                                                    v = deqHalfPrecisionFloat(vContainerDeq);
+                                                },
+                                                [&](float& v) { // fullPrecision
+                                                    v = vContainerDeq.deqFloat();
+                                                });
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_WEIGHT
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeWeightBuffer()/deqTilePixelBlockFunc finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_WEIGHT
+                       return true;
+                   },
+                   activeDecodeAction);
+#   ifdef DEBUG_FOOTMARK_DECODE_WEIGHT
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodeWeightBuffer() finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_WEIGHT
+    return flag;
 }
     
 //------------------------------------------------------------------------------
@@ -3053,12 +3403,13 @@ PackTilesImpl::encodeRenderOutputMerge(const ActivePixels &activePixels,
 }
 
 bool
-PackTilesImpl::decodeRenderOutput(const void *addr,
+PackTilesImpl::decodeRenderOutput(const void* addr,
                                   const size_t dataSize,
                                   bool storeNumSampleData,
-                                  ActivePixels &activePixels,
-                                  FbAovShPtr &fbAov, // done memory setup if needed
-                                  unsigned char *sha1HashDigest)
+                                  ActivePixels& activePixels,
+                                  FbAovShPtr& fbAov, // done memory setup if needed
+                                  bool& activeDecodeAction,
+                                  unsigned char* sha1HashDigest)
 //
 // VariableValue(float1|float2|float3|float4) with or without numSample
 //
@@ -3081,229 +3432,426 @@ PackTilesImpl::decodeRenderOutput(const void *addr,
 // this function and decoded data properly.
 //
 {
-    return decodeMain(addr,
-                      dataSize,
-                      activePixels,
-                      sha1HashDigest,
-                      [&](DataType dataType, float defaultValue,
-                          const PrecisionMode precisionMode,
-                          bool closestFilterStatus,
-                          CoarsePassPrecision currCoarsePassPrecision,
-                          FinePassPrecision currFinePassPrecision,
-                          VContainerDeq &vContainerDeq) -> bool {
+#   ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+    debugFootmark([]() { return ">> PackTiles.cc decodeRenderOutput() start"; });
+    debugFootmarkAdd([&]() {
+            std::ostringstream ostr;
+            NumSampleBuffer& numSampleBuff = fbAov->getNumSampleBufferTiled();
+            ostr << ">> PackTiles.cc decodeRenderOutput() {\n"
+                 << "  numSampleBuff"
+                 << " w:" << numSampleBuff.getWidth()
+                 << " h:" << numSampleBuff.getHeight()
+                 << " addr:0x" << std::hex << (uintptr_t)(numSampleBuff.getData()) << '\n'
+                 << "  fbAov w:" << fbAov->getWidth()
+                 << " h:" << fbAov->getHeight()
+                 << " aovName:" << fbAov->getAovName()
+                 << " debugTag:" << fbAov->getDebugTag()
+                 << " addr:0x" << std::hex << (uintptr_t)(fbAov.get()) << '\n'
+                 << "}";
+            return ostr.str();
+        });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
 
-                          fbAov->setCoarsePassPrecision(currCoarsePassPrecision);
-                          fbAov->setFinePassPrecision(currFinePassPrecision);
+    bool flag =
+        decodeMain(addr,
+                   dataSize,
+                   activePixels,
+                   sha1HashDigest,
+                   [&](DataType dataType, float defaultValue,
+                       const PrecisionMode precisionMode,
+                       bool closestFilterStatus,
+                       CoarsePassPrecision currCoarsePassPrecision,
+                       FinePassPrecision currFinePassPrecision,
+                       VContainerDeq& vContainerDeq) -> bool { // deqTilePixelBlockFunc
 
-                          VariablePixelBuffer::Format fmt = VariablePixelBuffer::UNINITIALIZED;
-                          bool withNumSample = false;
-                          switch (dataType) {
-                          case DataType::FLOAT1_WITH_NUMSAMPLE :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT;
-                              withNumSample = true;
-                              break;
-                          case DataType::FLOAT2_WITH_NUMSAMPLE :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT2;
-                              withNumSample = true;
-                              break;
-                          case DataType::FLOAT3_WITH_NUMSAMPLE :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT3;
-                              withNumSample = true;
-                              break;
-                          case DataType::FLOAT4_WITH_NUMSAMPLE :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT4;
-                              withNumSample = true;
-                              break;
-                          case DataType::FLOAT1 :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT;
-                              withNumSample = false;
-                              break;
-                          case DataType::FLOAT2 :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT2;
-                              withNumSample = false;
-                              break;
-                          case DataType::FLOAT3 :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT3;
-                              withNumSample = false;
-                              break;
-                          case DataType::FLOAT4 :
-                              fmt = fb_util::VariablePixelBuffer::FLOAT4;
-                              withNumSample = false;
-                              break;
-                          default :
-                              return false;
-                          }
-                          // need to set default value before call setup()
-                          fbAov->setDefaultValue(defaultValue);
+#                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc() start";
+                           });
+                       debugFootmarkPush();
+#                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                       {
+                           fbAov->setCoarsePassPrecision(currCoarsePassPrecision);
+                           fbAov->setFinePassPrecision(currFinePassPrecision);
 
-                          // setup closestFilter related information
-                          fbAov->setClosestFilterStatus(closestFilterStatus);
+#                          ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                           debugFootmarkAdd([]() {
+                                   return ">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc passA";
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
 
-                          // only allocate memory or initialized when we needed.
-                          // If no change reso and no change for fmt,
-                          // we just skip both of re-allocation and clear for fbAov and try to
-                          // overwrite decoded data onto previous result.
-                          fbAov->setup(nullptr, fmt, activePixels.getWidth(), activePixels.getHeight(),
-                                       storeNumSampleData);
+                           VariablePixelBuffer::Format fmt = VariablePixelBuffer::UNINITIALIZED;
+                           bool withNumSample = false;
+                           switch (dataType) {
+                           case DataType::FLOAT1_WITH_NUMSAMPLE :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT;
+                               withNumSample = true;
+                               break;
+                           case DataType::FLOAT2_WITH_NUMSAMPLE :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT2;
+                               withNumSample = true;
+                               break;
+                           case DataType::FLOAT3_WITH_NUMSAMPLE :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT3;
+                               withNumSample = true;
+                               break;
+                           case DataType::FLOAT4_WITH_NUMSAMPLE :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT4;
+                               withNumSample = true;
+                               break;
+                           case DataType::FLOAT1 :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT;
+                               withNumSample = false;
+                               break;
+                           case DataType::FLOAT2 :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT2;
+                               withNumSample = false;
+                               break;
+                           case DataType::FLOAT3 :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT3;
+                               withNumSample = false;
+                               break;
+                           case DataType::FLOAT4 :
+                               fmt = fb_util::VariablePixelBuffer::FLOAT4;
+                               withNumSample = false;
+                               break;
+                           default :
+                               return false;
+                           }
+                           // need to set default value before call setup()
+                           fbAov->setDefaultValue(defaultValue);
 
-                          switch (fbAov->getBufferTiled().getFormat()) {
-                          case fb_util::VariablePixelBuffer::FLOAT : {
-                              if (withNumSample) {
-                                  deqTilePixelBlockValSample
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloatBuffer(),
-                                       fbAov->getNumSampleBufferTiled(),
-                                       storeNumSampleData,
-                                       [&](float &v, unsigned int &numSample) { // lowPrecision
-                                           v = deqLowPrecisionFloat(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](float &v, unsigned int &numSample) { // halfPrecision
-                                           v = deqHalfPrecisionFloat(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](float &v, unsigned int &numSample) { // fullPrecision
-                                           v = vContainerDeq.deqFloat();
-                                           numSample = vContainerDeq.deqVLUInt();
+                           // setup closestFilter related information
+                           fbAov->setClosestFilterStatus(closestFilterStatus);
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                           debugFootmarkAdd([&]() {
+                                   std::ostringstream ostr;
+                                   ostr << ">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc"
+                                        << " before fbAov setup. {\n"
+                                        << "  storeNumSampleData:" << scene_rdl2::str_util::boolStr(storeNumSampleData) << '\n'
+                                        << "  activePixels w:" << activePixels.getWidth()
+                                        << " h:" << activePixels.getHeight() << '\n'
+                                        << "  fbAov debugTag:" << fbAov->getDebugTag()
+                                        << " w:" << fbAov->getWidth()
+                                        << " h:" << fbAov->getHeight()
+                                        << " addr:0x" << std::hex << (uintptr_t)(fbAov.get()) << '\n'
+                                        << "}";
+                                   return ostr.str();
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                           // only allocate memory or initialized when we needed.
+                           // If no change reso and no change for fmt,
+                           // we just skip both of re-allocation and clear for fbAov and try to
+                           // overwrite decoded data onto previous result.
+                           fbAov->setup(nullptr, fmt, activePixels.getWidth(), activePixels.getHeight(),
+                                        storeNumSampleData);
+
+#                          ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                           debugFootmarkAdd([]() {
+                                   return (">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc "
+                                           "before tile-decode block");
+                               });
+                           debugFootmarkPush();
+#                          endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                           {
+                               switch (fbAov->getBufferTiled().getFormat()) {
+                               case fb_util::VariablePixelBuffer::FLOAT : {
+                                   if (withNumSample) {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT-wNum");
+                                           });
+                                       debugFootmarkAdd([&]() {
+                                               std::ostringstream ostr;
+                                               NumSampleBuffer& numSampleBuff = fbAov->getNumSampleBufferTiled();
+                                               ostr << ">> PackTiles.cc numSampleBuff"
+                                                    << " w:" << numSampleBuff.getWidth()
+                                                    << " h:" << numSampleBuff.getHeight()
+                                                    << " addr:0x" << std::hex << (uintptr_t)(numSampleBuff.getData());
+                                               return ostr.str();
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockValSample
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloatBuffer(),
+                                            fbAov->getNumSampleBufferTiled(),
+                                            storeNumSampleData,
+                                            [&](float& v, unsigned int& numSample) { // lowPrecision
+                                               v = deqLowPrecisionFloat(vContainerDeq);
+                                               numSample = vContainerDeq.deqVLUInt();
+                                           },
+                                            [&](float& v, unsigned int& numSample) { // halfPrecision
+                                                v = deqHalfPrecisionFloat(vContainerDeq);
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](float& v, unsigned int& numSample) { // fullPrecision
+                                                v = vContainerDeq.deqFloat();
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            });
+                                   } else { // else withNumSample
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockVal
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloatBuffer(),
+                                            [&](float& v) { // lowPrecision
+                                               v = deqLowPrecisionFloat(vContainerDeq);
+                                            },
+                                            [&](float& v) { // halfPrecision
+                                                v = deqHalfPrecisionFloat(vContainerDeq);
+                                            },
+                                            [&](float& v) { // fullPrecision
+                                                v = vContainerDeq.deqFloat();
+                                            });
+                                   }
+#                                  ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   debugFootmarkPop();
+                                   debugFootmark([]() {
+                                           return (">> PackTiles.cc decodeRenderOutput()/"
+                                                   "deqTilePixelBlockFunc/FLOAT-finish");
                                        });
-                              } else {
-                                  deqTilePixelBlockVal
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloatBuffer(),
-                                       [&](float &v) { // lowPrecision
-                                           v = deqLowPrecisionFloat(vContainerDeq);
-                                       },
-                                       [&](float &v) { // halfPrecision
-                                           v = deqHalfPrecisionFloat(vContainerDeq);
-                                       },
-                                       [&](float &v) { // fullPrecision
-                                           v = vContainerDeq.deqFloat();
+#                                  endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                               } break;
+                               case fb_util::VariablePixelBuffer::FLOAT2 : {
+                                   if (withNumSample) {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT2-wNum");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockValSample
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat2Buffer(),
+                                            fbAov->getNumSampleBufferTiled(),
+                                            storeNumSampleData,
+                                            [&](math::Vec2f& v, unsigned int& numSample) { // lowPrecision
+                                               v = deqLowPrecisionVec2f(vContainerDeq);
+                                               numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec2f& v, unsigned int& numSample) { // halfPrecision
+                                                v = deqHalfPrecisionVec2f(vContainerDeq);
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec2f& v, unsigned int& numSample) { // fullPrecision
+                                                v = vContainerDeq.deqVec2f();
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            });
+                                   } else {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT2");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockVal
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat2Buffer(),
+                                            [&](math::Vec2f& v) { // lowPrecision
+                                               v = deqLowPrecisionVec2f(vContainerDeq);
+                                            },
+                                            [&](math::Vec2f& v) { // halfPrecision
+                                                v = deqHalfPrecisionVec2f(vContainerDeq);
+                                            },
+                                            [&](math::Vec2f& v) { // fullPrecision
+                                                v = vContainerDeq.deqVec2f();
+                                            });
+                                   }
+#                                  ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   debugFootmarkPop();
+                                   debugFootmark([]() {
+                                           return (">> PackTiles.cc decodeRenderOutput()/"
+                                                   "deqTilePixelBlockFunc/FLOAT2-finish");
                                        });
-                              }
-                          } break;
-                          case fb_util::VariablePixelBuffer::FLOAT2 : {
-                              if (withNumSample) {
-                                  deqTilePixelBlockValSample
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat2Buffer(),
-                                       fbAov->getNumSampleBufferTiled(),
-                                       storeNumSampleData,
-                                       [&](math::Vec2f &v, unsigned int &numSample) { // lowPrecision
-                                           v = deqLowPrecisionVec2f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec2f &v, unsigned int &numSample) { // halfPrecision
-                                           v = deqHalfPrecisionVec2f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec2f &v, unsigned int &numSample) { // fullPrecision
-                                           v = vContainerDeq.deqVec2f();
-                                           numSample = vContainerDeq.deqVLUInt();
+#                                  endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                               } break;
+                               case fb_util::VariablePixelBuffer::FLOAT3 : {
+                                   if (withNumSample) {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT3-wNum");
+                                           });
+                                       debugFootmarkAdd([&]() {
+                                               std::ostringstream ostr;
+                                               NumSampleBuffer& numSampleBuff = fbAov->getNumSampleBufferTiled();
+                                               ostr << ">> PackTiles.cc numSampleBuff"
+                                                    << " w:" << numSampleBuff.getWidth()
+                                                    << " h:" << numSampleBuff.getHeight()
+                                                    << " addr:0x" << std::hex << (uintptr_t)(numSampleBuff.getData());
+                                               return ostr.str();
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockValSample
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat3Buffer(),
+                                            fbAov->getNumSampleBufferTiled(),
+                                            storeNumSampleData,
+                                            [&](math::Vec3f& v, unsigned int& numSample) { // lowPrecision
+                                               v = deqLowPrecisionVec3f(vContainerDeq);
+                                               numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec3f& v, unsigned int& numSample) { // halfPrecision
+                                                v = deqHalfPrecisionVec3f(vContainerDeq);
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec3f& v, unsigned int& numSample) { // fullPrecision
+                                                v = vContainerDeq.deqVec3f();
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            });
+                                   } else {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT3");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockVal
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat3Buffer(),
+                                            [&](math::Vec3f& v) { // lowPrecision
+                                               v = deqLowPrecisionVec3f(vContainerDeq);
+                                            },
+                                            [&](math::Vec3f& v) { // halfPrecision
+                                                v = deqHalfPrecisionVec3f(vContainerDeq);
+                                            },
+                                            [&](math::Vec3f& v) { // fullPrecision
+                                                v = vContainerDeq.deqVec3f();
+                                            });
+                                   }
+#                                  ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   debugFootmarkPop();
+                                   debugFootmark([]() {
+                                           return (">> PackTiles.cc decodeRenderOutput()/"
+                                                   "deqTilePixelBlockFunc/FLOAT3-finish");
                                        });
-                              } else {
-                                  deqTilePixelBlockVal
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat2Buffer(),
-                                       [&](math::Vec2f &v) { // lowPrecision
-                                           v = deqLowPrecisionVec2f(vContainerDeq);
-                                       },
-                                       [&](math::Vec2f &v) { // halfPrecision
-                                           v = deqHalfPrecisionVec2f(vContainerDeq);
-                                       },
-                                       [&](math::Vec2f &v) { // fullPrecision
-                                           v = vContainerDeq.deqVec2f();
+#                                  endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                               } break;
+                               case fb_util::VariablePixelBuffer::FLOAT4 : {
+                                   if (withNumSample) {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT4-wNum");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockValSample
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat4Buffer(),
+                                            fbAov->getNumSampleBufferTiled(),
+                                            storeNumSampleData,
+                                            [&](math::Vec4f& v, unsigned int& numSample) { // lowPrecision
+                                               v = deqLowPrecisionVec4f(vContainerDeq);
+                                               numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec4f& v, unsigned int& numSample) { // halfPrecision
+                                                v = deqHalfPrecisionVec4f(vContainerDeq);
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            },
+                                            [&](math::Vec4f& v, unsigned int& numSample) { // fullPrecision
+                                                v = vContainerDeq.deqVec4f();
+                                                numSample = vContainerDeq.deqVLUInt();
+                                            });
+                                   } else {
+#                                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                       debugFootmark([]() {
+                                               return (">> PackTiles.cc decodeRenderOutput()/"
+                                                       "deqTilePixelBlockFunc/FLOAT4");
+                                           });
+                                       debugFootmarkPush();
+#                                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+
+                                       deqTilePixelBlockVal
+                                           (vContainerDeq,
+                                            precisionMode,
+                                            activePixels,
+                                            fbAov->getBufferTiled().getFloat4Buffer(),
+                                            [&](math::Vec4f& v) { // lowPrecision
+                                               v = deqLowPrecisionVec4f(vContainerDeq);
+                                            },
+                                            [&](math::Vec4f& v) { // halfPrecision
+                                                v = deqHalfPrecisionVec4f(vContainerDeq);
+                                            },
+                                            [&](math::Vec4f& v) { // fullPrecision
+                                                v = vContainerDeq.deqVec4f();
+                                            });
+                                   }
+#                                  ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   debugFootmarkPop();
+                                   debugFootmark([]() {
+                                           return (">> PackTiles.cc decodeRenderOutput()/"
+                                                   "deqTilePixelBlockFunc/FLOAT4-finish");
                                        });
-                              }
-                          } break;
-                          case fb_util::VariablePixelBuffer::FLOAT3 : {
-                              if (withNumSample) {
-                                  deqTilePixelBlockValSample
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat3Buffer(),
-                                       fbAov->getNumSampleBufferTiled(),
-                                       storeNumSampleData,
-                                       [&](math::Vec3f &v, unsigned int &numSample) { // lowPrecision
-                                           v = deqLowPrecisionVec3f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec3f &v, unsigned int &numSample) { // halfPrecision
-                                           v = deqHalfPrecisionVec3f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec3f &v, unsigned int &numSample) { // fullPrecision
-                                           v = vContainerDeq.deqVec3f();
-                                           numSample = vContainerDeq.deqVLUInt();
+#                                  endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                               } break;
+                               default :
+#                                  ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   debugFootmark([]() {
+                                           return (">> PackTiles.cc decodeRenderOutput()/"
+                                                   "deqTilePixelBlockFunc/default");
                                        });
-                              } else {
-                                  deqTilePixelBlockVal
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat3Buffer(),
-                                       [&](math::Vec3f &v) { // lowPrecision
-                                           v = deqLowPrecisionVec3f(vContainerDeq);
-                                       },
-                                       [&](math::Vec3f &v) { // halfPrecision
-                                           v = deqHalfPrecisionVec3f(vContainerDeq);
-                                       },
-                                       [&](math::Vec3f &v) { // fullPrecision
-                                           v = vContainerDeq.deqVec3f();
-                                       });
-                              }
-                          } break;
-                          case fb_util::VariablePixelBuffer::FLOAT4 : {
-                              if (withNumSample) {
-                                  deqTilePixelBlockValSample
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat4Buffer(),
-                                       fbAov->getNumSampleBufferTiled(),
-                                       storeNumSampleData,
-                                       [&](math::Vec4f &v, unsigned int &numSample) { // lowPrecision
-                                           v = deqLowPrecisionVec4f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec4f &v, unsigned int &numSample) { // halfPrecision
-                                           v = deqHalfPrecisionVec4f(vContainerDeq);
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       },
-                                       [&](math::Vec4f &v, unsigned int &numSample) { // fullPrecision
-                                           v = vContainerDeq.deqVec4f();
-                                           numSample = vContainerDeq.deqVLUInt();
-                                       });
-                              } else {
-                                  deqTilePixelBlockVal
-                                      (vContainerDeq,
-                                       precisionMode,
-                                       activePixels,
-                                       fbAov->getBufferTiled().getFloat4Buffer(),
-                                       [&](math::Vec4f &v) { // lowPrecision
-                                           v = deqLowPrecisionVec4f(vContainerDeq);
-                                       },
-                                       [&](math::Vec4f &v) { // halfPrecision
-                                           v = deqHalfPrecisionVec4f(vContainerDeq);
-                                       },
-                                       [&](math::Vec4f &v) { // fullPrecision
-                                           v = vContainerDeq.deqVec4f();
-                                       });
-                              }
-                          } break;
-                          default :
-                              break;
-                          }
-                          return true;
-                      });
+#                                  endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                                   break;
+                               } // end of switch
+                           }
+#                          ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                           debugFootmarkPop();
+                           debugFootmark([]() {
+                                   return (">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc "
+                                           "after tile-decode block");
+                               });
+#                          endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                       }
+#                      ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                       debugFootmarkPop();
+                       debugFootmark([]() {
+                               return ">> PackTiles.cc decodeRenderOutput()/deqTilePixelBlockFunc() finish";
+                           });
+#                      endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+                       return true;
+                   },           //  end of deqTilePixelBlockFunc()
+                   activeDecodeAction);
+#   ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc decodeRenderOutput() finish"; });
+#   endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUT
+    return flag;
 }
 
 //------------------------------------------------------------------------------
@@ -3368,38 +3916,68 @@ PackTilesImpl::encodeRenderOutputReference(const FbReferenceType &referenceType,
 }
 
 bool
-PackTilesImpl::decodeRenderOutputReference(const void *addr,
+PackTilesImpl::decodeRenderOutputReference(const void* addr,
                                            const size_t dataSize,
-                                           FbAovShPtr &fbAov,
-                                           unsigned char *sha1HashDigest)
+                                           FbAovShPtr& fbAov,
+                                           unsigned char* sha1HashDigest)
 {
-    //------------------------------
-    //
-    // read SHA1 hash
-    //
-    const unsigned char *currAddr = static_cast<const unsigned char *>(addr);
-    unsigned char dummySha1HashDigest[HASH_SIZE];
-    unsigned char *dstHash = (sha1HashDigest) ? sha1HashDigest : dummySha1HashDigest;
-    memcpy(static_cast<void *>(dstHash), static_cast<const void *>(currAddr), HASH_SIZE);
-    currAddr += HASH_SIZE;
+#   ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+    debugFootmark([]() {
+            return ">> PackTiles.cc decodeRenderOutputReference() start";
+        });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+    {
+        //------------------------------
+        //
+        // read SHA1 hash
+        //
+        const unsigned char* currAddr = static_cast<const unsigned char *>(addr);
+        unsigned char dummySha1HashDigest[HASH_SIZE];
+        unsigned char* dstHash = (sha1HashDigest) ? sha1HashDigest : dummySha1HashDigest;
+        memcpy(static_cast<void *>(dstHash), static_cast<const void *>(currAddr), HASH_SIZE);
+        currAddr += HASH_SIZE;
 
-    //------------------------------
-    //
-    // data decode
-    //
-    VContainerDeq vContainerDeq(static_cast<const void *>(currAddr), dataSize - HASH_SIZE);
+#       ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+        debugFootmarkAdd([]() {
+                return ">> PackTiles.cc decodeRenderOutputReference() passA";
+            });
+#       endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
 
-    DataType currDataType;
-    FbReferenceType currReferenceType;
-    if (!deqHeaderBlock(vContainerDeq, currDataType, currReferenceType)) {
-        // unknown format version or memory issue
-        return false;           // unknown format version
+        //------------------------------
+        //
+        // data decode
+        //
+        VContainerDeq vContainerDeq(static_cast<const void *>(currAddr), dataSize - HASH_SIZE);
+
+#       ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+        debugFootmarkAdd([]() {
+                return ">> PackTiles.cc decodeRenderOutputReference() passB";
+            });
+#       endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+
+        DataType currDataType;
+        FbReferenceType currReferenceType;
+        if (!deqHeaderBlock(vContainerDeq, currDataType, currReferenceType)) {
+            return false; // unknown format version or memory issue
+        }
+
+        //------------------------------
+
+#       ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+        debugFootmarkAdd([]() {
+                return ">> PackTiles.cc decodeRenderOutputReference() passC";
+            });
+#       endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+
+        fbAov->setup(currReferenceType);
     }
-
-    //------------------------------
-
-    fbAov->setup(currReferenceType);
-
+#   ifdef DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
+    debugFootmarkPop();
+    debugFootmark([]() {
+            return ">> PackTiles.cc decodeRenderOutputReference() finish";
+        });
+#   endif // end DEBUG_FOOTMARK_DECODE_RENDEROUTPUTREFERENCE
     return true;
 }
 
@@ -3671,6 +4249,7 @@ PackTilesImpl::verifyEncodeResultMultiMcrt(const void *addr,
     // We skip compare {Coarse,Fine}PassPrecision data on purpose
     CoarsePassPrecision coarsePassPrecision;
     FinePassPrecision finePassPrecision;
+    bool activeDecodeAction;
 
     if (!decode<false>(addr,
                        dataSize,
@@ -3679,7 +4258,8 @@ PackTilesImpl::verifyEncodeResultMultiMcrt(const void *addr,
                        decodedNormalizedRenderBufferTiled,
                        numSampleBufferTiled,
                        coarsePassPrecision,
-                       finePassPrecision)) {
+                       finePassPrecision,
+                       activeDecodeAction)) {
         return false;
     }
 
@@ -3707,6 +4287,7 @@ PackTilesImpl::verifyEncodeResultMerge(const void *addr,
     // We skip compare {Coarse,Fine}PassPrecision data on purpose
     CoarsePassPrecision coarsePassPrecision;
     FinePassPrecision finePassPrecision;
+    bool activeDecodeAction;
 
     if (!decode<false>(addr,
                        dataSize,
@@ -3715,7 +4296,8 @@ PackTilesImpl::verifyEncodeResultMerge(const void *addr,
                        decodedNormalizedRenderBufferTiled,
                        numSampleBufferTiled,
                        coarsePassPrecision,
-                       finePassPrecision)) {
+                       finePassPrecision,
+                       activeDecodeAction)) {
         return false;
     }
 
@@ -4185,31 +4767,41 @@ PackTilesImpl::setZeroTile(RenderColor *outputFirstRenderColorOfTile)
 
 // static function
 void
-PackTilesImpl::normalizedRenderBuffer(const ActivePixels &activePixels,
-                                      const RenderBuffer &renderBufferTiled, // non normalized
-                                      const FloatBuffer &weightBufferTiled,
-                                      RenderBuffer &outputRenderBufferTiled) // normalized output
+PackTilesImpl::normalizedRenderBuffer(const ActivePixels& activePixels,
+                                      const RenderBuffer& renderBufferTiled, // non normalized
+                                      const FloatBuffer& weightBufferTiled,
+                                      RenderBuffer& outputRenderBufferTiled) // normalized output
 //
 // Compute normalized renderBuffer
 // renderBufferTiled : tile aligned resolution
 // weightBufferTiled : tile aligned resolution
 //
 {
-    unsigned numTiles = activePixels.getNumTiles();
-    for (unsigned tileId = 0; tileId < numTiles; ++tileId) {
-        uint64_t currMask = activePixels.getTileMask(tileId);
+#   ifdef DEBUG_FOOTMARK_NORMALIZEDRENDERBUFFER
+    debugFootmark([]() { return ">> PackTiles.cc normalizedRenderBuffer() start"; });
+    debugFootmarkPush();
+#   endif // end DEBUG_FOOTMARK_NORMALIZEDRENDERBUFFER
+    {
+        unsigned numTiles = activePixels.getNumTiles();
+        for (unsigned tileId = 0; tileId < numTiles; ++tileId) {
+            uint64_t currMask = activePixels.getTileMask(tileId);
 
-        int pixOffset = tileId * 64;
-        RenderColor *outputFirstRenderColorOfTile = outputRenderBufferTiled.getData() + pixOffset;
-        if (currMask) {
-            const RenderColor *firstRenderColorOfTile = renderBufferTiled.getData() + pixOffset;
-            const float *firstWeightOfTile = weightBufferTiled.getData() + pixOffset;
-            normalizedTileColor(currMask, firstRenderColorOfTile,
-                                firstWeightOfTile, outputFirstRenderColorOfTile);
-        } else {
-            setZeroTile(outputFirstRenderColorOfTile);
+            int pixOffset = tileId * 64;
+            RenderColor* outputFirstRenderColorOfTile = outputRenderBufferTiled.getData() + pixOffset;
+            if (currMask) {
+                const RenderColor* firstRenderColorOfTile = renderBufferTiled.getData() + pixOffset;
+                const float* firstWeightOfTile = weightBufferTiled.getData() + pixOffset;
+                normalizedTileColor(currMask, firstRenderColorOfTile,
+                                    firstWeightOfTile, outputFirstRenderColorOfTile);
+            } else {
+                setZeroTile(outputFirstRenderColorOfTile);
+            }
         }
     }
+#   ifdef DEBUG_FOOTMARK_NORMALIZEDRENDERBUFFER
+    debugFootmarkPop();
+    debugFootmark([]() { return ">> PackTiles.cc normalizedRenderBuffer() finish"; });
+#   endif // end DEBUG_FOOTMARK_NORMALIZEDRENDERBUFFER
 }
 
 // static function
@@ -4405,7 +4997,7 @@ PackTilesImpl::calcBeautyDataSizeForTest(const ActivePixels &activePixels,
 
 // static function
 PackTiles::DataType
-PackTiles::decodeDataType(const void *addr, const size_t dataSize)
+PackTiles::decodeDataType(const void* addr, const size_t dataSize)
 {
     return PackTilesImpl::decodeDataType(addr, dataSize);
 }
@@ -4503,15 +5095,17 @@ PackTiles::encode(const bool renderBufferOdd,
 // static function
 bool
 PackTiles::decode(const bool renderBufferOdd,                // in
-                  const void *addr,                          // in
+                  const void* addr,                          // in
                   const size_t dataSize,                     // in
                   bool storeNumSampleData,                   // in
-                  ActivePixels &activePixels,                // out : includes orig w,h + tile aligned w,h
-                  RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned reso : init internal
-                  NumSampleBuffer &numSampleBufferTiled,     // out : tile aligned reso : init internal
-                  CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-                  FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-                  unsigned char *sha1HashDigest)
+                  ActivePixels& activePixels,                // out : includes orig w,h + tile aligned w,h
+                  RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned reso : init internal
+                  NumSampleBuffer& numSampleBufferTiled,     // out : tile aligned reso : init internal
+                  CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+                  FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+                  bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                             //                       empty data (=false)
+                  unsigned char* sha1HashDigest)
 {
     if (renderBufferOdd) {
         return PackTilesImpl::decode<true>(addr,
@@ -4522,6 +5116,7 @@ PackTiles::decode(const bool renderBufferOdd,                // in
                                            numSampleBufferTiled,
                                            coarsePassPrecision,
                                            finePassPrecision,
+                                           activeDecodeAction,
                                            sha1HashDigest);
     } else {
         return PackTilesImpl::decode<false>(addr,
@@ -4532,6 +5127,7 @@ PackTiles::decode(const bool renderBufferOdd,                // in
                                             numSampleBufferTiled,
                                             coarsePassPrecision,
                                             finePassPrecision,
+                                            activeDecodeAction,
                                             sha1HashDigest);
     }
 }
@@ -4540,23 +5136,27 @@ PackTiles::decode(const bool renderBufferOdd,                // in
 // static function
 bool
 PackTiles::decode(const bool renderBufferOdd,                // in
-                  const void *addr,                          // in
+                  const void* addr,                          // in
                   const size_t dataSize,                     // in
-                  ActivePixels &activePixels,                // out : includes orig w,h + tile aligned w,h
-                  RenderBuffer &normalizedRenderBufferTiled, // out : tile aligned reso : init internal
-                  CoarsePassPrecision &coarsePassPrecision,  // out : minimum coarse pass precision
-                  FinePassPrecision &finePassPrecision,      // out : minimum fine pass precision
-                  unsigned char *sha1HashDigest)
+                  ActivePixels& activePixels,                // out : includes orig w,h + tile aligned w,h
+                  RenderBuffer& normalizedRenderBufferTiled, // out : tile aligned reso : init internal
+                  CoarsePassPrecision& coarsePassPrecision,  // out : minimum coarse pass precision
+                  FinePassPrecision& finePassPrecision,      // out : minimum fine pass precision
+                  bool& activeDecodeAction,                  // out : decode result : some data (=true) or
+                                                             //                       empty data (=false)
+                  unsigned char* sha1HashDigest)
 {
     if (renderBufferOdd) {
         return PackTilesImpl::decode<true>(addr, dataSize, activePixels,
                                            normalizedRenderBufferTiled,
                                            coarsePassPrecision, finePassPrecision,
+                                           activeDecodeAction,
                                            sha1HashDigest);
     } else {
         return PackTilesImpl::decode<false>(addr, dataSize, activePixels,
                                             normalizedRenderBufferTiled,
                                             coarsePassPrecision, finePassPrecision,
+                                            activeDecodeAction,
                                             sha1HashDigest);
     }
 }
@@ -4587,18 +5187,21 @@ PackTiles::encodePixelInfo(const ActivePixels &activePixels,
 
 // static function
 bool
-PackTiles::decodePixelInfo(const void *addr,                   // in
+PackTiles::decodePixelInfo(const void* addr,                   // in
                            const size_t dataSize,              // in
-                           ActivePixels &activePixels,         // out : includes orig w,h + tile aligned w, h
-                           PixelInfoBuffer &pixelInfoBufTiled, // out : tile aligned reso : init internal
-                           CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                           FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                           unsigned char *sha1HashDigest)
+                           ActivePixels& activePixels,         // out : includes orig w,h + tile aligned w, h
+                           PixelInfoBuffer& pixelInfoBufTiled, // out : tile aligned reso : init internal
+                           CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                           FinePassPrecision& finePassPrecision,     // out : minimum fine pass precision
+                           bool& activeDecodeAction,           // out : decode result : some data (=true) or
+                                                               //                       empty data (=false)
+                           unsigned char* sha1HashDigest)
 {
     return PackTilesImpl::decodePixelInfo(addr, dataSize,
                                           activePixels, pixelInfoBufTiled,
                                           coarsePassPrecision,
                                           finePassPrecision,
+                                          activeDecodeAction,
                                           sha1HashDigest);
 }
 
@@ -4640,31 +5243,37 @@ PackTiles::encodeHeatMap(const ActivePixels &activePixels,
 // Sec + numSample : float * 1 + u_int
 // static function
 bool
-PackTiles::decodeHeatMap(const void *addr,                          // in
-                         const size_t dataSize,                     // in
-                         bool storeNumSampleData,                   // in:store numSampleData condition
-                         ActivePixels &activePixels,                // out:include orig w,h + tileAligned w,h
-                         FloatBuffer &heatMapSecBufferTiled,        // out:tile aligned reso : init internal
-                         NumSampleBuffer &heatMapNumSampleBufTiled, // out:tile aligned reso : init internal
-                         unsigned char *sha1HashDigest)
+PackTiles::decodeHeatMap(const void* addr,                      // in
+                         const size_t dataSize,                 // in
+                         bool storeNumSampleData,               // in:store numSampleData condition
+                         ActivePixels& activePixels,            // out:include orig w,h + tileAligned w,h
+                         FloatBuffer& heatMapSecBufferTiled,    // out:tile aligned reso : init internal
+                         NumSampleBuffer& heatMapNumSampleBufTiled, // out:tile aligned reso : init internal
+                         bool& activeDecodeAction,              // out:decode result : some data (=true) or
+                                                                //                     empty data (=false)
+                         unsigned char* sha1HashDigest)
 {
     return PackTilesImpl::decodeHeatMap(addr, dataSize,
                                         storeNumSampleData,
                                         activePixels, heatMapSecBufferTiled, heatMapNumSampleBufTiled,
+                                        activeDecodeAction,
                                         sha1HashDigest);
 }
     
 // Sec : float * 1
 // static function
 bool
-PackTiles::decodeHeatMap(const void *addr,                          // in
-                         const size_t dataSize,                     // in
-                         ActivePixels &activePixels,                // out:include orig w,h + tile aligned w,h
-                         FloatBuffer &normalizedHeatMapSecBufTiled, // out:tile aligned reso : init internal
-                         unsigned char *sha1HashDigest)
+PackTiles::decodeHeatMap(const void* addr,                      // in
+                         const size_t dataSize,                 // in
+                         ActivePixels& activePixels,            // out:include orig w,h + tile aligned w,h
+                         FloatBuffer& normalizedHeatMapSecBufTiled, // out:tile aligned reso : init internal
+                         bool& activeDecodeAction,              // out:decode result : some data (=true) or
+                                                                //                     empty data (=false)
+                         unsigned char* sha1HashDigest)
 {
     return PackTilesImpl::decodeHeatMap(addr, dataSize,
                                         activePixels, normalizedHeatMapSecBufTiled,
+                                        activeDecodeAction,
                                         sha1HashDigest);
 }
 
@@ -4696,16 +5305,19 @@ PackTiles::encodeWeightBuffer(const ActivePixels &activePixels,
 
 // static function
 bool
-PackTiles::decodeWeightBuffer(const void *addr,               // in
+PackTiles::decodeWeightBuffer(const void* addr,               // in
                               const size_t dataSize,          // in
-                              ActivePixels &activePixels,     // out : includes orig w,h + tile aligned w,h
-                              FloatBuffer &weightBufferTiled, // out : tile aligned reso : init internal
-                              CoarsePassPrecision &coarsePassPrecision, // out : minimum coarse pass precision
-                              FinePassPrecision &finePassPrecision,     // out : minimum fine pass precision
-                              unsigned char *sha1HashDigest)
+                              ActivePixels& activePixels,     // out : includes orig w,h + tile aligned w,h
+                              FloatBuffer& weightBufferTiled, // out : tile aligned reso : init internal
+                              CoarsePassPrecision& coarsePassPrecision, // out : minimum coarse pass precision
+                              FinePassPrecision& finePassPrecision,     // out : minimum fine pass precision
+                              bool& activeDecodeAction,       // out : decode result : some data (=true) or
+                                                              //                       empty data (=false)
+                              unsigned char* sha1HashDigest)
 {
     return PackTilesImpl::decodeWeightBuffer(addr, dataSize, activePixels, weightBufferTiled,
                                              coarsePassPrecision, finePassPrecision,
+                                             activeDecodeAction,
                                              sha1HashDigest);
 }
 
@@ -4785,18 +5397,21 @@ PackTiles::encodeRenderOutputMerge(const ActivePixels &activePixels,
 // VariableValue(float1|float2|float3|float4)             : float * (1|2|3|4)
 // static function
 bool
-PackTiles::decodeRenderOutput(const void *addr,           // in
+PackTiles::decodeRenderOutput(const void* addr,           // in
                               const size_t dataSize,      // in
                               bool storeNumSampleData,    // in : store numSampleData condition
-                              ActivePixels &activePixels, // out
-                              FbAovShPtr &fbAov,          // out : allocate memory if needed internally
-                              unsigned char *sha1HashDigest)
+                              ActivePixels& activePixels, // out
+                              FbAovShPtr& fbAov,          // out : allocate memory if needed internally
+                              bool& activeDecodeAction,   // out : decode result : some data (=true) or
+                                                          //                       empty data (=false)
+                              unsigned char* sha1HashDigest)
 {
     return PackTilesImpl::decodeRenderOutput(addr,
                                              dataSize,
                                              storeNumSampleData,
                                              activePixels,
                                              fbAov,
+                                             activeDecodeAction,
                                              sha1HashDigest);
 }
 
@@ -4816,12 +5431,15 @@ PackTiles::encodeRenderOutputReference(const FbReferenceType &referenceType,
     
 // static function
 bool
-PackTiles::decodeRenderOutputReference(const void *addr,      // in
-                                       const size_t dataSize, // in
-                                       FbAovShPtr &fbAov,     // out
-                                       unsigned char *sha1HashDigest)
+PackTiles::decodeRenderOutputReference(const void* addr,         // in
+                                       const size_t dataSize,    // in
+                                       FbAovShPtr& fbAov,        // out
+                                       unsigned char* sha1HashDigest)
 {
-    return PackTilesImpl::decodeRenderOutputReference(addr, dataSize, fbAov, sha1HashDigest);
+    return PackTilesImpl::decodeRenderOutputReference(addr,
+                                                      dataSize,
+                                                      fbAov,
+                                                      sha1HashDigest);
 }
 
 //------------------------------
@@ -4837,14 +5455,14 @@ PackTiles::show(const std::string &hd, const void *addr, const size_t dataSize)
     
 // static function
 std::string
-PackTiles::showPrecisionMode(const PrecisionMode &mode)
+PackTiles::showPrecisionMode(const PrecisionMode& mode)
 {
     return PackTilesImpl::showPrecisionMode(mode);
 }
 
 // static function
 std::string
-PackTiles::showDataType(const DataType &dataType)
+PackTiles::showDataType(const DataType& dataType)
 {
     return PackTilesImpl::showDataType(dataType);
 }
@@ -4888,11 +5506,11 @@ PackTiles::showHash(const std::string &hd, const unsigned char sha1HashDigest[HA
 // Verify RenderBuffer (not RenderBufferOdd) for multi-machine mode of mcrt computation
 // static function
 bool
-PackTiles::verifyEncodeResultMultiMcrt(const void *addr,
+PackTiles::verifyEncodeResultMultiMcrt(const void* addr,
                                        const size_t dataSize,
-                                       const ActivePixels &originalActivePixels,
-                                       const RenderBuffer &originalRenderBufferTiled,
-                                       const FloatBuffer &originalWeightBufferTiled)
+                                       const ActivePixels& originalActivePixels,
+                                       const RenderBuffer& originalRenderBufferTiled,
+                                       const FloatBuffer& originalWeightBufferTiled)
 {
     return PackTilesImpl::verifyEncodeResultMultiMcrt(addr,
                                                       dataSize,
@@ -4904,16 +5522,16 @@ PackTiles::verifyEncodeResultMultiMcrt(const void *addr,
 // Verify RenderBuffer (not RenderBufferOdd) for merge computation
 // static function
 bool
-PackTiles::verifyEncodeResultMerge(const void *addr,
+PackTiles::verifyEncodeResultMerge(const void* addr,
                                    const size_t dataSize,
-                                   const Fb &originalFb)
+                                   const Fb& originalFb)
 {
     return PackTilesImpl::verifyEncodeResultMerge(addr, dataSize, originalFb);
 }
     
 // static function
 bool
-PackTiles::verifyDecodeHash(const void *addr, const size_t dataSize)
+PackTiles::verifyDecodeHash(const void* addr, const size_t dataSize)
 {
     return PackTilesImpl::verifyDecodeHash(addr, dataSize);
 }
@@ -4921,14 +5539,14 @@ PackTiles::verifyDecodeHash(const void *addr, const size_t dataSize)
 // access all renderBuffer pixels test
 // static function
 bool
-PackTiles::verifyRenderBufferAccessTest(const RenderBuffer &renderBufferTiled)
+PackTiles::verifyRenderBufferAccessTest(const RenderBuffer& renderBufferTiled)
 {
     return PackTilesImpl::verifyRenderBufferAccessTest(renderBufferTiled);
 }
     
 // static function
 void
-PackTiles::verifyActivePixelsAccessTest(const ActivePixels &activePixels)
+PackTiles::verifyActivePixelsAccessTest(const ActivePixels& activePixels)
 {
     return PackTilesImpl::verifyActivePixelsAccessTest(activePixels);
 }
@@ -4944,21 +5562,21 @@ PackTiles::timingTestEnqTileMaskBlock(const unsigned width,
     
 // static function
 void
-PackTiles::timingAndSizeTest(const ActivePixels &activePixels, const PrecisionMode precisionMode)
+PackTiles::timingAndSizeTest(const ActivePixels& activePixels, const PrecisionMode precisionMode)
 {
     return PackTilesImpl::timingAndSizeTest(activePixels, precisionMode);
 }
 
 // static function
 void
-PackTiles::encodeActivePixels(const ActivePixels &activePixels, VContainerEnq &vContainerEnq)
+PackTiles::encodeActivePixels(const ActivePixels& activePixels, VContainerEnq& vContainerEnq)
 {
     return PackTilesImpl::encodeActivePixels(activePixels, vContainerEnq);
 }
     
 // static function
 void
-PackTiles::decodeActivePixels(VContainerDeq &vContainerDeq, ActivePixels &activePixels)
+PackTiles::decodeActivePixels(VContainerDeq& vContainerDeq, ActivePixels& activePixels)
 {
     return PackTilesImpl::decodeActivePixels(vContainerDeq, activePixels);
 }

@@ -59,6 +59,10 @@ public:
         mFinePassPrecision(FinePassPrecision::F32)
     {}
 
+    // debugTag for debugging purposes
+    void setDebugTag(const std::string& debugTag) { mDebugTag = debugTag; }
+    const std::string& getDebugTag() const { return mDebugTag; }
+
     void setDefaultValue(float v) { mDefaultValue = v; }
     float getDefaultValue() const { return mDefaultValue; }
     
@@ -127,6 +131,9 @@ public:
     bool isBeautyRelatedAov() const;
 
 protected:
+
+    std::string mDebugTag; // for debugging purposes
+
     bool mStatus; // active status on/off
                   // off means this data is not used
                   // on includes Reference != UNDEF condition.

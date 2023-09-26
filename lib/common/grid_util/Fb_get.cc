@@ -6,9 +6,9 @@ namespace scene_rdl2 {
 namespace grid_util {
 
 bool
-Fb::getPixRenderBufferActivePixels(int sx, int sy) const
+Fb::isActivePixelRenderBuffer(int sx, int sy) const
 {
-    return mActivePixels.getActivePixelCondition(sx, sy);
+    return mActivePixels.isActivePixel(sx, sy);
 }
 
 fb_util::RenderColor

@@ -81,6 +81,10 @@ public:
     // width, height are original size and not need to be tile aligned
     finline void init(const math::Viewport &rezedViewport);
 
+    // debugTag for debugging purposes
+    void setDebugTag(const std::string& debugTag) { mDebugTag = debugTag; }
+    const std::string& getDebugTag() const { return mDebugTag; }
+
     finline void reset(); // clear beauty include color, set non-active condition for other buffer
     finline void resetExceptColor(); // clear beauty except color, set non-active condition for other buffer
     finline void reset(const PartialMergeTilesTbl &activeTilesTbl);
@@ -105,7 +109,7 @@ public:
     const NumSampleBuffer& getNumSampleBufferTiled() const { return mNumSampleBufferTiled; }
     CoarsePassPrecision&   getRenderBufferCoarsePassPrecision() { return mRenderBufferCoarsePassPrecision; }
     FinePassPrecision&     getRenderBufferFinePassPrecision() { return mRenderBufferFinePassPrecision; }
-    bool                   getPixRenderBufferActivePixels(int sx, int sy) const;
+    bool                   isActivePixelRenderBuffer(int sx, int sy) const;
     fb_util::RenderColor   getPixRenderBuffer(int sx, int sy) const;
     unsigned int           getPixRenderBufferNumSample(int sx, int sy) const;
 
@@ -385,6 +389,10 @@ public:
                                 const MessageOutFunc& messageOutput = nullptr) const;
 
 private:
+
+    std::string mDebugTag; // for debugging purposes
+
+    //------------------------------
 
     // pixels per tile 64 is hard-wired into the implementation by the use of uint64_t and other details.
     // We can not change this number easily. This definition is just for readability of the code.
@@ -955,6 +963,21 @@ Fb::getAov(const std::string &aovName)
     if (mRenderOutput.find(aovName) == mRenderOutput.end()) {
         // Very first time to access this AOV -> create
         mRenderOutput[aovName] = FbAovShPtr(new FbAov(aovName));
+
+        //
+        // For debugging purposes, we set debugTag to each aov data.
+        // This is only happening once at construction time and this is pretty small performance overhead.
+        //
+        std::ostringstream ostr;
+        ostr << getDebugTag() << ':' << aovName;
+        mRenderOutput[aovName]->setDebugTag(ostr.str());
+
+        /* useful debug message
+        std::cerr << ">> Fb.h getAov() aovName:" << aovName << " debugTag:" << mRenderOutput[aovName]->getDebugTag()
+                  << " w:" << mRenderOutput[aovName]->getWidth() << " h:" << mRenderOutput[aovName]->getHeight()
+                  << " addr:0x" << std::hex << (uintptr_t)(mRenderOutput[aovName].get())
+                  << '\n';
+        */
     }
     mRenderOutputStatus = true;
 

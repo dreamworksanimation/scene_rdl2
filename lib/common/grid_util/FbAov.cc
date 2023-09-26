@@ -57,6 +57,15 @@ FbAov::setup(const PartialMergeTilesTbl *partialMergeTilesTbl,
         // mActivePixels and mNumSampleBufferTiled are always changed resolution at same time,
         // So we only do resolution change test for one of them.
         //
+        /* useful debug message. getDebugTag() includes AOV data name
+        std::cerr << ">> FbAov.cc mActivePixels.init()"
+                  << " storeNumSampleData:" << scene_rdl2::str_util::boolStr(storeNumSampleData)
+                  << " width:" << width << " height:" << height
+                  << " aovName:" << getAovName()
+                  << " debugTag:" << getDebugTag()
+                  << " fbAov:0x" << std::hex << (uintptr_t)this << '\n';
+        */
+            
         mActivePixels.init(width, height);
         if (storeNumSampleData) {
             mNumSampleBufferTiled.init(mActivePixels.getAlignedWidth(), mActivePixels.getAlignedHeight());
