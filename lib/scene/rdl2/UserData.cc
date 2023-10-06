@@ -523,6 +523,12 @@ UserData::getMat4fValues1() const
     return get(sAttrMat4fValues1);
 }
 
+void
+UserData::setRate(int rate)
+{
+    set(sAttrRateKey, rate);
+}
+
 int
 UserData::getRate() const
 {

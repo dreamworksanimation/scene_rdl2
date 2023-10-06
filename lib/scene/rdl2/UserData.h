@@ -101,6 +101,7 @@ public:
     const Mat4fVector& getMat4fValues0() const;
     const Mat4fVector& getMat4fValues1() const;
 
+    void setRate(int rate);
     int getRate() const;
 
 private:
