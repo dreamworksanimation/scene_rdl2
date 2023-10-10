@@ -132,6 +132,9 @@ public:
         case FATAL_LEVEL:
             fatal(value...);
             break;
+        default:
+            MNRY_LOGGING_LIBRARY_ASSERT(!"Should not get here");
+            break;
         }
     }
 
@@ -188,8 +191,8 @@ class EventCounters
 
     using EventCountMap = std::unordered_map<LogEvent, unsigned>;
 
-    using KeyType   = const T*;
-    using MapType   = std::unordered_map<KeyType, EventCountMap>;
+    using KeyType = const T*;
+    using MapType = std::unordered_map<KeyType, EventCountMap>;
 
 public:
     void clear()
@@ -237,6 +240,21 @@ public:
         }
     }
 
+    // Skips zero-records
+    // Calls f with key type, LogEvent, and event count
+    template <typename F>
+    void forEachRecord(F&& f) const
+    {
+        std::lock_guard<MutexType> lock(mMutex);
+
+        for (const auto& key : mMap) {
+            const EventCountMap& eventMap = key.second;
+            for (const auto& eventCount : eventMap) {
+                f(key.first, eventCount.first, eventCount.second);
+            }
+        }
+    }
+
 private:
     mutable MutexType mMutex;
     MapType           mMap;
@@ -262,7 +280,7 @@ class LogEventRegistry
 
     struct Key
     {
-        LogLevel mLevel;
+        LogLevel    mLevel;
         std::string mMessage;
 
         friend bool operator<(const Key& a, const Key& b) noexcept
@@ -310,8 +328,11 @@ public:
     {
         BasicLock lock(mMutex);
         MNRY_LOGGING_LIBRARY_ASSERT(event < static_cast<LogEvent>(mEventToNode.size()));
-        return mEventToNode[event]->second;
+        return mEventToNode[event]->first.mLevel;
     }
+
+    template <typename OutputFormatter>
+    void outputReports(OutputFormatter formatter) const;
 
     // Logs each event recorded in log for a object SceneObject i.e.
     // the name and the type of the SceneObject will be associated with
@@ -379,7 +400,6 @@ private:
         return event;
     }
 
-
     // We want to keep track of three immediate things (independent of event counts, which is covered later):
     // 1. Log message (string)
     // 2. Log level
@@ -421,6 +441,23 @@ private:
 
 template <typename T>
 std::atomic<bool> LogEventRegistry<T>::mLoggingEnabled{true};
+
+template <typename T>
+template <typename OutputFormatter>
+void LogEventRegistry<T>::outputReports(OutputFormatter formatter) const
+{
+    if (!mLoggingEnabled) {
+        return;
+    }
+
+    mEventCounters.forEachRecord([this, &formatter](const T* p, LogEvent event, unsigned count) {
+        const auto& description = getDescription(event);
+        const auto  level       = getLevel(event);
+
+        const std::string message = formatter(p, count, description);
+        Logger::log(level, message);
+    });
+}
 
 template <typename T>
 void LogEventRegistry<T>::outputReport(const T*           p,
