@@ -51,7 +51,6 @@ AttributeKey<Float> SceneVariables::sTargetAdaptiveError;
 AttributeKey<Int>   SceneVariables::sPixelSamplesSqrt;
 AttributeKey<Int>   SceneVariables::sLightSamplesSqrt;
 AttributeKey<Int>   SceneVariables::sBsdfSamplesSqrt;
-AttributeKey<Int>   SceneVariables::sBsdfSamplerStrategy;
 AttributeKey<Int>   SceneVariables::sBssrdfSamplesSqrt;
 AttributeKey<Int>   SceneVariables::sMaxDepth;
 AttributeKey<Int>   SceneVariables::sMaxDiffuseDepth;
@@ -302,17 +301,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "The square root of the number of samples taken for BSDF lobe evaluations on the primary intersection. The "
         "number of samples taken per material depends on the BSDF sampler strategy and the number of lobes that "
         "comprise the material.");
-
-    sBsdfSamplerStrategy = sceneClass.declareAttribute<Int>("bsdf_sampler_strategy",
-        Int(BsdfSamplerStrategy::MULTI_SAMPLE),
-        rdl2::FLAGS_ENUMERABLE);
-    sceneClass.setEnumValue(sBsdfSamplerStrategy, Int(BsdfSamplerStrategy::MULTI_SAMPLE), "multi-sample");
-    sceneClass.setEnumValue(sBsdfSamplerStrategy, Int(BsdfSamplerStrategy::ONE_SAMPLE), "one-sample");
-    sceneClass.setEnumValue(sBsdfSamplerStrategy, Int(BsdfSamplerStrategy::ONE_LOBE), "one-lobe");
-    sceneClass.setMetadata(sBsdfSamplerStrategy,
-        SceneClass::sComment,
-        "Indirect sampling and evaluation strategy: all lobes using one path segment per lobe (multi-sample), all "
-        "lobes using one shared path segment (one-sample), or one lobe.");
 
     sBssrdfSamplesSqrt = sceneClass.declareAttribute<Int>("bssrdf_samples", Int(2), {"bssrdf samples"});
     sceneClass.setMetadata(sBssrdfSamplesSqrt, "label", "bssrdf samples");
@@ -1010,7 +998,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Sampling", sPixelSamplesSqrt);
     sceneClass.setGroup("Sampling", sLightSamplesSqrt);
     sceneClass.setGroup("Sampling", sBsdfSamplesSqrt);
-    sceneClass.setGroup("Sampling", sBsdfSamplerStrategy);
     sceneClass.setGroup("Sampling", sBssrdfSamplesSqrt);
     sceneClass.setGroup("Sampling", sMaxDepth);
     sceneClass.setGroup("Sampling", sMaxDiffuseDepth);

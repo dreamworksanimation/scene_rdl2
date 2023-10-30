@@ -47,14 +47,6 @@ enum class ShadowTerminatorFix
     COSINE_COMPENSATION = 4
 };
 
-enum class BsdfSamplerStrategy
-{
-    MULTI_SAMPLE = 0,
-    ONE_SAMPLE,
-    ONE_LOBE,
-};
-
-
 /**
  * The SceneVariables are a SceneObject which contain render globals. This
  * object is created by the SceneContext when it is constructed, and the context
@@ -210,7 +202,6 @@ public:
     static AttributeKey<Int> sPixelSamplesSqrt;     // Traditional non-adaptive sampling sample count.
     static AttributeKey<Int> sLightSamplesSqrt;
     static AttributeKey<Int> sBsdfSamplesSqrt;
-    static AttributeKey<Int> sBsdfSamplerStrategy;
     static AttributeKey<Int> sBssrdfSamplesSqrt;
     static AttributeKey<Int> sMaxDepth;
     static AttributeKey<Int> sMaxDiffuseDepth;
