@@ -133,12 +133,9 @@ AttributeKey<Bool> SceneVariables::sPropagateVisibilityBounceType;
 AttributeKey<Int>  SceneVariables::sShadowTerminatorFix;
 AttributeKey<Bool> SceneVariables::sCryptomatteMultiPresence;
 
-AttributeKey<Int>    SceneVariables::sThreads;
 AttributeKey<Int>    SceneVariables::sMachineId;
 AttributeKey<Int>    SceneVariables::sNumMachines;
 AttributeKey<Int>    SceneVariables::sTaskDistributionType;
-AttributeKey<Bool>   SceneVariables::sInteractiveKey;
-AttributeKey<Bool>   SceneVariables::sProgressiveKey;
 AttributeKey<Int>    SceneVariables::sBatchTileOrder;
 AttributeKey<Int>    SceneVariables::sProgressiveTileOrder;
 AttributeKey<Int>    SceneVariables::sCheckpointTileOrder;
@@ -190,6 +187,10 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "no camera is specified.");
 
     sLayer = sceneClass.declareAttribute<SceneObject*>("layer", FLAGS_NONE, INTERFACE_LAYER);
+    sceneClass.setMetadata(sLayer,
+        SceneClass::sComment,
+        "This specifies the layer object used for rendering. If no layer is specified in the scene variables, "
+        "MoonRay will rendering using the first layer object encountered.");
 
     sAttrExrHeaderAttributes = sceneClass.declareAttribute<SceneObject*>("exr_header_attributes",
         FLAGS_NONE,
@@ -568,6 +569,11 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 
     sFastGeomUpdate = sceneClass.declareAttribute("fast_geometry_update", false, {"fast geometry update"});
     sceneClass.setMetadata(sFastGeomUpdate, "label", "fast geometry update");
+    sceneClass.setMetadata(sFastGeomUpdate, SceneClass::sComment,
+        "If this flag is off, the tessellation related data for subdivision surface "
+        "will be deleted after tessellation is done. This is to save memory for single "
+        "frame rendering. Otherwise, that data will be kept in memory to support "
+        "re-tessellation after geometry are updated.");
 
     // Checkpoint render
     sCheckpointActive = sceneClass.declareAttribute<Bool>("checkpoint_active", false, {"checkpoint active"});
@@ -800,26 +806,27 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "Different scenes may work better with different techniques.  The recommendation is to start with the custom "
         "compensation ON, then sine compensation technique, then GGX, then cosine.");
 
-    sThreads = sceneClass.declareAttribute<Int>("threads", Int(0));
-
     sMachineId = sceneClass.declareAttribute<Int>("machine_id", -1, {"machine id"});
     sceneClass.setMetadata(sMachineId, "label", "machine id");
+    sceneClass.setMetadata(sMachineId,
+        SceneClass::sComment,
+        "Used only in arras moonray context, automatically set by arras and indicates the MCRT computation ID in the current session");
 
     sNumMachines = sceneClass.declareAttribute<Int>("num_machines", -1, {"num machines"});
     sceneClass.setMetadata(sNumMachines, "label", "num machines");
+    sceneClass.setMetadata(sNumMachines,
+        SceneClass::sComment,
+        "Used only in arras moonray context, automatically set by arras and indicates total number of MCRT computations active in the current session");
 
     sTaskDistributionType = sceneClass.declareAttribute<Int>("task_distribution_type", Int(1), rdl2::FLAGS_ENUMERABLE);
     sceneClass.setMetadata(sTaskDistributionType, "label", "task distribution type");
-    sceneClass.setEnumValue(sTaskDistributionType,
-        (int)TaskDistributionType::NON_OVERLAPPED_TILE,
-        "non-overlapped tile");
+    sceneClass.setEnumValue(sTaskDistributionType, (int)TaskDistributionType::NON_OVERLAPPED_TILE, "non-overlapped tile");
     sceneClass.setEnumValue(sTaskDistributionType, (int)TaskDistributionType::MULTIPLEX_PIXEL, "multiplex pixel");
-
-    sInteractiveKey = sceneClass.declareAttribute<Bool>("interactive_mode", false, {"interactive mode"});
-    sceneClass.setMetadata(sInteractiveKey, "label", "interactive mode");
-
-    sProgressiveKey = sceneClass.declareAttribute<Bool>("progressive_shading", false, {"progressive shading"});
-    sceneClass.setMetadata(sProgressiveKey, "label", "progressive shading");
+    sceneClass.setMetadata(sTaskDistributionType,
+        SceneClass::sComment,
+        "Used only in arras moonray context, defines the task distribution method to the MCRT computation. "
+        "Multi-plex pixel is the default and preferred method. "
+        "Non-overlapped tile is experimental and only used for debugging/development purposes");
 
     sBatchTileOrder = sceneClass.declareAttribute<Int>("batch_tile_order",
         Int(4),
@@ -935,6 +942,10 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     IntVector debugPixel = {minIntVal, minIntVal};
     sDebugPixel          = sceneClass.declareAttribute<IntVector>("debug_pixel", debugPixel, {"debug pixel"});
     sceneClass.setMetadata(sDebugPixel, "label", "debug pixel");
+    sceneClass.setMetadata(sDebugPixel,
+        SceneClass::sComment,
+        "This setting allows for rendering a single pixel and is typically used for debugging. The value given specifies "
+        "the 2D pixel coordinate expressed from the bottom-left of the frame-viewport");
 
     sDebugRaysFile = sceneClass.declareAttribute<String>("debug_rays_file", "", {"debug rays file"});
     sceneClass.setMetadata(sDebugRaysFile, "label", "debug rays file");
@@ -1076,12 +1087,9 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Global Toggles", sShadowTerminatorFix);
     sceneClass.setGroup("Global Toggles", sCryptomatteMultiPresence);
 
-    sceneClass.setGroup("Driver", sThreads);
     sceneClass.setGroup("Driver", sMachineId);
     sceneClass.setGroup("Driver", sNumMachines);
     sceneClass.setGroup("Driver", sTaskDistributionType);
-    sceneClass.setGroup("Driver", sInteractiveKey);
-    sceneClass.setGroup("Driver", sProgressiveKey);
     sceneClass.setGroup("Driver", sOutputFile);
     sceneClass.setGroup("Driver", sTemporaryDirectory);
 

@@ -276,10 +276,6 @@ public:
 
     static AttributeKey<Int> sTextureCacheSizeMb;
     static AttributeKey<Int> sTextureFileHandleCount;
-    // If this flag is off, the tessellation related data for subdivision surface
-    // will be deleted after tessellation is done. This is to save memory for single
-    // frame rendering. Otherwise, that data will be kept in memory to support
-    // re-tessellation after geometry are updated.
     static AttributeKey<Bool> sFastGeomUpdate;
 
     //
@@ -334,10 +330,6 @@ public:
     // Driver
     //
 
-    // DEPRECATED! This no longer works. RenderOptions is the current mechanism
-    //             for setting the number of runtime threads.
-    static AttributeKey<Int> sThreads;
-
     // The machine ID. Machine IDs must be >= 0 and < numMachines.
     static AttributeKey<Int> sMachineId;
 
@@ -346,12 +338,6 @@ public:
 
     // Task distribution type for multi-machine context.
     static AttributeKey<Int> sTaskDistributionType;
-
-    // DEPRECATED!
-    static AttributeKey<Bool> sInteractiveKey;
-
-    // DEPRECATED! Whether or not we have progressive refinement enabled.
-    static AttributeKey<Bool> sProgressiveKey;
 
     // Batch/Realime mode tile scheduling pattern.
     static AttributeKey<Int> sBatchTileOrder;

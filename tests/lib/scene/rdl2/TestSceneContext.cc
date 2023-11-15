@@ -332,8 +332,6 @@ TestSceneContext::testSceneVariables()
     const SceneContext& constContext = context;
 
     // Check some default values.
-    CPPUNIT_ASSERT(context.getSceneVariables().get(SceneVariables::sInteractiveKey) == false);
-    CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sInteractiveKey) == false);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointActive) == false);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointInterval) == 15.0f);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointTimeCap) == 0.0f);
@@ -343,7 +341,6 @@ TestSceneContext::testSceneVariables()
     // Try changing them.
     context.getSceneVariables().beginUpdate();
     CPPUNIT_ASSERT_NO_THROW(
-        context.getSceneVariables().set(SceneVariables::sInteractiveKey, true);
         context.getSceneVariables().set(SceneVariables::sCheckpointActive, true);
         context.getSceneVariables().set(SceneVariables::sCheckpointInterval, 5.0f);
         context.getSceneVariables().set(SceneVariables::sCheckpointTimeCap, 1.0f);
@@ -353,8 +350,6 @@ TestSceneContext::testSceneVariables()
     context.getSceneVariables().endUpdate();
 
     // Check that they changed.
-    CPPUNIT_ASSERT(context.getSceneVariables().get(SceneVariables::sInteractiveKey) == true);
-    CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sInteractiveKey) == true);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointActive) == true);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointInterval) == 5.0f);
     CPPUNIT_ASSERT(constContext.getSceneVariables().get(SceneVariables::sCheckpointTimeCap) == 1.0f);
