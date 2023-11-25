@@ -221,6 +221,7 @@ replaceBlankToSingleSpace(const std::string &str)
         }
     }
 
+    if (result.empty()) return result;
     if (result.back() == '\n') result.pop_back(); // rm last newline
     if (result.back() == ' ') result.pop_back(); // rm last space
     return result;
