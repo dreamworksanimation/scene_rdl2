@@ -1039,21 +1039,21 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     // provide a a more informative comment.
     sDebugRaysFile = sceneClass.declareAttribute<String>("debug_rays_file", "", {"debug rays file"});
     sceneClass.setMetadata(sDebugRaysFile, "label", "debug rays file");
-    sceneClass.setMetadata(sDebugRaysFile, SceneClass::sComment, "Deprecated."
+    sceneClass.setMetadata(sDebugRaysFile, SceneClass::sComment, "Deprecated.");
 
     IntVector debugRaysRange = {minIntVal, minIntVal};
     sDebugRaysPrimaryRange   = sceneClass.declareAttribute<IntVector>("debug_rays_primary_range",
         debugRaysRange,
         {"debug rays primary range"});
     sceneClass.setMetadata(sDebugRaysPrimaryRange, "label", "debug rays primary range");
-    sceneClass.setMetadata(sDebugRaysPrimaryRange, SceneClass::sComment, "Deprecated."
+    sceneClass.setMetadata(sDebugRaysPrimaryRange, SceneClass::sComment, "Deprecated.");
 
     IntVector debugRaysDepthRange = {minIntVal, minIntVal};
     sDebugRaysDepthRange          = sceneClass.declareAttribute<IntVector>("debug_rays_depth_range",
         debugRaysDepthRange,
         {"debug rays depth range"});
     sceneClass.setMetadata(sDebugRaysDepthRange, "label", "debug rays depth range");
-    sceneClass.setMetadata(sDebugRaysDepthRange, SceneClass::sComment, "Deprecated."
+    sceneClass.setMetadata(sDebugRaysDepthRange, SceneClass::sComment, "Deprecated.");
 
     // Debug console
     sDebugConsole = sceneClass.declareAttribute<Int>("debug_console", Int(-1), {"debug console"});
