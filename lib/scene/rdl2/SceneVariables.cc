@@ -166,13 +166,24 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 
     auto interface = Parent::declare(sceneClass);
 
+    // TODO: Do a more detailed analysis of how exactly min_frame, max_frame and frame are used and provide
+    // a more informative comment.
     sMinFrameKey = sceneClass.declareAttribute<Float>("min_frame", 0.0f, {"min frame"});
     sceneClass.setMetadata(sMinFrameKey, "label", "min frame");
+    sceneClass.setMetadata(sMinFrameKey,
+        SceneClass::sComment,
+        "Used to provide unique samples per frame.");
 
     sMaxFrameKey = sceneClass.declareAttribute<Float>("max_frame", 0.0f, {"max frame"});
     sceneClass.setMetadata(sMaxFrameKey, "label", "max frame");
+    sceneClass.setMetadata(sMaxFrameKey,
+        SceneClass::sComment,
+        "Used to provide unique samples per frame.");
 
     sFrameKey = sceneClass.declareAttribute<Float>("frame", 0.0f);
+    sceneClass.setMetadata(sFrameKey,
+        SceneClass::sComment,
+        "Used to provide unique samples per frame, and for selecting the frame for scenes with animated data.");
 
     sCamera = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
     sceneClass.setMetadata(sCamera,
@@ -203,11 +214,21 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 
     sImageWidth = sceneClass.declareAttribute<Int>("image_width", Int(1920), {"image width"});
     sceneClass.setMetadata(sImageWidth, "label", "image width");
+    sceneClass.setMetadata(sImageWidth,
+        SceneClass::sComment,
+        "The desired width of the output image(s), in pixels.");
 
     sImageHeight = sceneClass.declareAttribute<Int>("image_height", Int(1080), {"image height"});
     sceneClass.setMetadata(sImageHeight, "label", "image height");
+    sceneClass.setMetadata(sImageHeight,
+        SceneClass::sComment,
+        "The desired height of the output image(s), in pixels.");
 
     sResKey = sceneClass.declareAttribute<Float>("res", 1.0f);
+    sceneClass.setMetadata(sResKey,
+        SceneClass::sComment,
+        "Final divisor for the overall image dimensions. A quick way to reduce or increase the size of the render. "
+        "A value of 2 halves the size of the rendered image(s). A value of 0.5 doubles it.");
 
     IntVector viewportVector = {minIntVal, minIntVal, minIntVal, minIntVal};
     sApertureWindow = sceneClass.declareAttribute<IntVector>("aperture_window", viewportVector, {"aperture window"});
@@ -235,9 +256,14 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     FloatVector defaultMotionSteps = {-1.0f, 0.0f};
     sMotionSteps = sceneClass.declareAttribute<FloatVector>("motion_steps", defaultMotionSteps, {"motion steps"});
     sceneClass.setMetadata(sMotionSteps, "label", "motion steps");
-    sceneClass.setMetadata(sMotionSteps, SceneClass::sComment, "frame-relative time offsets for motion sampling");
+    sceneClass.setMetadata(sMotionSteps, SceneClass::sComment, "Frame-relative time offsets for motion sampling");
 
     sFpsKey = sceneClass.declareAttribute<Float>("fps", 24.0f);
+    // TODO: Do a more detailed analysis of how exactly this affects motion blur and provide
+    // a more informative comment.
+    sceneClass.setMetadata(sFpsKey,
+        SceneClass::sComment,
+        "(Frames per second) Affects motion blur.");
 
     sSceneScaleKey = sceneClass.declareAttribute<Float>("scene_scale", 0.01f, {"scene scale"});
     sceneClass.setMetadata(sSceneScaleKey, "label", "scene scale");
@@ -312,24 +338,58 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 
     sMaxDepth = sceneClass.declareAttribute<Int>("max_depth", Int(5), {"max depth"});
     sceneClass.setMetadata(sMaxDepth, "label", "max depth");
+    sceneClass.setMetadata(sMaxDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for diffuse|glossy|mirror event types. This can be thought of "
+        "as the global depth limit. Reducing this can improve performance at the cost of biasing the rendered image.");
 
     sMaxDiffuseDepth = sceneClass.declareAttribute<Int>("max_diffuse_depth", Int(2), {"max diffuse depth"});
     sceneClass.setMetadata(sMaxDiffuseDepth, "label", "max diffuse depth");
+    sceneClass.setMetadata(sMaxDiffuseDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for diffuse event types. "
+        "Reducing this can improve performance at the cost of biasing the rendered image. "
+        "Note that this limit is also governed by the global \"max depth\" attribute.");
 
     sMaxGlossyDepth = sceneClass.declareAttribute<Int>("max_glossy_depth", Int(2), {"max glossy depth"});
     sceneClass.setMetadata(sMaxGlossyDepth, "label", "max glossy depth");
+    sceneClass.setMetadata(sMaxGlossyDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for glossy event types. "
+        "Reducing this can improve performance at the cost of biasing the rendered image. "
+        "Note that this limit is also governed by the global \"max depth\" attribute.");
 
     sMaxMirrorDepth = sceneClass.declareAttribute<Int>("max_mirror_depth", Int(3), {"max mirror depth"});
     sceneClass.setMetadata(sMaxMirrorDepth, "label", "max mirror depth");
+    sceneClass.setMetadata(sMaxMirrorDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for mirror event types. "
+        "Reducing this can improve performance at the cost of biasing the rendered image. "
+        "Note that this limit is also governed by the global \"max depth\" attribute.");
 
     sMaxVolumeDepth = sceneClass.declareAttribute<Int>("max_volume_depth", Int(1), {"max volume depth"});
     sceneClass.setMetadata(sMaxVolumeDepth, "label", "max volume depth");
+    sceneClass.setMetadata(sMaxVolumeDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for volume event types. "
+        "Volumes are ignored after this depth has been reached. "
+        "Reducing this can improve performance at the cost of biasing the rendered image. ");
 
     sMaxPresenceDepth = sceneClass.declareAttribute<Int>("max_presence_depth", Int(16), {"max presence depth"});
     sceneClass.setMetadata(sMaxPresenceDepth, "label", "max presence depth");
+    sceneClass.setMetadata(sMaxPresenceDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for presence event types. "
+        "The material's \"presence\" attribute is ignored after this depth has been reached and the surface is treated as "
+        "fully present. Reducing this can improve performance at the cost of biasing the rendered image.");
 
     sMaxHairDepth = sceneClass.declareAttribute<Int>("max_hair_depth", Int(5));
     sceneClass.setMetadata(sMaxHairDepth, "label", "max hair depth");
+    sceneClass.setMetadata(sMaxHairDepth,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") for hair material types. "
+        "This limit may need to be increased to allow for more hair-to-hair interactions, especially for blonde/white hair or fur. "
+        "Reducing this can improve performance at the cost of biasing the rendered image. ");
 
     sDisableOptimizedHairSampling = sceneClass.declareAttribute<Bool>("disable_optimized_hair_sampling", Bool(false));
     sceneClass.setMetadata(sDisableOptimizedHairSampling, "label", "disable optimized hair sampling");
@@ -340,6 +400,10 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
 
     sMaxSubsurfacePerPath = sceneClass.declareAttribute<Int>("max_subsurface_per_path", Int(1));
     sceneClass.setMetadata(sMaxSubsurfacePerPath, "label", "max subsurface per path");
+    sceneClass.setMetadata(sMaxSubsurfacePerPath,
+        SceneClass::sComment,
+        "The maximum ray depth (number of \"bounces\") to allow subsurface scattering. "
+        "For ray depths beyond this limit Lambertian diffuse is used to approximate subsurface scattering.");
 
     sRussianRouletteThreshold =
         sceneClass.declareAttribute<Float>("russian_roulette_threshold", Float(0.0375), {"russian roulette threshold"});
@@ -472,8 +536,13 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "lower values temper the clamping value. 0 disables the effect. Using this technique reduces fireflies from "
         "indirect caustics but is biased.");
 
+    // TODO: Do a more detailed analysis of how exactly texture_blur affects texture blurriness and provide
+    // a more informative comment.
     sTextureBlur = sceneClass.declareAttribute<Float>("texture_blur", Float(0.0), {"texture blur"});
     sceneClass.setMetadata(sTextureBlur, "label", "texture blur");
+    sceneClass.setMetadata(sTextureBlur,
+        SceneClass::sComment,
+        "Adjusts the amount of texture filtering.");
 
     sPixelFilterWidth = sceneClass.declareAttribute<Float>("pixel_filter_width", Float(3.0), {"pixel filter width"});
     sceneClass.setMetadata(sPixelFilterWidth, "label", "pixel filter width");
@@ -548,7 +617,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTextureCacheSizeMb, "label", "texture cache size");
     sceneClass.setMetadata(sTextureCacheSizeMb,
         SceneClass::sComment,
-        "This setting specifies the maximum size of the texture cache in megabytes. This value can significantly "
+        "Specifies the maximum size of the texture cache in megabytes. This value can significantly "
         "impact rendering speed, where larger values often improve rendering speed.");
 
     sCryptoUVAttributeName =
@@ -565,7 +634,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTextureFileHandleCount, "label", "texture file handles");
     sceneClass.setMetadata(sTextureFileHandleCount,
         SceneClass::sComment,
-        "This setting specifies the maximum number of simultaneous open texture file handles.");
+        "Specifies the maximum number of simultaneous open texture file handles.");
 
     sFastGeomUpdate = sceneClass.declareAttribute("fast_geometry_update", false, {"fast geometry update"});
     sceneClass.setMetadata(sFastGeomUpdate, "label", "fast geometry update");
@@ -580,14 +649,14 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointActive, "label", "checkpoint active");
     sceneClass.setMetadata(sCheckpointActive,
         SceneClass::sComment,
-        "This setting enables or disables checkpoint file writing.");
+        "Enables or disables checkpoint file writing.");
 
     sCheckpointInterval =
         sceneClass.declareAttribute<Float>("checkpoint_interval", Float(15.0f), {"checkpoint interval"});
     sceneClass.setMetadata(sCheckpointInterval, "label", "checkpoint interval");
     sceneClass.setMetadata(sCheckpointInterval,
         SceneClass::sComment,
-        "This setting specifies the time interval, in minutes, between checkpoint file writes. The interval must be "
+        "Specifies the time interval, in minutes, between checkpoint file writes. The interval must be "
         "equal to or greater than 0.1 minutes.");
 
     sCheckpointQualitySteps =
@@ -595,7 +664,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointQualitySteps, "label", "checkpoint quality steps");
     sceneClass.setMetadata(sCheckpointQualitySteps,
         SceneClass::sComment,
-        "This setting specifies the number of quality steps, which refers to the internal sampling iteration count "
+        "Specifies the number of quality steps, which refers to the internal sampling iteration count "
         "between checkpoint file writes. The value must be equal to or greater than 1. In the case of uniform "
         "sampling, this number of steps is equivalent to the pixel sampling steps for each pixel. For example, if you "
         "set quality steps to 2, a checkpoint file will be created every time each pixel's sample count exceeds 2, 4, "
@@ -609,7 +678,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointTimeCap, "label", "checkpoint time cap");
     sceneClass.setMetadata(sCheckpointTimeCap,
         SceneClass::sComment,
-        "This setting determines when the render will finish based on the total render process time in minutes. If the "
+        "Determines when the render will finish based on the total render process time in minutes. If the "
         "value is exceeded, the render will finish after the next checkpoint write. If the value is set to 0, the time "
         "cap feature is disabled.");
 
@@ -617,7 +686,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointSampleCap, "label", "checkpoint sample cap");
     sceneClass.setMetadata(sCheckpointSampleCap,
         SceneClass::sComment,
-        "This setting causes the render to finish based on the total pixel sample count. For example, if the value is "
+        "Causes the render to finish based on the total pixel sample count. For example, if the value is "
         "1024, the render will end after the next checkpoint write when each pixel exceeds 1024 samples. If the value "
         "is set to 0, the sample cap feature is disabled.");
 
@@ -637,7 +706,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointMode, "label", "checkpoint mode");
     sceneClass.setMetadata(sCheckpointMode,
         SceneClass::sComment,
-        "This setting allows you to choose whether checkpoint images are written based on time elapsed or on quality "
+        "Allows you to choose whether checkpoint images are written based on time elapsed or on quality "
         "reached.");
     sceneClass.setEnumValue(sCheckpointMode, 0, "time");
     sceneClass.setEnumValue(sCheckpointMode, 1, "quality");
@@ -647,7 +716,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointStartSPP, "label", "checkpoint start sample");
     sceneClass.setMetadata(sCheckpointStartSPP,
         SceneClass::sComment,
-        "This setting specifies the samples per pixel (SPP). A checkpoint file is created when all pixels' SPP are "
+        "Specifies the samples per pixel (SPP). A checkpoint file is created when all pixels' SPP are "
         "greater than or equal to this number. A checkpoint file is created once this criterion is met.");
 
     sCheckpointBgWrite = sceneClass.declareAttribute<Bool>("checkpoint_bg_write", true, {"checkpoint bg write"});
@@ -662,7 +731,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointPostScript, "label", "checkpoint post script");
     sceneClass.setMetadata(sCheckpointPostScript,
         SceneClass::sComment,
-        "This setting specifies the filename of a Lua script that will be executed after every checkpoint file is "
+        "Specifies the filename of a Lua script that will be executed after every checkpoint file is "
         "written. The script will run concurrently with the ongoing MCRT threads. For more information, refer to the "
         "documentation for MoonRay-provided Lua variables accessible within the script.");
 
@@ -686,7 +755,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointMaxBgCache, "label", "checkpoint max bgcache");
     sceneClass.setMetadata(sCheckpointMaxBgCache,
         SceneClass::sComment,
-        "This setting specifies the maximum number of queued checkpoint images the checkpoint-writing background "
+        "Specifies the maximum number of queued checkpoint images the checkpoint-writing background "
         "thread can handle. The value of checkpoint_max_bgcache must be greater than or equal to 1. If the number of "
         "queued checkpoint images exceeds this limit, MCRT threads will be temporarily suspended while background "
         "images are written to make room in the queue. A larger value can support background writing even with short "
@@ -698,7 +767,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointMaxSnapshotOverhead, "label", "checkpoint max snapshot overhead");
     sceneClass.setMetadata(sCheckpointMaxSnapshotOverhead,
         SceneClass::sComment,
-        "This setting specifies the maximum fraction of the snapshot overhead threshold for an extra snapshot action "
+        "Specifies the maximum fraction of the snapshot overhead threshold for an extra snapshot action "
         "in the event of an unexpected interruption by SIGINT. The value is expressed as a fraction. If the value is "
         "set to zero or a negative number, no extra snapshot action will be executed, and no checkpoint file will be "
         "generated if SIGINT is received.");
@@ -709,7 +778,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sCheckpointSnapshotInterval, "label", "checkpoint snapshot interval");
     sceneClass.setMetadata(sCheckpointSnapshotInterval,
         SceneClass::sComment,
-        "This setting specifies the time interval, in minutes, allowed for a snapshot when a SIGINT is encountered. If "
+        "Specifies the time interval, in minutes, allowed for a snapshot when a SIGINT is encountered. If "
         "the value is 0 or negative, the checkpoint_max_snapshot_overhead parameter is used instead.");
 
     // Resume render
@@ -733,48 +802,59 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     // Global overriding toggles
     sEnableMotionBlur = sceneClass.declareAttribute<Bool>("enable_motion_blur", true, {"enable motion blur"});
     sceneClass.setMetadata(sEnableMotionBlur, "label", "enable motion blur");
+    sceneClass.setMetadata(sEnableMotionBlur, SceneClass::sComment, "Enables or disables motion blur");
 
     sEnableDof = sceneClass.declareAttribute<Bool>("enable_dof", true, {"enable DOF"});
     sceneClass.setMetadata(sEnableDof, "label", "enable DOF");
-    sceneClass.setMetadata(sEnableDof, SceneClass::sComment, "This setting enables camera depth-of-field (DOF)");
+    sceneClass.setMetadata(sEnableDof, SceneClass::sComment, "Enables or disables camera depth-of-field (DOF)");
 
     sEnableMaxGeomResolution =
         sceneClass.declareAttribute<Bool>("enable_max_geometry_resolution", false, {"enable max geometry resolution"});
     sceneClass.setMetadata(sEnableMaxGeomResolution, "label", "enable max geometry resolution");
+    sceneClass.setMetadata(sEnableMaxGeomResolution,
+        SceneClass::sComment,
+        "Specifies whether the max_geometry_resolution limit is in effect.");
 
     sMaxGeomResolution =
         sceneClass.declareAttribute<Int>("max_geometry_resolution", Int(INT_MAX), {"max geometry resolution"});
     sceneClass.setMetadata(sMaxGeomResolution, "label", "max geometry resolution");
+    sceneClass.setMetadata(sMaxGeomResolution,
+        SceneClass::sComment,
+        "Specifies a global limit to geometry resolution. Geometry procedurals should respect this limit.");
 
     sEnableDisplacement = sceneClass.declareAttribute<Bool>("enable_displacement", true, {"enable displacement"});
     sceneClass.setMetadata(sEnableDisplacement, "label", "enable displacement");
     sceneClass.setMetadata(sEnableDisplacement,
         SceneClass::sComment,
-        "This setting enables or disables geometry displacement.");
+        "Enables or disables geometry displacement.");
 
     sEnableSSS =
         sceneClass.declareAttribute<Bool>("enable_subsurface_scattering", true, {"enable subsurface scattering"});
     sceneClass.setMetadata(sEnableSSS, "label", "enable subsurface scattering");
     sceneClass.setMetadata(sEnableSSS,
         SceneClass::sComment,
-        "This setting enables or disables sub-surface scattering.");
+        "Enables or disables sub-surface scattering.");
 
     sEnableShadowing = sceneClass.declareAttribute<Bool>("enable_shadowing", true, {"enable shadowing"});
     sceneClass.setMetadata(sEnableShadowing, "label", "enable shadowing");
     sceneClass.setMetadata(sEnableShadowing,
         SceneClass::sComment,
-        "This setting enables or disables shadowing through occlusion rays.");
+        "Enables or disables shadowing through occlusion rays.");
 
     sEnablePresenceShadows =
         sceneClass.declareAttribute<Bool>("enable_presence_shadows", false, {"enable presence shadows"});
     sceneClass.setMetadata(sEnablePresenceShadows, "label", "enable presence shadows");
+    sceneClass.setMetadata(sEnablePresenceShadows,
+        SceneClass::sComment,
+        "Whether or not to respect a material's \"presence\" value for shadow rays. Performance may improve "
+        "when disabled, but all materials are treated as fully present.");
 
     sLightsVisibleInCameraKey =
         sceneClass.declareAttribute<Bool>("lights_visible_in_camera", false, {"lights visible in camera"});
     sceneClass.setMetadata(sLightsVisibleInCameraKey, "label", "lights visible in camera");
     sceneClass.setMetadata(sLightsVisibleInCameraKey,
         SceneClass::sComment,
-        "This setting globally enables or disables lights being visible in camera. Each light has its own setting "
+        "Globally enables or disables lights being visible in camera. Each light has its own setting "
         "which may override this value.");
 
     sPropagateVisibilityBounceType = sceneClass.declareAttribute<Bool>("propagate_visibility_bounce_type",
@@ -845,7 +925,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sBatchTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sBatchTileOrder,
         SceneClass::sComment,
-        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for batch rendering, "
+        "Specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for batch rendering, "
         "which determines which areas of the image are rendered first. The ordering is not guaranteed: the strict "
         "sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
@@ -866,7 +946,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sProgressiveTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sProgressiveTileOrder,
         SceneClass::sComment,
-        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for progressive "
+        "Specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for progressive "
         "rendering, which determines which areas of the image are rendered first. The ordering is not guaranteed: the "
         "strict sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
@@ -887,7 +967,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setEnumValue(sCheckpointTileOrder, 8, "morton shiftflip");
     sceneClass.setMetadata(sCheckpointTileOrder,
         SceneClass::sComment,
-        "This setting specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for checkpoint "
+        "Specifies the order in which tiles (as areas of 8x8 pixels) are prioritized for checkpoint "
         "rendering, which determines which areas of the image are rendered first. The ordering is not guaranteed: the "
         "strict sequence of tile starting and completion for any pass is nondeterministic due to thread scheduling.");
 
@@ -909,7 +989,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sTwoStageOutput, "label", "two stage output");
     sceneClass.setMetadata(sTwoStageOutput,
         SceneClass::sComment,
-        "This setting specifies whether to use a two-stage writing process for images. In two-stage writing, the image "
+        "Specifies whether to use a two-stage writing process for images. In two-stage writing, the image "
         "is first written to a temporary location and then moved to the final location. This approach significantly "
         "reduces the risk of output data corruption due to an unexpected render process termination.\n"
         "The directory where the temporary files are stored is defined by the \"tmp_dir\" scene variable.");
@@ -917,24 +997,31 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sDebugKey = sceneClass.declareAttribute<Bool>("debug", false);
     sceneClass.setMetadata(sDebugKey,
         SceneClass::sComment,
-        "This setting determines whether debugging-level messages are logged.");
+        "Determines whether debugging-level messages are logged.");
 
     sInfoKey = sceneClass.declareAttribute<Bool>("info", false);
     sceneClass.setMetadata(sInfoKey,
         SceneClass::sComment,
-        "This setting determines whether information-level messages are logged.");
+        "Determines whether information-level messages are logged.");
 
     sFatalColor = sceneClass.declareAttribute<Rgb>("fatal_color", Rgb(1.0f, 0.0f, 1.0f), {"fatal color"});
     sceneClass.setMetadata(sFatalColor, "label", "fatal color");
+    sceneClass.setMetadata(sFatalColor,
+        SceneClass::sComment,
+        "The color to use for materials or map shaders that are unable to execute shading, "
+        "usually due to incomplete initialization.");
 
     sStatsFile = sceneClass.declareAttribute<String>("stats_file", "", {"stats file"});
     sceneClass.setMetadata(sStatsFile, "label", "stats file");
+    sceneClass.setMetadata(sStatsFile,
+        SceneClass::sComment,
+        "The filename to write the rendering statistics to in CSV format.");
 
     sAthenaDebug = sceneClass.declareAttribute<Bool>("athena_debug", false, {"athena debug"});
     sceneClass.setMetadata(sAthenaDebug, "label", "athena debug");
     sceneClass.setMetadata(sAthenaDebug,
         SceneClass::sComment,
-        "[DreamWorks Animation internal] This setting enables sending logging results to the Athena debugging database "
+        "[DreamWorks Animation internal] Enables or disables sending logging results to the Athena debugging database "
         "instead of the production database.");
 
     // "debug pixel" is defined such that a coordinate of (0, 0) maps to the left,
@@ -944,30 +1031,36 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sDebugPixel, "label", "debug pixel");
     sceneClass.setMetadata(sDebugPixel,
         SceneClass::sComment,
-        "This setting allows for rendering a single pixel and is typically used for debugging. The value given specifies "
+        "Allows for rendering a single pixel and is typically used for debugging. The value given specifies "
         "the 2D pixel coordinate expressed from the bottom-left of the frame-viewport");
 
+    // TODO: Do a more detailed analysis of how exactly debug rays is/was used, and decide if this is
+    // truly deprecated (in which case all related functionality should be removed) or if still relevant
+    // provide a a more informative comment.
     sDebugRaysFile = sceneClass.declareAttribute<String>("debug_rays_file", "", {"debug rays file"});
     sceneClass.setMetadata(sDebugRaysFile, "label", "debug rays file");
+    sceneClass.setMetadata(sDebugRaysFile, SceneClass::sComment, "Deprecated."
 
     IntVector debugRaysRange = {minIntVal, minIntVal};
     sDebugRaysPrimaryRange   = sceneClass.declareAttribute<IntVector>("debug_rays_primary_range",
         debugRaysRange,
         {"debug rays primary range"});
     sceneClass.setMetadata(sDebugRaysPrimaryRange, "label", "debug rays primary range");
+    sceneClass.setMetadata(sDebugRaysPrimaryRange, SceneClass::sComment, "Deprecated."
 
     IntVector debugRaysDepthRange = {minIntVal, minIntVal};
     sDebugRaysDepthRange          = sceneClass.declareAttribute<IntVector>("debug_rays_depth_range",
         debugRaysDepthRange,
         {"debug rays depth range"});
     sceneClass.setMetadata(sDebugRaysDepthRange, "label", "debug rays depth range");
+    sceneClass.setMetadata(sDebugRaysDepthRange, SceneClass::sComment, "Deprecated."
 
     // Debug console
     sDebugConsole = sceneClass.declareAttribute<Int>("debug_console", Int(-1), {"debug console"});
     sceneClass.setMetadata(sDebugConsole, "label", "debug console");
     sceneClass.setMetadata(sDebugConsole,
         SceneClass::sComment,
-        "This setting specifies the port number for the debug console. When the debug console functionalities are "
+        "Specifies the port number for the debug console. When the debug console functionalities are "
         "enabled, you can use a telnet connection to send commands and control rendering behavior for debugging "
         "purposes.\n"
         "- A value of -1 disables all debug console functionality.\n"
@@ -983,7 +1076,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sCryptomatteMultiPresence = sceneClass.declareAttribute<Bool>("cryptomatte_multi_presence", false);
     sceneClass.setMetadata(sCryptomatteMultiPresence,
         SceneClass::sComment,
-        "This setting determines whether to record presence bounces as separate cryptomatte samples.");
+        "Determines whether to record presence bounces as separate cryptomatte samples.");
 
     // Grouping the attributes for Torch - the order of
     // the attributes should be the same as how they are defined.
