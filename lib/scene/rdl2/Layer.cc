@@ -65,15 +65,99 @@ Layer::declare(SceneClass& sceneClass)
 {
     auto interface = Parent::declare(sceneClass);
 
-    sSurfaceShadersKey = sceneClass.declareAttribute<SceneObjectVector>("surface_shaders", FLAGS_NONE, INTERFACE_MATERIAL, { "surface shaders" });
+    // This call overrides the comments for the corresponding attribute in TraceSet, from which Layer inherits
+    sceneClass.setMetadata(sGeometriesKey, "comment",
+        "The geometry objects included in the layer, each of which must be included in the GeometrySet.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry1, \"\", ...}\n"
+        "        {myGeometry2, \"\", ...}\n"
+        "      }");
+
+    // This call overrides the comments for the corresponding attribute in TraceSet, from which Layer inherits
+    sceneClass.setMetadata(sPartsKey, "comment",
+        "For each geometry object in the layer, the list of names of the parts of that geometry to be included.\n"
+        "    To include all parts of a geometry object without needing to name them explicitly, "
+        "use the empty string, \"\".\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, {\"part1\", \"part2\"}, ...}\n"
+        "      }\n"
+        "    If the list contains only one entry (either the empty string or a single part name), the braces can "
+        "optionally be omitted. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"part1\", ...}\n"
+        "      }");
+
+    sSurfaceShadersKey = sceneClass.declareAttribute<SceneObjectVector>("surface_shaders", FLAGS_NONE,
+        INTERFACE_MATERIAL, { "surface shaders" });
     sceneClass.setMetadata(sSurfaceShadersKey, "label", "surface shaders");
+    sceneClass.setMetadata(sSurfaceShadersKey, rdl2::SceneClass::sComment, "The materials "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myMaterial, ...}\n"
+        "      }");
+
     sLightSetsKey = sceneClass.declareAttribute<SceneObjectVector>("lightsets", FLAGS_NONE, INTERFACE_LIGHTSET);
+    sceneClass.setMetadata(sLightSetsKey, rdl2::SceneClass::sComment, "The light sets "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myLightSet, ...}\n"
+        "      }");
+
     sDisplacementsKey = sceneClass.declareAttribute<SceneObjectVector>("displacements", FLAGS_NONE, INTERFACE_DISPLACEMENT);
+    sceneClass.setMetadata(sDisplacementsKey, rdl2::SceneClass::sComment, "The displacement shaders "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myDisplacement, ...}\n"
+        "      }");
+
     sVolumeShadersKey = sceneClass.declareAttribute<SceneObjectVector>("volume_shaders", FLAGS_NONE, INTERFACE_VOLUMESHADER, { "volume shaders" });
     sceneClass.setMetadata(sVolumeShadersKey, "label", "volume shaders");
-    sLightFilterSetsKey = sceneClass.declareAttribute<SceneObjectVector>("lightfiltersets", FLAGS_NONE, INTERFACE_LIGHTFILTERSET);
+    sceneClass.setMetadata(sVolumeShadersKey, rdl2::SceneClass::sComment, "The volume shaders "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myVolumeShader, ...}\n"
+        "      }");
+
+    sLightFilterSetsKey = sceneClass.declareAttribute<SceneObjectVector>("lightfiltersets", FLAGS_NONE,
+        INTERFACE_LIGHTFILTERSET);
+    sceneClass.setMetadata(sLightFilterSetsKey, rdl2::SceneClass::sComment, "The light filter sets "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myLightFilterSet, ...}\n"
+        "      }");
+
     sShadowSetsKey = sceneClass.declareAttribute<SceneObjectVector>("shadowsets", FLAGS_NONE, INTERFACE_SHADOWSET);
-    sShadowReceiverSetsKey = sceneClass.declareAttribute<SceneObjectVector>("shadowreceiversets", FLAGS_NONE, INTERFACE_SHADOWRECEIVERSET);
+    sceneClass.setMetadata(sShadowSetsKey, rdl2::SceneClass::sComment, "The shadow sets "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myShadowSet, ...}\n"
+        "      }");
+
+    sShadowReceiverSetsKey = sceneClass.declareAttribute<SceneObjectVector>("shadowreceiversets", FLAGS_NONE,
+        INTERFACE_SHADOWRECEIVERSET);
+    sceneClass.setMetadata(sShadowReceiverSetsKey, rdl2::SceneClass::sComment, "The shadow receiver sets "
+        "assigned to geometry objects in the layer, or to their specified parts.\n"
+        "    Note: this attribute is typically not set directly, but by using a Lua table for defining "
+        "layer entries. For example,\n"
+        "      Layer(\"/myLayer/\") { \n"
+        "        {myGeometry, \"\", myShadowReceiverSet, ...}\n"
+        "      }");
 
     return interface | INTERFACE_LAYER;
 }
