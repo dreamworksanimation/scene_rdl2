@@ -1,8 +1,7 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-
 #include "TestArg.h"
+#include "TestPixelBufferSha1.h"
 #include "TestParser.h"
 #include "TestSha1.h"
 
@@ -18,7 +17,7 @@ main(int ac, char **av)
     CPPUNIT_TEST_SUITE_REGISTRATION(TestArg);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestParser);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestSha1);
+    CPPUNIT_TEST_SUITE_REGISTRATION(TestPixelBufferSha1);
 
     return pdevunit::run(ac, av);
 }
-

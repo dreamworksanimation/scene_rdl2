@@ -10,6 +10,7 @@ target_sources(${target}
         main.cc
         TestArg.cc
         TestParser.cc
+        TestPixelBufferSha1.cc
         TestSha1.cc
 )
 
@@ -19,6 +20,7 @@ target_link_libraries(${target}
         SceneRdl2::pdevunit
         SceneRdl2::render_util
         SceneRdl2::scene_rdl2
+        TBB::tbb
 )
 
 # Set standard compile/link options

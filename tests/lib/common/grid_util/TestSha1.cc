@@ -1,8 +1,5 @@
 // Copyright 2023 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TestSha1.h"
 
 #include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
@@ -95,4 +92,3 @@ TestSha1::randomDataGen(size_t size) const
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

@@ -36,6 +36,7 @@ target_sources(${component}
         PackTilesPassPrecision.cc
         PackTilesTest.cc
         Parser.cc
+	PixelBufferSha1Hash.cc
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
