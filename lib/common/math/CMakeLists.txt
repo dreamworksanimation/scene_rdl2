@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 target_sources(${component}
     PRIVATE
         ColorSpace.cc
+        Transcendental.cc
         Types.cc
         sse.cpp
 )
@@ -32,6 +33,7 @@ set_property(TARGET ${component}
         Permutation.h
         Quaternion.h
         ReferenceFrame.h
+        Transcendental.h
         Vec2.h
         Vec3ba.h
         Vec3ba_mic.h

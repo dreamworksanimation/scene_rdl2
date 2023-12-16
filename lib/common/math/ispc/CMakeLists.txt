@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 
 target_sources(${component}
     PRIVATE
+        Transcendental.ispc
         Types.ispc
         Xform.ispc
 )
@@ -33,6 +34,7 @@ set_property(TARGET ${component}
         Math.isph
         Quaternion.isph
         ReferenceFrame.isph
+        Transcendental.isph
         Typesv.h
         Variform.isph
         Vec2.isph

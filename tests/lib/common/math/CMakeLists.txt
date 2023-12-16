@@ -16,7 +16,9 @@ target_sources(${target}
         test_math_ReferenceFrame.cc
         test_math_Vec4.cc
         test_math_Xform.cc
+        PeakErrs.cc
         TestRandom.cc
+        TestTranscendental.cc
         TestViewport.cc
 )
 

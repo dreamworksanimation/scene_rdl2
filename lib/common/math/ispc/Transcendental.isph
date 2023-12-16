@@ -1,0 +1,7 @@
+// Copyright 2023 DreamWorks Animation LLC
+// SPDX-License-Identifier: Apache-2.0
+
+#pragma once
+
+uniform float dw_acos(uniform float x);
+varying float dw_acos(varying float x);

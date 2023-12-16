@@ -22,6 +22,7 @@ target_sources(${objLib}
         TestQuaternion.ispc
         TestRandom.ispc
         TestReferenceFrame.ispc
+        TestTranscendental.ispc
         TestVec2.ispc
         TestVec3.ispc
         TestVec4.ispc
@@ -49,6 +50,7 @@ add_executable(${target})
 target_sources(${target}
     PRIVATE
         main.cc
+        ../PeakErrs.cc
         Test.cc
         TestAsA.cc
         TestAutodiff.cc
@@ -61,6 +63,7 @@ target_sources(${target}
         TestQuaternion.cc
         TestRandom.cc
         TestReferenceFrame.cc
+        TestTranscendental.cc
         TestVec2.cc
         TestVec3.cc
         TestVec4.cc
