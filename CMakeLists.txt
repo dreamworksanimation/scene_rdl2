@@ -22,7 +22,7 @@ endif()
 option(${PROJECT_NAME_UPPER}_BUILD_TESTING
     "Whether or not to build the unittests" YES)
 
-option(ABI_SET_VERSION "Enable the abi-version option" ON)
+option(ABI_SET_VERSION "Enable the abi-version option" OFF)
 if(ABI_SET_VERSION)
     set(ABI_VERSION "6" CACHE STRING "If ABI_SET_VERSION is on, which version to set")
 endif()

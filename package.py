@@ -66,6 +66,8 @@ variants = [
     ['os-rocky-9', 'opt_level-debug', 'refplat-vfx2021.0', 'gcc-9.3.x.1', 'python-3.7'],
     ['os-rocky-9', 'opt_level-optdebug', 'refplat-vfx2022.0', 'gcc-9.3.x.1', 'python-3.9'],
     ['os-rocky-9', 'opt_level-debug', 'refplat-vfx2022.0', 'gcc-9.3.x.1', 'python-3.9'],
+    ['os-rocky-9', 'opt_level-optdebug', 'refplat-vfx2023.0', 'gcc-11.x', 'python-3.10'],
+    ['os-rocky-9', 'opt_level-debug', 'refplat-vfx2023.0', 'gcc-11.x.1', 'python-3.10'],
     ['os-rocky-9', 'opt_level-optdebug', 'refplat-vfx2021.0', 'gcc-9.3.x.1', 'python-2.7'],
     ['os-rocky-9', 'opt_level-debug', 'refplat-vfx2021.0', 'gcc-9.3.x.1', 'python-2.7'],
 ]
@@ -79,6 +81,7 @@ sconsTargets = {
     'refplat-vfx2020.3': scons_targets,
     'refplat-vfx2021.0': scons_targets,
     'refplat-vfx2022.0': scons_targets,
+    'refplat-vfx2023.0': scons_targets,
 }
 
 requires = [

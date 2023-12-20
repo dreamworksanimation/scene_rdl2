@@ -81,7 +81,6 @@ elif 'gcc' in env['CC']:
     env['CXXFLAGS'].append('-Wno-unknown-pragmas') # W: Don't yell at me about pragmas
     env['CXXFLAGS'].append('-Wno-unused-variable') # W: Don't yell at me about unused variables
     env['CXXFLAGS'].append('-Wno-sign-compare')    # W: Sign vs. Unsigned comparisons
-    env['CXXFLAGS'].append('-fabi-version=6')      # O: Application Binary Interface to version 6
     env['CXXFLAGS'].append('-Wno-unused-local-typedefs') # W: Locally defined typedef but not used
     env['CXXFLAGS'].append('-Wno-class-memaccess') # W: with no trivial copy-assignment
     env['CXXFLAGS'].append('-Wno-maybe-uninitialized') # W: may be used uninitialized in this function

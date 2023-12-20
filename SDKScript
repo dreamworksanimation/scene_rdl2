@@ -12,7 +12,6 @@ ccflags = []
 cppdefines = []
 
 if 'gcc' in env['CC']:
-    ccflags.append('-fabi-version=6')
     cppdefines.append(('__cdecl', '""'))
     cppdefines.append(('"__pragma(p)"', '""'))
 elif 'clang' in env['CC']:

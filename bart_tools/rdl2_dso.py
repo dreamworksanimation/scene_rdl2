@@ -294,7 +294,7 @@ def DWARdl2Dso(env, target, source, **kwargs):
 
     proxyEnv.AppendUnique(
         CPPDEFINES=[('__cdecl', '""'), ('"__pragma(p)"', '""')],
-        CCFLAGS=['-fabi-version=6', '-Wno-conversion', '-Wno-narrowing',
+        CCFLAGS=['-Wno-conversion', '-Wno-narrowing',
                  '-Wno-sign-compare', '-Wno-switch', '-Wno-unknown-pragmas',
                  '-fno-var-tracking-assignments'])
 
