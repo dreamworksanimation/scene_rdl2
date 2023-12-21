@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "Transcendental.h"
 #include <algorithm>
 #include <cmath>
 #include <emmintrin.h>
@@ -107,7 +108,7 @@ namespace math {
 #if !defined(__WIN32__)
 // MoonRay: added exp2(), log2() and sincos()
   __forceinline float abs  ( const float x ) { return ::fabsf(x); }
-  __forceinline float acos ( const float x ) { return ::acosf (x); }
+  __forceinline float acos ( const float x ) { return dw_acos (x); }
   __forceinline float asin ( const float x ) { return ::asinf (x); }
   __forceinline float atan ( const float x ) { return ::atanf (x); }
   __forceinline float atan2( const float y, const float x ) { return ::atan2f(y, x); }

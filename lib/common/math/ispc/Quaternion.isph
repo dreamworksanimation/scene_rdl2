@@ -462,7 +462,7 @@ MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Quaternion3f, Quaternion3f,
         l0.sinAngle = 0.;                                                      \
         l0.cosAngle = dot(p0, p1);                                             \
         if (abs(l0.cosAngle) < 1.) {                                           \
-            l0.angle = acos(l0.cosAngle);                                      \
+            l0.angle = dw_acos(l0.cosAngle);                                   \
             l0.sinAngle = sin(l0.angle);                                       \
         }                                                                      \
         if (abs(l0.sinAngle) < 0.00001) {                                      \

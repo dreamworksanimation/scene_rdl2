@@ -125,6 +125,7 @@
 #pragma once
 
 #include "Constants.isph"
+#include "Transcendental.isph"
 #include "Variform.isph"
 
 // bool = isEqual(float, float, float)

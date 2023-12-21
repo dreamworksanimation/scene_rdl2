@@ -654,7 +654,7 @@ MATH_DEFINE_BINARY_VARIFORM(fmod, Dual3f, Dual3f, float, { result = fmod(p0, Dua
 #define MATH_DUAL3_ACOS(DTYPE)                          \
     {                                                   \
         MATH_DUAL_ACOS_COMPUTE();                       \
-        result = DTYPE##_ctor(acos(p0.a),               \
+        result = DTYPE##_ctor(dw_acos(p0.a),            \
                               l0.dacosp0 * p0.b0,       \
                               l0.dacosp0 * p0.b1,       \
                               l0.dacosp0 * p0.b2);      \
@@ -664,7 +664,7 @@ MATH_DEFINE_BINARY_VARIFORM(fmod, Dual3f, Dual3f, float, { result = fmod(p0, Dua
  * @{
  * Compute the arc cosine of a dual number
  */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(acos, Dual3f, Dual3f, MATH_DUAL_ACOS_L0(float),
+MATH_DEFINE_UNARY_VARIFORM_WITH_L(dw_acos, Dual3f, Dual3f, MATH_DUAL_ACOS_L0(float),
                                   MATH_DUAL3_ACOS(Dual3f))
 /** @} */
 

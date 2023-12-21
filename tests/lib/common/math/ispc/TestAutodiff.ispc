@@ -311,7 +311,7 @@ Test_Autodiff_algebra3()
     return error;
 }
 
-#define ACOSXYZ(X, Y, Z) acos((X) * (Y) * (Z))
+#define ACOSXYZ(X, Y, Z) dw_acos((X) * (Y) * (Z))
 
 export uniform int
 Test_Autodiff_acos()

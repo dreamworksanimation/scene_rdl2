@@ -179,13 +179,13 @@ testIsFinite()
     uniform double zero = 0.0;
 
     IS_FINITE_TEST(VAR, VAR, (pi + 1) / zero, false);
-    IS_FINITE_TEST(VAR, VAR, acos(pi + 1.1), false);
-    IS_FINITE_TEST(VAR, VAR, acos(2.0 * pi / programCount - 0.9999), true);
+    IS_FINITE_TEST(VAR, VAR, dw_acos(pi + 1.1), false);
+    IS_FINITE_TEST(VAR, VAR, dw_acos(2.0 * pi / programCount - 0.9999), true);
     IS_FINITE_TEST(VAR, VAR, (pi + 1), true);
     IS_FINITE_TEST(UNI, UNI, (0.1 / zero), false);
     IS_FINITE_TEST(UNI, UNI, (-0.1 / zero), false);
-    IS_FINITE_TEST(UNI, UNI, acos(1.1), false);
-    IS_FINITE_TEST(UNI, UNI, acos(0.25), true);
+    IS_FINITE_TEST(UNI, UNI, dw_acos(1.1), false);
+    IS_FINITE_TEST(UNI, UNI, dw_acos(0.25), true);
     IS_FINITE_TEST(UNI, UNI, (0.1), true);
     IS_FINITE_TEST(UNI, UNI, zero, true);
 
@@ -212,13 +212,13 @@ testIsInf()
     uniform double zero = 0.0;
 
     IS_INF_TEST(VAR, VAR, (pi + 1) / zero, true);
-    IS_INF_TEST(VAR, VAR, acos(pi + 1.1), false); // NaN, but not isinf
-    IS_INF_TEST(VAR, VAR, acos(2.0 * pi / programCount - 0.9999), false);
+    IS_INF_TEST(VAR, VAR, dw_acos(pi + 1.1), false); // NaN, but not isinf
+    IS_INF_TEST(VAR, VAR, dw_acos(2.0 * pi / programCount - 0.9999), false);
     IS_INF_TEST(VAR, VAR, (pi + 1), false);
     IS_INF_TEST(UNI, UNI, (0.1 / zero), true);
     IS_INF_TEST(UNI, UNI, (-0.1 / zero), true);
-    IS_INF_TEST(UNI, UNI, acos(1.1), false); // NaN, but not isinf
-    IS_INF_TEST(UNI, UNI, acos(0.25), false);
+    IS_INF_TEST(UNI, UNI, dw_acos(1.1), false); // NaN, but not isinf
+    IS_INF_TEST(UNI, UNI, dw_acos(0.25), false);
     IS_INF_TEST(UNI, UNI, (0.1), false);
     IS_INF_TEST(UNI, UNI, zero, false);
 
@@ -246,13 +246,13 @@ testIsNormal()
     const uniform float denormMin = 0x1p-149f;
 
     IS_NORMAL_TEST(VAR, VAR, (pi + 1) / zero, false);
-    IS_NORMAL_TEST(VAR, VAR, acos(pi + 1.1), false);
-    IS_NORMAL_TEST(VAR, VAR, acos(2.0 * pi / programCount - 0.9999), true);
+    IS_NORMAL_TEST(VAR, VAR, dw_acos(pi + 1.1), false);
+    IS_NORMAL_TEST(VAR, VAR, dw_acos(2.0 * pi / programCount - 0.9999), true);
     IS_NORMAL_TEST(VAR, VAR, (pi + 1), true);
     IS_NORMAL_TEST(UNI, UNI, (0.1 / zero), false);
     IS_NORMAL_TEST(UNI, UNI, (-0.1 / zero), false);
-    IS_NORMAL_TEST(UNI, UNI, acos(1.1), false);
-    IS_NORMAL_TEST(UNI, UNI, acos(0.25), true);
+    IS_NORMAL_TEST(UNI, UNI, dw_acos(1.1), false);
+    IS_NORMAL_TEST(UNI, UNI, dw_acos(0.25), true);
     IS_NORMAL_TEST(UNI, UNI, (0.1), true);
     IS_NORMAL_TEST(UNI, UNI, denormMin, false);
     IS_NORMAL_TEST(UNI, UNI, zero, false);

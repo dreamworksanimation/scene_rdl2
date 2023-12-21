@@ -825,7 +825,7 @@ testIsEqualFixedEps()
             (VUP1 float) (P1J), (VUP1 float) (P1K)));                          \
         const VUP2 float t = (VUP2 float) (P2);                                \
         const VURES Quaternion3f res = slerp(q0, q1, t);                       \
-        const VURES float angle = acos(dot(q0, q1));                           \
+        const VURES float angle = dw_acos(dot(q0, q1));                        \
         const VURES float sinAngle = sin(angle);                               \
         const VURES float r0 = sin((1.-t)*angle) / sinAngle;                   \
         const VURES float r1 = sin((   t)*angle) / sinAngle;                   \
