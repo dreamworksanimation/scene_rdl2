@@ -162,11 +162,19 @@ template <typename T>
 void
 outputValueHelper(std::ostream& os, const rdl2::SceneObject& obj,
                   const rdl2::Attribute& attr, rdl2::AttributeTimestep timestep,
-                  const bool simple)
+                  const bool showComments)
 {
     auto key = rdl2::AttributeKey<T>(attr);
-    os << obj.get(key, timestep);
-    if (!obj.hasChanged(key) && !simple) {
+
+    if (attr.getType() == rdl2::TYPE_STRING) {
+        os << '\"' << obj.get(key, timestep) << '\"';
+    } else {
+        os << obj.get(key, timestep);
+    }
+
+    os << ',';
+
+    if (!obj.hasChanged(key) && showComments) {
         os << "  -- default";
     }
 }
@@ -175,17 +183,17 @@ template <>
 void
 outputValueHelper<rdl2::Int>(std::ostream& os, const rdl2::SceneObject& obj,
                              const rdl2::Attribute& attr, rdl2::AttributeTimestep timestep,
-                             const bool simple)
+                             const bool showComments)
 {
     auto key = rdl2::AttributeKey<rdl2::Int>(attr);
     rdl2::Int value = obj.get(key, timestep);
-    os << value;
+    os << value << ',';
 
-    if (attr.isEnumerable() && attr.isValidEnumValue(value) && !simple) {
+    if (attr.isEnumerable() && attr.isValidEnumValue(value) && showComments) {
         os << "  -- \"" << attr.getEnumDescription(value) << "\"";
     }
 
-    if (!obj.hasChanged(key) && !simple) {
+    if (!obj.hasChanged(key) && showComments) {
         os << "  -- default";
     }
 }
@@ -194,11 +202,11 @@ template <>
 void
 outputValueHelper<rdl2::Bool>(std::ostream& os, const rdl2::SceneObject& obj,
                               const rdl2::Attribute& attr, rdl2::AttributeTimestep timestep,
-                              const bool simple)
+                              const bool showComments)
 {
     auto key = rdl2::AttributeKey<rdl2::Bool>(attr);
-    os << std::boolalpha << obj.get(key, timestep) << std::noboolalpha;
-    if (!obj.hasChanged(key) && !simple) {
+    os << std::boolalpha << obj.get(key, timestep) << std::noboolalpha << ',';
+    if (!obj.hasChanged(key) && showComments) {
         os << "  -- default";
     }
 }
@@ -206,144 +214,144 @@ outputValueHelper<rdl2::Bool>(std::ostream& os, const rdl2::SceneObject& obj,
 void
 outputValue(std::ostream& os, const rdl2::SceneObject& obj,
             const rdl2::Attribute& attr, rdl2::AttributeTimestep timestep,
-            const bool simple)
+            const bool showComments)
 {
     switch (attr.getType()) {
     case rdl2::TYPE_BOOL:
-        return outputValueHelper<rdl2::Bool>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Bool>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_INT:
-        return outputValueHelper<rdl2::Int>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Int>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_LONG:
-        return outputValueHelper<rdl2::Long>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Long>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_FLOAT:
-        return outputValueHelper<rdl2::Float>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Float>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_DOUBLE:
-        return outputValueHelper<rdl2::Double>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Double>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_STRING:
-        return outputValueHelper<rdl2::String>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::String>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_RGB:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Rgb>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Rgb>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_RGBA:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Rgba>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Rgba>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC2F:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec2f>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec2f>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC2D:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec2d>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec2d>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC3F:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec3f>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec3f>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC3D:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec3d>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec3d>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC4F:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec4f>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec4f>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC4D:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec4d>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec4d>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_MAT4F:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Mat4f>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Mat4f>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_MAT4D:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Mat4d>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Mat4d>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_SCENE_OBJECT:
-        return outputValueHelper<rdl2::SceneObject*>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::SceneObject*>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_BOOL_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::BoolVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::BoolVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_INT_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::IntVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::IntVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_LONG_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::LongVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::LongVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_FLOAT_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::FloatVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::FloatVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_DOUBLE_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::DoubleVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::DoubleVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_STRING_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::StringVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::StringVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_RGB_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::RgbVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::RgbVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_RGBA_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::RgbaVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::RgbaVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC2F_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec2fVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec2fVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC2D_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec2dVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec2dVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC3F_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec3fVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec3fVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC3D_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec3dVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec3dVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC4F_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec4fVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec4fVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_VEC4D_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Vec4dVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Vec4dVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_MAT4F_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Mat4fVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Mat4fVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_MAT4D_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::Mat4dVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::Mat4dVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_SCENE_OBJECT_VECTOR:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::SceneObjectVector>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::SceneObjectVector>(os, obj, attr, timestep, showComments);
 
     case rdl2::TYPE_SCENE_OBJECT_INDEXABLE:
         os << rdl2::attributeTypeName(attr.getType());
-        return outputValueHelper<rdl2::SceneObjectIndexable>(os, obj, attr, timestep, simple);
+        return outputValueHelper<rdl2::SceneObjectIndexable>(os, obj, attr, timestep, showComments);
 
     default:
-        os << "<unknown type>";
+        os << "<unknown type>,";
     }
 }
 
@@ -619,37 +627,36 @@ outputDefault(std::ostream& os, const rdl2::Attribute& attr)
         return outputDefaultHelper<rdl2::SceneObjectIndexable>(os, attr);
 
     default:
-        os << "<unknown type>";
+        os << "<unknown type>,";
     }
 }
 
-} // namespace
-
 std::string
-getAttributeStr(const rdl2::Attribute& attr, const bool simple)
+getAttributeStr(const rdl2::Attribute& attr, const bool showComments)
 {
     std::ostringstream os;
 
     os << "[\"" << attr.getName() << "\"] = ";
     if (attr.getType() == rdl2::TYPE_STRING) {
-        os << "\"";
+        os << '\"';
     }
     outputDefault(os, attr);
     if (attr.getType() == rdl2::TYPE_STRING) {
-        os << "\"";
+        os << '\"';
     }
 
-    if (simple) {
-        os << ',';
+    os << ',';
+
+    if (!showComments) {
         // If the attribute type is enumerable, show the description as well.
         if (attr.isEnumerable() && attr.getType() == rdl2::TYPE_INT) {
             rdl2::Int value = attr.getDefaultValue<rdl2::Int>();
             if (attr.isValidEnumValue(value)) {
-                os << "  -- \"" << attr.getEnumDescription(value) << "\"";
+                os << " -- \"" << attr.getEnumDescription(value) << '\"';
             }
         }
     } else {
-        os << ",  -- " << rdl2::attributeTypeName(attr.getType());
+        os << "  -- " << rdl2::attributeTypeName(attr.getType());
 
         if (attr.isBindable()) {
             os << ", bindable";
@@ -667,35 +674,38 @@ getAttributeStr(const rdl2::Attribute& attr, const bool simple)
         if (attr.isEnumerable() && attr.getType() == rdl2::TYPE_INT) {
             rdl2::Int value = attr.getDefaultValue<rdl2::Int>();
             if (attr.isValidEnumValue(value)) {
-                os << ", \"" << attr.getEnumDescription(value) << "\"";
+                os << ", \"" << attr.getEnumDescription(value) << '\"';
             }
         }
     }
 
     return os.str();
 }
+} // namespace
 
 std::string
 getSceneInfoStr(const rdl2::SceneClass& sc,
-                const bool attrs,
-                const bool simple,
-                const bool alphabetize)
+                const Options& options)
 {
     std::ostringstream os;
 
     os << sc.getName() << "(\"" <<
-        rdl2::interfaceTypeName(sc.getDeclaredInterface()) << "\")" << (attrs ? " {\n" : "\n");
+        rdl2::interfaceTypeName(sc.getDeclaredInterface()) << "\")" << (options.showAttrs ? " {\n" : "\n");
 
-    if (!attrs) {
+    if (!options.showAttrs) {
         return os.str();
     }
 
     std::vector<const rdl2::Attribute*> array;
     for (auto iter = sc.beginAttributes(); iter != sc.endAttributes(); ++iter) {
+        if (options.attributeFilter &&
+            !(*options.attributeFilter)(**iter)) {
+            continue;
+        }
         array.push_back(*iter);
     }
 
-    if (alphabetize) {
+    if (options.alphabetize) {
         std::sort(array.begin(), array.end(),
                      [](const rdl2::Attribute* a1, const rdl2::Attribute* a2){
                          return (getAttributeStr(*a1, true) < getAttributeStr(*a2, true));
@@ -704,8 +714,8 @@ getSceneInfoStr(const rdl2::SceneClass& sc,
 
     for (auto iter = array.cbegin(); iter != array.cend(); ++iter) {
         const rdl2::Attribute* attr = *iter;
-        os << INDENT << getAttributeStr(*attr, simple) << '\n';
-        if (!simple) {
+        os << INDENT << getAttributeStr(*attr, options.comments) << '\n';
+        if (options.comments) {
             if ((*attr).isEnumerable()) {
                 for (auto enumIter = attr->beginEnumValues();
                         enumIter != attr->endEnumValues(); ++enumIter) {
@@ -726,16 +736,14 @@ getSceneInfoStr(const rdl2::SceneClass& sc,
 
 std::string
 getSceneInfoStr(const rdl2::SceneObject& obj,
-                const bool attrs,
-                const bool simple,
-                const bool alphabetize)
+                const Options& options)
 {
     const rdl2::SceneClass& sc = obj.getSceneClass();
     std::ostringstream os;
 
-    os << sc.getName() << "(\"" << obj.getName() << "\")" << (attrs ? " {\n" : "\n");
+    os << sc.getName() << "(\"" << obj.getName() << "\")" << (options.showAttrs ? " {\n" : "\n");
 
-    if (!attrs) {
+    if (!options.showAttrs) {
         return os.str();
     }
     // Special formatting for Layers.
@@ -827,10 +835,14 @@ getSceneInfoStr(const rdl2::SceneObject& obj,
     } else {
         std::vector<const rdl2::Attribute*> array;
         for (auto iter = sc.beginAttributes(); iter != sc.endAttributes(); ++iter) {
+            if (options.attributeFilter &&
+                !(*options.attributeFilter)(**iter)) {
+                continue;
+            }
             array.push_back(*iter);
         }
 
-        if (alphabetize) {
+        if (options.alphabetize) {
             std::sort(array.begin(), array.end(),
                          [](const rdl2::Attribute* a1, const rdl2::Attribute* a2){
                              return (getAttributeStr(*a1, true) < getAttributeStr(*a2, true));
@@ -842,12 +854,12 @@ getSceneInfoStr(const rdl2::SceneObject& obj,
             os << INDENT << "[\"" << attr->getName() << "\"] = ";
             if (attr->isBlurrable()) {
                     os << "[\n" << INDENT << INDENT;
-                    outputValue(os, obj, (*attr), rdl2::TIMESTEP_BEGIN, simple);
+                    outputValue(os, obj, (*attr), rdl2::TIMESTEP_BEGIN, options.comments);
                     os << " @ BEGIN,\n" << INDENT << INDENT;
-                    outputValue(os, obj, (*attr), rdl2::TIMESTEP_END, simple);
+                    outputValue(os, obj, (*attr), rdl2::TIMESTEP_END, options.comments);
                     os << " @ END\n" << INDENT << ']';
             } else {
-                outputValue(os, obj, (*attr), rdl2::TIMESTEP_BEGIN, simple);
+                outputValue(os, obj, (*attr), rdl2::TIMESTEP_BEGIN, options.comments);
             }
             if ((*attr).isBindable() && fetchBinding(obj, (*attr))) {
                 os << '\n' << INDENT << INDENT << "bound to " <<
