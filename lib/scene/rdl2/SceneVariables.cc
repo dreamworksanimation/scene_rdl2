@@ -48,6 +48,9 @@ AttributeKey<Int>   SceneVariables::sMinAdaptiveSamples;
 AttributeKey<Int>   SceneVariables::sMaxAdaptiveSamples;
 AttributeKey<Float> SceneVariables::sTargetAdaptiveError;
 
+AttributeKey<Int>   SceneVariables::sLightSamplingMode;
+AttributeKey<Float> SceneVariables::sLightSamplingQuality;
+
 AttributeKey<Int>   SceneVariables::sPixelSamplesSqrt;
 AttributeKey<Int>   SceneVariables::sLightSamplesSqrt;
 AttributeKey<Int>   SceneVariables::sBsdfSamplesSqrt;
@@ -307,6 +310,24 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "When adaptive sampling is turned on, this represents the desired quality of the output images. Lower values "
         "will give higher quality but take longer to render. Higher values will give lower quality but render "
         "quicker.");
+
+    sLightSamplingMode = sceneClass.declareAttribute<Int>("light_sampling_mode", Int(0), rdl2::FLAGS_ENUMERABLE, 
+                                                           INTERFACE_GENERIC, {"light sampling mode"});
+    sceneClass.setMetadata(sLightSamplingMode, "label", "light sampling mode");
+    sceneClass.setEnumValue(sLightSamplingMode, 0, "uniform");
+    sceneClass.setEnumValue(sLightSamplingMode, 1, "adaptive");
+    sceneClass.setMetadata(sLightSamplingMode, SceneClass::sComment, "Controls which light sampling scheme to use: "
+                                                                     " uniform or adaptive");
+    
+    sLightSamplingQuality = sceneClass.declareAttribute<Float>("light_sampling_quality", Float(0.5), 
+                                                              {"light sampling quality"});
+    sceneClass.setMetadata(sLightSamplingQuality, "label", "light sampling quality");
+    sceneClass.setMetadata(sLightSamplingQuality, SceneClass::sComment, 
+            "When the light sampling mode is 'adaptive', this attribute controls how many lights are sampled per light "
+            "sample, where 0.0 is low quality (1 light sampled per light sample) and 1.0 is high quality (all lights "
+            "sampled per light sample). Any value in between will cause adaptive light sampling to kick into effect, "
+            "meaning that it will choose a higher or lower number of lights depending on what that particular point "
+            "needs. A number closer to 0.0 will cause it to sample a lower number of lights on average, and vice versa. ");
 
     sPixelSamplesSqrt = sceneClass.declareAttribute<Int>("pixel_samples", Int(8), {"pixel samples"});
     sceneClass.setMetadata(sPixelSamplesSqrt, "label", "pixel samples");

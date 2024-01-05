@@ -199,6 +199,9 @@ public:
     static AttributeKey<Int> sMaxAdaptiveSamples;
     static AttributeKey<Float> sTargetAdaptiveError;
 
+    static AttributeKey<Int> sLightSamplingMode;
+    static AttributeKey<Float> sLightSamplingQuality;
+
     static AttributeKey<Int> sPixelSamplesSqrt;     // Traditional non-adaptive sampling sample count.
     static AttributeKey<Int> sLightSamplesSqrt;
     static AttributeKey<Int> sBsdfSamplesSqrt;
