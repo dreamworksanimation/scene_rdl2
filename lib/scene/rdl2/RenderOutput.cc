@@ -80,8 +80,6 @@ RenderOutput::declare(SceneClass &sceneClass)
     sceneClass.setEnumValue(sAttrResult, RESULT_HEAT_MAP, "time per pixel");
     // wireframe
     sceneClass.setEnumValue(sAttrResult, RESULT_WIREFRAME, "wireframe");
-    // variance aov result
-    sceneClass.setEnumValue(sAttrResult, RESULT_VARIANCE, "variance aov");
     // weight result
     sceneClass.setEnumValue(sAttrResult, RESULT_WEIGHT, "weight");
     // renderBuffer auxiliary sample data for adaptive sampling

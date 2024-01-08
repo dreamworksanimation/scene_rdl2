@@ -41,7 +41,6 @@ set_property(TARGET ${component}
         SparseTiledPixelBuffer.h
         SrgbF2C.h
         StatisticalTestSuite.h
-        StatisticsPixelBuffer.h
         TileExtrapolation.h
         Tiler.h
         VariablePixelBuffer.h
