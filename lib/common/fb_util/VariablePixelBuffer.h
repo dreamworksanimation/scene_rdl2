@@ -4,6 +4,7 @@
 
 #pragma once
 #include "FbTypes.h"
+#include "StatisticsPixelBuffer.h"
 #include "ispc/PixelBuffer.hh"
 
 namespace scene_rdl2 {
@@ -26,6 +27,16 @@ public:
         FLOAT2,
         FLOAT3,
         FLOAT4,
+
+        RGB_VARIANCE,
+        FLOAT_VARIANCE,
+        FLOAT2_VARIANCE,
+        FLOAT3_VARIANCE,
+
+        RGB_VARIANCE_FULLDUMP, // variance of illuminance of RGB
+        FLOAT_VARIANCE_FULLDUMP,
+        FLOAT2_VARIANCE_FULLDUMP,
+        FLOAT3_VARIANCE_FULLDUMP,
 
         // Extend as needed...
 
@@ -136,6 +147,94 @@ public:
     const Float4Buffer &getFloat4Buffer() const
     {
         return const_cast<VariablePixelBuffer *>(this)->getFloat4Buffer();
+    }
+
+    RgbVarianceBuffer &getRgbVarianceBuffer()
+    {
+        MNRY_ASSERT(mFormat == RGB_VARIANCE);
+        return reinterpret_cast<RgbVarianceBuffer&>(mBuffer);
+    }
+
+    const RgbVarianceBuffer &getRgbVarianceBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getRgbVarianceBuffer();
+    }
+
+    FloatVarianceBuffer &getFloatVarianceBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT_VARIANCE);
+        return reinterpret_cast<FloatVarianceBuffer&>(mBuffer);
+    }
+
+    const FloatVarianceBuffer &getFloatVarianceBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloatVarianceBuffer();
+    }
+
+    Float2VarianceBuffer &getFloat2VarianceBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT2_VARIANCE);
+        return reinterpret_cast<Float2VarianceBuffer&>(mBuffer);
+    }
+
+    const Float2VarianceBuffer &getFloat2VarianceBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloat2VarianceBuffer();
+    }
+
+    Float3VarianceBuffer &getFloat3VarianceBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT3_VARIANCE);
+        return reinterpret_cast<Float3VarianceBuffer&>(mBuffer);
+    }
+
+    const Float3VarianceBuffer &getFloat3VarianceBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloat3VarianceBuffer();
+    }
+
+    RgbVarianceFulldumpBuffer &getRgbVarianceFulldumpBuffer()
+    {
+        MNRY_ASSERT(mFormat == RGB_VARIANCE_FULLDUMP);
+        return reinterpret_cast<RgbVarianceFulldumpBuffer&>(mBuffer);
+    }
+
+    const RgbVarianceFulldumpBuffer &getRgbVarianceFulldumpBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getRgbVarianceFulldumpBuffer();
+    }
+
+    FloatVarianceFulldumpBuffer &getFloatVarianceFulldumpBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT_VARIANCE_FULLDUMP);
+        return reinterpret_cast<FloatVarianceFulldumpBuffer&>(mBuffer);
+    }
+
+    const FloatVarianceFulldumpBuffer &getFloatVarianceFulldumpBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloatVarianceFulldumpBuffer();
+    }
+
+    Float2VarianceFulldumpBuffer &getFloat2VarianceFulldumpBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT2_VARIANCE_FULLDUMP);
+        return reinterpret_cast<Float2VarianceFulldumpBuffer&>(mBuffer);
+    }
+
+    const Float2VarianceFulldumpBuffer &getFloat2VarianceFulldumpBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloat2VarianceFulldumpBuffer();
+    }
+
+    Float3VarianceFulldumpBuffer &getFloat3VarianceFulldumpBuffer()
+    {
+        MNRY_ASSERT(mFormat == FLOAT3_VARIANCE_FULLDUMP);
+        return reinterpret_cast<Float3VarianceFulldumpBuffer&>(mBuffer);
+    }
+
+    const Float3VarianceFulldumpBuffer &getFloat3VarianceFulldumpBuffer() const
+    {
+        return const_cast<VariablePixelBuffer*>(this)->getFloat3VarianceFulldumpBuffer();
     }
 
 private:

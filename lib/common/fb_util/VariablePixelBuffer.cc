@@ -5,6 +5,7 @@
 #include "VariablePixelBuffer.h"
 #include "PixelBufferUtilsGamma8bit.h"
 #include "SparseTiledPixelBuffer.h"
+#include "StatisticsPixelBuffer.h"
 #include "Tiler.h"
 
 namespace scene_rdl2 {
@@ -44,6 +45,14 @@ VariablePixelBuffer::init(Format format, unsigned w, unsigned h)
     case FLOAT2:                   return getFloat2Buffer().init(w, h);
     case FLOAT3:                   return getFloat3Buffer().init(w, h);
     case FLOAT4:                   return getFloat4Buffer().init(w, h);
+    case RGB_VARIANCE:             return getRgbVarianceBuffer().init(w, h);
+    case FLOAT_VARIANCE:           return getFloatVarianceBuffer().init(w, h);
+    case FLOAT2_VARIANCE:          return getFloat2VarianceBuffer().init(w, h);
+    case FLOAT3_VARIANCE:          return getFloat3VarianceBuffer().init(w, h);
+    case RGB_VARIANCE_FULLDUMP:    return getRgbVarianceFulldumpBuffer().init(w, h);
+    case FLOAT_VARIANCE_FULLDUMP:  return getFloatVarianceFulldumpBuffer().init(w, h);
+    case FLOAT2_VARIANCE_FULLDUMP: return getFloat2VarianceFulldumpBuffer().init(w, h);
+    case FLOAT3_VARIANCE_FULLDUMP: return getFloat3VarianceFulldumpBuffer().init(w, h);
     case UNINITIALIZED: // follow through to assert.
     default: MNRY_ASSERT(0);
     };
@@ -61,6 +70,14 @@ VariablePixelBuffer::cleanUp()
     case FLOAT2:                   getFloat2Buffer().cleanUp();                 break;
     case FLOAT3:                   getFloat3Buffer().cleanUp();                 break;
     case FLOAT4:                   getFloat4Buffer().cleanUp();                 break;
+    case RGB_VARIANCE:             getRgbVarianceBuffer().cleanUp();            break;
+    case FLOAT_VARIANCE:           getFloatVarianceBuffer().cleanUp();          break;
+    case FLOAT2_VARIANCE:          getFloat2VarianceBuffer().cleanUp();         break;
+    case FLOAT3_VARIANCE:          getFloat3VarianceBuffer().cleanUp();         break;
+    case RGB_VARIANCE_FULLDUMP:    getRgbVarianceFulldumpBuffer().cleanUp();    break;
+    case FLOAT_VARIANCE_FULLDUMP:  getFloatVarianceFulldumpBuffer().cleanUp();  break;
+    case FLOAT2_VARIANCE_FULLDUMP: getFloat2VarianceFulldumpBuffer().cleanUp(); break;
+    case FLOAT3_VARIANCE_FULLDUMP: getFloat3VarianceFulldumpBuffer().cleanUp(); break;
     case UNINITIALIZED:                                                         break;
     default: MNRY_ASSERT(0);
     };
@@ -79,6 +96,14 @@ VariablePixelBuffer::getSizeOfPixel(Format format)
     case FLOAT2:                   return 8;
     case FLOAT3:                   return 12;
     case FLOAT4:                   return 16;
+    case RGB_VARIANCE:             return sizeof(RgbVarianceBuffer);
+    case FLOAT_VARIANCE:           return sizeof(FloatVarianceBuffer);
+    case FLOAT2_VARIANCE:          return sizeof(Float2VarianceBuffer);
+    case FLOAT3_VARIANCE:          return sizeof(Float3VarianceBuffer);
+    case RGB_VARIANCE_FULLDUMP:    return sizeof(RgbVarianceFulldumpBuffer);
+    case FLOAT_VARIANCE_FULLDUMP:  return sizeof(FloatVarianceFulldumpBuffer);
+    case FLOAT2_VARIANCE_FULLDUMP: return sizeof(Float2VarianceFulldumpBuffer);
+    case FLOAT3_VARIANCE_FULLDUMP: return sizeof(Float3VarianceFulldumpBuffer);
     case UNINITIALIZED:            return 0;
     default: MNRY_ASSERT(0);
     };
@@ -102,6 +127,14 @@ VariablePixelBuffer::clear()
     case FLOAT2:                   getFloat2Buffer().clear();                 break;
     case FLOAT3:                   getFloat3Buffer().clear();                 break;
     case FLOAT4:                   getFloat4Buffer().clear();                 break;
+    case RGB_VARIANCE:             getRgbVarianceBuffer().clear();            break;
+    case FLOAT_VARIANCE:           getFloatVarianceBuffer().clear();          break;
+    case FLOAT2_VARIANCE:          getFloat2VarianceBuffer().clear();         break;
+    case FLOAT3_VARIANCE:          getFloat3VarianceBuffer().clear();         break;
+    case RGB_VARIANCE_FULLDUMP:    getRgbVarianceFulldumpBuffer().clear();    break;
+    case FLOAT_VARIANCE_FULLDUMP:  getFloatVarianceFulldumpBuffer().clear();  break;
+    case FLOAT2_VARIANCE_FULLDUMP: getFloat2VarianceFulldumpBuffer().clear(); break;
+    case FLOAT3_VARIANCE_FULLDUMP: getFloat3VarianceFulldumpBuffer().clear(); break;
     case UNINITIALIZED:                                                       break;
     default: MNRY_ASSERT(0);
     };
@@ -116,6 +149,14 @@ VariablePixelBuffer::clear(float val)
     case FLOAT2:                   getFloat2Buffer().clear(math::Vec2f(val)); break;
     case FLOAT3:                   getFloat3Buffer().clear(math::Vec3f(val)); break;
     case FLOAT4:                   getFloat4Buffer().clear(math::Vec4f(val)); break;
+    case RGB_VARIANCE:             getRgbVarianceBuffer().clear();            break;
+    case FLOAT_VARIANCE:           getFloatVarianceBuffer().clear();          break;
+    case FLOAT2_VARIANCE:          getFloat2VarianceBuffer().clear();         break;
+    case FLOAT3_VARIANCE:          getFloat3VarianceBuffer().clear();         break;
+    case RGB_VARIANCE_FULLDUMP:    getRgbVarianceFulldumpBuffer().clear();    break;
+    case FLOAT_VARIANCE_FULLDUMP:  getFloatVarianceFulldumpBuffer().clear();  break;
+    case FLOAT2_VARIANCE_FULLDUMP: getFloat2VarianceFulldumpBuffer().clear(); break;
+    case FLOAT3_VARIANCE_FULLDUMP: getFloat3VarianceFulldumpBuffer().clear(); break;
     case UNINITIALIZED:                                                       break;
     default: MNRY_ASSERT(0);
     };
@@ -139,6 +180,14 @@ VariablePixelBuffer::gammaAndQuantizeTo8bit(const RenderBuffer& srcBuffer,
     case FLOAT2:
     case FLOAT3:
     case FLOAT4:
+    case RGB_VARIANCE:
+    case FLOAT_VARIANCE:
+    case FLOAT2_VARIANCE:
+    case FLOAT3_VARIANCE:
+    case RGB_VARIANCE_FULLDUMP:
+    case FLOAT_VARIANCE_FULLDUMP:
+    case FLOAT2_VARIANCE_FULLDUMP:
+    case FLOAT3_VARIANCE_FULLDUMP:
         MNRY_ASSERT(0 && "can't quantize to 8 bit with 32 bit destination channels");
         break;
 
