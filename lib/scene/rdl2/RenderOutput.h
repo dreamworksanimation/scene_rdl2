@@ -74,8 +74,8 @@ public:
         RESULT_LIGHT_AOV,
         /// SCALAR fraction of light samples that hit light
         RESULT_VISIBILITY_AOV,
-        /// Variance for any AOV result type
-        RESULT_VARIANCE,
+        /// Unused output type
+        UNUSED,
         /// Weight
         RESULT_WEIGHT,
         /// RenderBuffer auxiliary sample data (ODD sample) for adaptive sampling
