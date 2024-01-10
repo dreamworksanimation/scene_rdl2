@@ -20,7 +20,6 @@ AttributeKey<Int> RenderOutput::sAttrPrimitiveAttributeType;
 AttributeKey<String> RenderOutput::sAttrMaterialAov;
 AttributeKey<String> RenderOutput::sAttrLpe;
 AttributeKey<String> RenderOutput::sAttrVisibilityAov;
-AttributeKey<SceneObject*> RenderOutput::sAttrReferenceOutput;
 AttributeKey<String> RenderOutput::sAttrFileName;
 AttributeKey<String> RenderOutput::sAttrFilePart;
 AttributeKey<Int> RenderOutput::sAttrCompression;
@@ -102,7 +101,6 @@ RenderOutput::declare(SceneClass &sceneClass)
                            "\n\t\t\"material aov\" - Aovs provided via material expressions "
                            "\n\t\t\"light aov\" - Aovs provided via light path expressions "
                            "\n\t\t\"visibility aov\" - Fraction of light samples that hit light source"
-                           "\n\t\t\"variance aov\" - Aovs calculated from the pixel variance of other aovs"
                            "\n\t\t\"weight\" - weight,"
                            "\n\t\t\"beauty aux\" - renderBuffer auxiliary sample data for adaptive sampling,"
                            "\n\t\t\"cryptomatte\" - cryptomatte,"
@@ -251,13 +249,6 @@ RenderOutput::declare(SceneClass &sceneClass)
                            "If \"result\" is \"visibility aov\", this attribute specifies "
                            "a light path expression that defines the set of all paths used"
                            "to compute the visibility ratio.");
-
-    // "variance aov"
-    sAttrReferenceOutput = sceneClass.declareAttribute<SceneObject*>("reference_render_output", FLAGS_NONE, INTERFACE_RENDEROUTPUT);
-    sceneClass.setMetadata(sAttrReferenceOutput, "label", "RenderOutput reference");
-    sceneClass.setMetadata(sAttrReferenceOutput, SceneClass::sComment,
-                           "If \"result\" is \"variance aov\", this attribute refers "
-                               "to another render output for which to calculate the pixel variance.");
 
     // "file name"
     sAttrFileName = sceneClass.declareAttribute<String>("file_name", "scene.exr", { "file name" });
@@ -495,12 +486,6 @@ void
 RenderOutput::setLpe(const String &lightAov)
 {
     set(sAttrLpe, lightAov);
-}
-
-void
-RenderOutput::setReferenceOutput(RenderOutput* const reference)
-{
-    set(sAttrReferenceOutput, reference);
 }
 
 void

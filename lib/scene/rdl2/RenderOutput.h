@@ -57,35 +57,33 @@ public:
         /// RGB full color render.
         RESULT_BEAUTY = 0,
         /// SCALAR full render alpha.
-        RESULT_ALPHA,
+        RESULT_ALPHA = 1,
         /// SCALAR full render depth result (camera space)
-        RESULT_DEPTH,
+        RESULT_DEPTH = 2,
         /// VEC3, VEC2, or SCALAR depending on Statevariable type
-        RESULT_STATE_VARIABLE,
+        RESULT_STATE_VARIABLE = 3,
         /// RGB, VEC3, VEC2, or SCALAR depending on prim attr type
-        RESULT_PRIMITIVE_ATTRIBUTE,
+        RESULT_PRIMITIVE_ATTRIBUTE = 4,
         /// SCALAR time per pixel heat map
-        RESULT_HEAT_MAP,
+        RESULT_HEAT_MAP = 5,
         /// RGB wireframe render
-        RESULT_WIREFRAME,
+        RESULT_WIREFRAME = 6,
         /// RGB, VEC3, VEC2, or SCALAR
-        RESULT_MATERIAL_AOV,
+        RESULT_MATERIAL_AOV = 7,
         /// RGB
-        RESULT_LIGHT_AOV,
+        RESULT_LIGHT_AOV = 8,
         /// SCALAR fraction of light samples that hit light
-        RESULT_VISIBILITY_AOV,
-        /// Unused output type
-        UNUSED,
+        RESULT_VISIBILITY_AOV = 9,
         /// Weight
-        RESULT_WEIGHT,
+        RESULT_WEIGHT = 11,
         /// RenderBuffer auxiliary sample data (ODD sample) for adaptive sampling
-        RESULT_BEAUTY_AUX,
+        RESULT_BEAUTY_AUX = 12,
         // Cryptomatte
-        RESULT_CRYPTOMATTE,
+        RESULT_CRYPTOMATTE = 13,
         /// Alpha auxiliary sample data (ODD sample) for adaptive sampling
-        RESULT_ALPHA_AUX,
+        RESULT_ALPHA_AUX = 14,
         /// Display Filter
-        RESULT_DISPLAY_FILTER,
+        RESULT_DISPLAY_FILTER = 15,
     };
 
     /// If the result type is state variable, this enum defines
@@ -198,12 +196,6 @@ public:
     /// expression we should use?
     finline String getVisibilityAov() const;
 
-    /// If the result is "variance aov", this is the aov for which we're
-    /// collecting statistics.
-    /// In theory, this could be used for other purposes.
-    finline const RenderOutput* getReferenceOutput() const;
-    void setReferenceOutput(RenderOutput* const reference);
-
     /// If the result is "Display Filter" what display
     /// filter object should be used?
     const DisplayFilter *getDisplayFilter() const;
@@ -296,7 +288,6 @@ private:
     static AttributeKey<String> sAttrMaterialAov;
     static AttributeKey<String> sAttrLpe;
     static AttributeKey<String> sAttrVisibilityAov;
-    static AttributeKey<SceneObject*> sAttrReferenceOutput;
     static AttributeKey<String> sAttrFileName;
     static AttributeKey<String> sAttrFilePart;
     static AttributeKey<Int> sAttrCompression;
@@ -388,12 +379,6 @@ String
 RenderOutput::getVisibilityAov() const
 {
     return get(sAttrVisibilityAov);
-}
-
-const RenderOutput*
-RenderOutput::getReferenceOutput() const
-{
-    return get(sAttrReferenceOutput) ? get(sAttrReferenceOutput)->asA<RenderOutput>() : nullptr;
 }
 
 const SceneObject *
