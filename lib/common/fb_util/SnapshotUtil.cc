@@ -1,5 +1,6 @@
-// Copyright 2023 DreamWorks Animation LLC
+// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
 #include <scene_rdl2/common/fb_util/ispc/SnapshotUtil_ispc_stubs.h>
 
 #include "SnapshotUtil.h"
