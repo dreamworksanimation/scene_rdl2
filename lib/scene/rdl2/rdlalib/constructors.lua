@@ -1,4 +1,4 @@
--- Copyright 2023 DreamWorks Animation LLC
+-- Copyright 2023-2024 DreamWorks Animation LLC
 -- SPDX-License-Identifier: Apache-2.0
 
 -- Hook global identifier lookups by using the __index metamethod on the _G
