@@ -8,10 +8,12 @@ add_executable(${target})
 target_sources(${target}
     PRIVATE
         main.cc
+        test_util.cc
         TestArray2D.cc
         TestAtomicFloat.cc
         TestMemPool.cc
-        test_util.cc
+	TestProcCpuAffinity.cc
+	TestThreadPoolExecutor.cc
 )
 
 target_link_libraries(${target}

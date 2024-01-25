@@ -3,3 +3,4 @@
 
 add_subdirectory(shmFootmarkDump)
 add_subdirectory(snapshotDeltaDump)
+add_subdirectory(threadPoolExecutorTest)

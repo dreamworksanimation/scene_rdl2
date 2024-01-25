@@ -13,11 +13,14 @@ target_sources(${component}
     PRIVATE
         Arena.cc
         Args.cc
+	CpuAffinityMask.cc
         GetEnv.cc
         Files.cc
         GetEnv.cc
         GUID.cc
         LuaScriptRunner.cc
+	ProcCpuAffinity.cc
+	ThreadPoolExecutor.cc
 )
 
 set_property(TARGET ${component}
@@ -32,6 +35,7 @@ set_property(TARGET ${component}
         BitUtils.h
         BitUtils.isph
         BlockAllocatorCheck.h
+	CpuAffinityMask.h
         Files.h
         GetEnv.h
         GUID.h
@@ -41,6 +45,7 @@ set_property(TARGET ${component}
         Memory.h
         MemPool.h
         MiscUtils.h
+	ProcCpuAffinity.h
         Random.h
         Random.isph
         ReaderWriterMutex.h
@@ -54,6 +59,7 @@ set_property(TARGET ${component}
         Strings.h
         StrUtil.h
         syncstream.h
+	ThreadPoolExecutor.h
         TimeUtil.h
         type_traits.h
         TypedStaticallySizedMemoryPool.h
