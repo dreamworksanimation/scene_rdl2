@@ -53,9 +53,3 @@ install(TARGETS ${component}
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${installIncludeDir}
 )
 
-# # install the export set
-# install(
-#     EXPORT ${exportGroup}
-#     NAMESPACE ${PROJECT_NAME}::
-#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION}
-# )

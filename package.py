@@ -93,11 +93,11 @@ requires = [
     'log4cplus-1.1.2.x',
     'lua',
     'tbb',
+    'cppunit',
 ]
 
 private_build_requires = [
     build_system_pbr,
-    'cppunit',
     'ispc-1.20.0.x',
 ]
 

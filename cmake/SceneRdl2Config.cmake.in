@@ -31,9 +31,6 @@ find_dependency(OpenSSL)
 find_dependency(JsonCpp)
 find_dependency(Log4cplus)
 find_dependency(TBB)
-if(@PROJECT_NAME_UPPER@_BUILD_TESTING)
-    find_dependency(CppUnit)
-endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
 
