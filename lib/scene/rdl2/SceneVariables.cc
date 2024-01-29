@@ -1015,12 +1015,12 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "reduces the risk of output data corruption due to an unexpected render process termination.\n"
         "The directory where the temporary files are stored is defined by the \"tmp_dir\" scene variable.");
 
-    sDebugKey = sceneClass.declareAttribute<Bool>("debug", false);
+    sDebugKey = sceneClass.declareAttribute<Bool>("log_debug", false, {"debug"});
     sceneClass.setMetadata(sDebugKey,
         SceneClass::sComment,
         "Determines whether debugging-level messages are logged.");
 
-    sInfoKey = sceneClass.declareAttribute<Bool>("info", false);
+    sInfoKey = sceneClass.declareAttribute<Bool>("log_info", false, {"info"});
     sceneClass.setMetadata(sInfoKey,
         SceneClass::sComment,
         "Determines whether information-level messages are logged.");
