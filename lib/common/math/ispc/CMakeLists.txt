@@ -22,13 +22,11 @@ set_property(TARGET ${component}
         ${CMAKE_CURRENT_BINARY_DIR}/Types_ispc_stubs.h
         ${CMAKE_CURRENT_BINARY_DIR}/Xform_ispc_stubs.h
         asA.isph
-        autodiff.isph
         Col3.isph
         Col4.isph
         Color.isph
         ColorSpace.isph
         Constants.isph
-        Dual.isph
         Mat3.isph
         Mat4.isph
         Math.isph

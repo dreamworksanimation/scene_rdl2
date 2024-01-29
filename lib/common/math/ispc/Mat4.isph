@@ -138,8 +138,6 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Mat4f, Mat4f, float, MATH_MAT4_MULT_S())
 /// @{
 /// Vec4 * Mat4
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Vec4f, Mat4f, MATH_VEC4_MULT_MAT4())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4Dual3f, Vec4Dual3f, Mat4f,
-                            MATH_VEC4_MULT_MAT4())
 /// @}
 
 // Vec4f = Mat4f * Vec4f;
@@ -155,8 +153,6 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4Dual3f, Vec4Dual3f, Mat4f,
 /// @{
 /// Mat4 * Vec4
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Mat4f, Vec4f, MATH_MAT4_MULT_VEC4())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4Dual3f, Mat4f, Vec4Dual3f,
-                            MATH_MAT4_MULT_VEC4())
 /// @}
 
 // Mat4f = Mat4f * Mat4f;
@@ -566,8 +562,6 @@ MATH_DEFINE_UNARY_VARIFORM(Mat4f_translate, Mat4f, Vec3f,
 /// non-normal vector.
 MATH_DEFINE_BINARY_VARIFORM(transform, Vec4f, Mat4f, Vec4f,
                             { result = p1 * p0; })
-MATH_DEFINE_BINARY_VARIFORM(transform, Vec4Dual3f, Mat4f, Vec4Dual3f,
-                            { result = p1 * p0; })
 /// @}
 
 // Vec3f = transformPoint(Mat4f, Vec3f)
@@ -586,25 +580,9 @@ MATH_DEFINE_BINARY_VARIFORM(transform, Vec4Dual3f, Mat4f, Vec4Dual3f,
         result = Vec3f_ctor(l0.tp.x, l0.tp.y, l0.tp.z);      \
     }
 
-#define MATH_MAT4_TRANSFORM_POINT_L0_D()    \
-    struct                                  \
-    {                                       \
-        Vec4Dual3f p;                       \
-        Vec4Dual3f tp;                      \
-    }
-#define MATH_MAT4_TRANSFORM_POINT_D()                                   \
-    {                                                                   \
-        l0.p   = Vec4Dual3f_ctor(p1.x, p1.y, p1.z, Dual3f_ctor(1.f));   \
-        l0.tp  = transform(p0, l0.p);                                   \
-        result = Vec3Dual3f_ctor(l0.tp.x, l0.tp.y, l0.tp.z);            \
-    }
-
 MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformPoint, Vec3f, Mat4f, Vec3f,
                                    MATH_MAT4_TRANSFORM_POINT_L0(),
                                    MATH_MAT4_TRANSFORM_POINT())
-MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformPoint, Vec3Dual3f, Mat4f, Vec3Dual3f,
-                                   MATH_MAT4_TRANSFORM_POINT_L0_D(),
-                                   MATH_MAT4_TRANSFORM_POINT_D())
 /// @}
                                    
 
@@ -621,8 +599,6 @@ MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformPoint, Vec3Dual3f, Mat4f, Vec3Dual3f
 /// transform a Vec3 (p1) by a Mat4 (p0) using only the 3x3 portion of the input
 /// matrix.
 MATH_DEFINE_BINARY_VARIFORM(transform3x3, Vec3f, Vec3f, Mat4f,
-                            { MATH_VEC3_MULT_MAT4(); })
-MATH_DEFINE_BINARY_VARIFORM(transform3x3, Vec3Dual3f, Vec3Dual3f, Mat4f,
                             { MATH_VEC3_MULT_MAT4(); })
 /// @}
 
@@ -641,8 +617,6 @@ MATH_DEFINE_BINARY_VARIFORM(transform3x3, Vec3Dual3f, Vec3Dual3f, Mat4f,
 /// transform a Vec4 (p1) by a Mat4 (p0).  translation is ignored.
 MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3f, Mat4f, Vec3f,
                             { result = transform3x3(p1, p0); })
-MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Mat4f, Vec3Dual3f,
-                            { result = transform3x3(p1, p0); })
 /// @}
 
 
@@ -653,8 +627,6 @@ MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Mat4f, Vec3Dual3f,
 /// transform non normals.  so all we do is multiply by the transpose.
 MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec4f, Mat4f, Vec4f,
                             { result = p0 * p1; })
-MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec4Dual3f, Mat4f, Vec4Dual3f,
-                            { result = p0 * p1; })
 /// @}
 
 // Vec3f = transformNormal(Mat4f, Vec3f)
@@ -664,8 +636,6 @@ MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec4Dual3f, Mat4f, Vec4Dual3f,
 /// transform non normals.  so all we do is multiply by the transpose.
 
 MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Mat4f, Vec3f,
-                            { MATH_MAT4_MULT_VEC3(); })
-MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Mat4f, Vec3Dual3f,
                             { MATH_MAT4_MULT_VEC3(); })
 /// @}
 
@@ -687,25 +657,7 @@ MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Mat4f, Vec3Dual3f,
         result = Vec3f_ctor(0.f, 0.f, 0.f);     \
     }
 
-#define MATH_MAT4_TRANSFORMH_D()                \
-    l0.v = p1 * p0;                             \
-    result.x = l0.v.x;                          \
-    result.y = l0.v.y;                          \
-    result.z = l0.v.z;                          \
-    if (!isZero(l0.v.w, 0.f)) {                 \
-        l0.wrcp = rcp(l0.v.w);                  \
-        result.x = result.x * l0.wrcp;          \
-        result.y = result.y * l0.wrcp;          \
-        result.z = result.z * l0.wrcp;          \
-    } else {                                    \
-        result = Vec3Dual3f_ctor(Dual3f_ctor(0.f)); \
-    }
-
 MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformH, Vec3f, Mat4f, Vec4f,
                                    MATH_MAT4_TRANSFORMH_L0(float, Vec4f),
                                    MATH_MAT4_TRANSFORMH())
-
-MATH_DEFINE_BINARY_VARIFORM_WITH_L(transformH, Vec3Dual3f, Mat4f, Vec4Dual3f,
-                                   MATH_MAT4_TRANSFORMH_L0(Dual3f, Vec4Dual3f),
-                                   MATH_MAT4_TRANSFORMH_D())
 

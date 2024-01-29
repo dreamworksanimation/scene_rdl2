@@ -8,7 +8,6 @@
 
 #include "Test.h"
 #include "TestAsA.h"
-#include "TestAutodiff.h"
 #include "TestCol3.h"
 #include "TestCol4.h"
 #include "TestColorSpace.h"
@@ -31,7 +30,6 @@ main(int argc, char *argv[])
 
     CPPUNIT_TEST_SUITE_REGISTRATION(Test);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestAsA);
-    CPPUNIT_TEST_SUITE_REGISTRATION(TestAutodiff);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestCol3);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestCol4);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestColorSpace);

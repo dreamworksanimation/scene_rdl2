@@ -42,14 +42,6 @@
  * are defined in Constants.isph while functions and types that don't
  * really warrant their own file can be found in the generic Math.isph file.
  *
- * @section autodiff_sec Auto Differentiation
- * One of the novel features of the math library is auto-differentiation
- * through the use of Dual number types.  The main header is Dual.isph.
- * Functions of one to three variables are supported by the base Dual types.
- * Think of these as replacements for floats.  Additionally, some of the
- * higher level structures (e.g. Vec4, Vec3, Vec2, and Col3) have
- * Dual versions as well.
- *
  * @section tutorial_sec Tutorial
  * \code
  * #include <Color.isph>

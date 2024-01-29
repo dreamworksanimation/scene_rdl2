@@ -52,10 +52,8 @@ namespace rdl2 {
 // you can freely cast rdl2::Tv to moonray::shading::Tv
 class Bsdfv;        // moonray::shading::Bsdfv;
 class BsdfBuilderv; // moonray::shading::BsdfBuilderv;
-class ColorDualv;   // moonray::shading::ColorDualv;
 class Colorv;       // moonray::shading::Colorv;
 class Statev;       // moonray::shading::Statev;
-class Vec3Dualv;    // moonray::shading::Vec3Dualv;
 class Vec3fv;       // moonray::shading::Vec3fv;
 
 struct DisplayFilterStatev; // displayfilter::DisplayFilterStatev;
@@ -553,22 +551,10 @@ typedef void (__cdecl * SampleFuncv)(   const Map* self,
                                         rdl2::Colorv* sample,
                                         SIMD_MASK_TYPE implicitMask);
 
-typedef void (__cdecl * SampleADFuncv)( const Map* self,
-                                        moonray::shading::TLState *tls,
-                                        const rdl2::Statev* state,
-                                        rdl2::ColorDualv* sample,
-                                        SIMD_MASK_TYPE implicitMask);
-
 typedef void (__cdecl * SampleNormalFuncv)(   const NormalMap* self,
                                               moonray::shading::TLState *tls,
                                               const rdl2::Statev* state,
                                               rdl2::Vec3fv* sample,
-                                              SIMD_MASK_TYPE implicitMask);
-
-typedef void (__cdecl * SampleNormalADFuncv)( const NormalMap* self,
-                                              moonray::shading::TLState *tls,
-                                              const rdl2::Statev* state,
-                                              rdl2::Vec3Dualv* sample,
                                               SIMD_MASK_TYPE implicitMask);
 
 typedef void (__cdecl * DisplaceFuncv)( const Displacement* self,

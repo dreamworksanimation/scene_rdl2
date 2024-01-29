@@ -563,19 +563,10 @@ testTransformPoint()
     const Vec3f trans = Vec3f_ctor(1., 2., 3.);
     const Mat4f m = Mat4f_rotate(rotAxis, rotAngle) * Mat4f_translate(trans);
 
-    // primal
     const Vec3f v = Vec3f_ctor(1., 1., 1.);
     const Vec3f vM = transformPoint(m, v);
     const Vec3f vTest = v * Mat3f_rotate(rotAxis, rotAngle) + trans;
     if (any(!isEqual(vM, vTest))) {
-        ++error;
-    }
-
-    // dual
-    const Vec3Dual3f vDual = Vec3Dual3f_ctor(Dual3f_ctor(1.), Dual3f_ctor(1.), Dual3f_ctor(1.));
-    const Vec3Dual3f vDualM = transformPoint(m, vDual);
-    const Vec3Dual3f vDualTest = vDual * Mat3f_rotate(rotAxis, rotAngle) + trans;
-    if (any(!isEqual(vDualM, vDualTest))) {
         ++error;
     }
 

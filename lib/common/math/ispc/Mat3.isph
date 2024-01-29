@@ -173,8 +173,6 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, Mat3f, float, MATH_MAT3_MULT_S())
 /// @{
 /// Vec3 * Mat3
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Vec3f, Mat3f, MATH_VEC3_MULT_MAT3())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3Dual3f, Vec3Dual3f, Mat3f,
-                            MATH_VEC3_MULT_MAT3())
 /// @}
 
 // Vec3f = Mat3f * Vec3f;
@@ -189,8 +187,6 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3Dual3f, Vec3Dual3f, Mat3f,
 /// @{
 /// Mat3 * Vec3
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Mat3f, Vec3f, MATH_MAT3_MULT_VEC3())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3Dual3f, Mat3f, Vec3Dual3f,
-                            MATH_MAT3_MULT_VEC3())
 /// @}
 
 // Mat3f = Mat3f * Mat3f;
@@ -409,8 +405,6 @@ MATH_DEFINE_BINARY_VARIFORM(Mat3f_rotate, Mat3f, Vec3f, float,
 /// non-normal vector.
 MATH_DEFINE_BINARY_VARIFORM(transform, Vec3f, Mat3f, Vec3f,
                             { result = p1 * p0; })
-MATH_DEFINE_BINARY_VARIFORM(transform, Vec3Dual3f, Mat3f, Vec3Dual3f,
-                            { result = p1 * p0; })
 /// @}
 
 // Vec3f = transformNormal(Mat3f, Vec3f)
@@ -419,8 +413,6 @@ MATH_DEFINE_BINARY_VARIFORM(transform, Vec3Dual3f, Mat3f, Vec3Dual3f,
 /// a normal.  we assume that Mat3 is already an inverse of the Mat3 used to
 /// transform non normals.  so all we do is multiply by the transpose.
 MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Mat3f, Vec3f,
-                            { result = p0 * p1; })
-MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Mat3f, Vec3Dual3f,
                             { result = p0 * p1; })
 /// @}
 

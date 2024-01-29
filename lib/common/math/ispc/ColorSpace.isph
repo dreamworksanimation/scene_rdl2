@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "Dual.isph"
 #include "Variform.isph"
 #include "Col3.isph"
 
@@ -19,9 +18,6 @@
 /** \cond */
 #define MATH_TERNARY_RGB_TO_HUE_L0_F()                                  \
     struct { float h; }
-
-#define MATH_TERNARY_RGB_TO_HUE_L0_D()                                  \
-    struct { Dual3f h; }
 
 #define MATH_TERNARY_RGB_TO_HUE()                                       \
     {                                                                   \
@@ -48,31 +44,6 @@
         }                                                               \
         result = l0.h;                                                  \
     }
-#define MATH_DUAL_TERNARY_RGB_TO_HUE()                                  \
-    {                                                                   \
-        if (isZero(p1.a)) {                                             \
-            l0.h = Dual3f_ctor(0.0f);                                   \
-        } else {                                                        \
-            switch (p2) {                                               \
-            case 0:                                                     \
-                l0.h = (p0.g - p0.b) / p1;                              \
-                break;                                                  \
-            case 1:                                                     \
-                l0.h = 2.0f + ((p0.b - p0.r) / p1);                     \
-                break;                                                  \
-            default:                                                    \
-                l0.h = 4.0f + ((p0.r - p0.g) / p1);                     \
-                break;                                                  \
-            }                                                           \
-            l0.h = l0.h * 60.0f;                                        \
-            l0.h = fmod(l0.h, 360.0f);                                  \
-            if (eval(l0.h) < 0.0f) {                                    \
-                l0.h = l0.h + 360.0f;                                   \
-            }                                                           \
-            l0.h = l0.h / 360.0f;                                       \
-        }                                                               \
-        result = l0.h;                                                  \
-    }
 /** \endcond */
 /**
  * @{
@@ -81,9 +52,6 @@
 MATH_DEFINE_TERNARY_VARIFORM_WITH_L(rgbToHue, float, Col3f, float, int,
                                     MATH_TERNARY_RGB_TO_HUE_L0_F(),
                                     MATH_TERNARY_RGB_TO_HUE())
-MATH_DEFINE_TERNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f, Dual3f, int,
-                                    MATH_TERNARY_RGB_TO_HUE_L0_D(),
-                                    MATH_DUAL_TERNARY_RGB_TO_HUE())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -104,24 +72,9 @@ MATH_DEFINE_TERNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f, Dual3f, int,
             result = 2;                                                 \
         }                                                               \
     }
-#define MATH_DUAL_UNARY_MAX_RGB_CHANNEL()                               \
-    {                                                                   \
-        l0.maxChannel = eval(p0.r);                                     \
-        result = 0;                                                     \
-        if (eval(p0.g) > l0.maxChannel) {                               \
-            l0.maxChannel = eval(p0.g);                                 \
-            result = 1;                                                 \
-        }                                                               \
-        if (eval(p0.b) > l0.maxChannel) {                               \
-            result = 2;                                                 \
-        }                                                               \
-    }
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3f,
                                   MATH_UNARY_MAX_RGB_CHANNEL_L0_F(),
                                   MATH_UNARY_MAX_RGB_CHANNEL())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3Dual3f,
-                                MATH_UNARY_MAX_RGB_CHANNEL_L0_F(),
-                                MATH_DUAL_UNARY_MAX_RGB_CHANNEL())
 
 // ---------------------------------------------------------------------------
 // public macros.
@@ -133,10 +86,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3Dual3f,
 #define MATH_UNARY_RGB_TO_HUE_L0_F()                                    \
     struct { float h; float maxChannel; float minChannel;               \
                 float chroma; }
-
-#define MATH_UNARY_RGB_TO_HUE_L0_D()                                    \
-    struct { Dual3f h; Dual3f maxChannel; Dual3f minChannel;            \
-                Dual3f chroma; }
 
 #define MATH_UNARY_RGB_TO_HUE()                                         \
     {                                                                   \
@@ -162,30 +111,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3Dual3f,
         }                                                               \
         result = l0.h;                                                  \
     }
-#define MATH_DUAL_UNARY_RGB_TO_HUE()                                    \
-    {                                                                   \
-        l0.maxChannel = max(p0.r, max(p0.g, p0.b));                     \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                     \
-        l0.chroma = l0.maxChannel - l0.minChannel;                      \
-        if (isZero(l0.chroma)) {                                        \
-            l0.h = Dual3f_ctor(0.0f);                                   \
-        } else {                                                        \
-            if (isEqual(l0.maxChannel, p0.r)) {                         \
-                l0.h = ((p0.g - p0.b) / l0.chroma);                     \
-            } else if (isEqual(l0.maxChannel, p0.g)) {                  \
-                l0.h = 2.0f + (p0.b - p0.r) / l0.chroma;                \
-            } else {                                                    \
-                l0.h = 4.0f + (p0.r - p0.g) / l0.chroma;                \
-            }                                                           \
-            l0.h = l0.h * 60.0f;                                        \
-            l0.h = fmod(l0.h, 360.0f);                                  \
-            if (eval(l0.h) < 0.0f) {                                    \
-                l0.h = l0.h + 360.0f;                                   \
-            }                                                           \
-            l0.h = l0.h / 360.0f;                                       \
-        }                                                               \
-        result = l0.h;                                                  \
-    }
 /** \endcond */
 /**
  * @{
@@ -194,9 +119,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3Dual3f,
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, float, Col3f,
                                   MATH_UNARY_RGB_TO_HUE_L0_F(),
                                   MATH_UNARY_RGB_TO_HUE())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f,
-                                MATH_UNARY_RGB_TO_HUE_L0_D(),
-                                MATH_DUAL_UNARY_RGB_TO_HUE())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -206,10 +128,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f,
 #define MATH_UNARY_RGB_TO_HSV_L0_F()                                    \
     struct { float h; float s; float v; int maxChannelIndex;            \
              float maxChannel; float minChannel; float chroma; }
-
-#define MATH_UNARY_RGB_TO_HSV_L0_D()                                    \
-    struct { Dual3f h; Dual3f s; Dual3f v; int maxChannelIndex;         \
-             Dual3f maxChannel; Dual3f minChannel; Dual3f chroma; }
 
 #define MATH_UNARY_RGB_TO_HSV()                                         \
     {                                                                   \
@@ -232,27 +150,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f,
         }                                                               \
         result = Col3f_ctor(l0.h, l0.s, l0.v);                          \
     }
-#define MATH_DUAL_UNARY_RGB_TO_HSV()                                    \
-    {                                                                   \
-        l0.maxChannelIndex = maxRgbChannel(p0);                         \
-        l0.maxChannel = p0.r;                                           \
-        if (l0.maxChannelIndex == 1) {                                  \
-            l0.maxChannel = p0.g;                                       \
-        } else if (l0.maxChannelIndex == 2) {                           \
-            l0.maxChannel = p0.b;                                       \
-        }                                                               \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                     \
-        l0.v = l0.maxChannel;                                           \
-        l0.chroma = l0.maxChannel - l0.minChannel;                      \
-        if (!isZero(l0.maxChannel.a)) {                                 \
-            l0.s = l0.chroma / l0.maxChannel;                           \
-            l0.h = rgbToHue(p0, l0.chroma, l0.maxChannelIndex);         \
-        } else {                                                        \
-            l0.s = Dual3f_ctor(0.f);                                    \
-            l0.h = Dual3f_ctor(0.f);                                    \
-        }                                                               \
-        result = Col3Dual3f_ctor(l0.h, l0.s, l0.v);                     \
-    }
 /** \endcond */
 /**
  * @{
@@ -261,9 +158,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, Dual3f, Col3Dual3f,
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3f, Col3f,
         MATH_UNARY_RGB_TO_HSV_L0_F(),
         MATH_UNARY_RGB_TO_HSV())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3Dual3f, Col3Dual3f,
-        MATH_UNARY_RGB_TO_HSV_L0_D(),
-        MATH_DUAL_UNARY_RGB_TO_HSV())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -273,10 +167,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3Dual3f, Col3Dual3f,
 #define MATH_UNARY_RGB_TO_HSL_L0_F()                                                \
     struct { float h; float s; float l; int maxChannelIndex;                        \
              float maxChannel; float minChannel; float chroma; }
-
-#define MATH_UNARY_RGB_TO_HSL_L0_D()                                                \
-    struct { Dual3f h; Dual3f s; Dual3f l; int maxChannelIndex;                     \
-             Dual3f maxChannel; Dual3f minChannel; Dual3f chroma; }
 
 #define MATH_UNARY_RGB_TO_HSL()                                                     \
     {                                                                               \
@@ -311,39 +201,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3Dual3f, Col3Dual3f,
         }                                                                           \
         result = Col3f_ctor(l0.h, l0.s, l0.l);                                      \
     }
-#define MATH_DUAL_UNARY_RGB_TO_HSL()                                                \
-    {                                                                               \
-        l0.maxChannelIndex = maxRgbChannel(p0);                                     \
-        l0.maxChannel = p0.r;                                                       \
-        if (l0.maxChannelIndex == 1) {                                              \
-            l0.maxChannel = p0.g;                                                   \
-        } else if (l0.maxChannelIndex == 2) {                                       \
-            l0.maxChannel = p0.b;                                                   \
-        }                                                                           \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                                 \
-        l0.l = (l0.maxChannel + l0.minChannel) * 0.5f;                              \
-        l0.chroma = l0.maxChannel - l0.minChannel;                                  \
-        if (isZero(l0.chroma)) {                                                    \
-            l0.h = Dual3f_ctor(0.0f);                                                 \
-            l0.s = Dual3f_ctor(0.0f);                                                 \
-        } else {                                                                    \
-            if (eval(l0.l) > 0.5) {                                                 \
-                if (isEqual(l0.maxChannel + l0.minChannel, Dual3f_ctor(2.0f)) ) {     \
-                    l0.s = Dual3f_ctor(1.0f);                                         \
-                } else {                                                            \
-                    l0.s = abs(l0.chroma / (2.0 - l0.maxChannel - l0.minChannel));  \
-                }                                                                   \
-            } else {                                                                \
-                if (eval(l0.maxChannel + l0.minChannel) <= 0) {                     \
-                    l0.s = l0.chroma;                                               \
-                } else {                                                            \
-                    l0.s = l0.chroma / (l0.maxChannel + l0.minChannel);             \
-                }                                                                   \
-            }                                                                       \
-            l0.h = rgbToHue(p0, l0.chroma, l0.maxChannelIndex);                     \
-        }                                                                           \
-        result = Col3Dual3f_ctor(l0.h, l0.s, l0.l);                                 \
-    }
 /** \endcond */
 /**
  * @{
@@ -352,9 +209,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3Dual3f, Col3Dual3f,
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3f, Col3f,
         MATH_UNARY_RGB_TO_HSL_L0_F(),
         MATH_UNARY_RGB_TO_HSL())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
-        MATH_UNARY_RGB_TO_HSL_L0_D(),
-        MATH_DUAL_UNARY_RGB_TO_HSL())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -364,10 +218,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
 #define MATH_UNARY_HSV_TO_RGB_L0_F()                                    \
     struct { float r; float g; float b; int sector;                     \
              float h; float f; float p; float q; float t; }
-
-#define MATH_UNARY_HSV_TO_RGB_L0_D()                                    \
-    struct { Dual3f r; Dual3f g; Dual3f b; int sector;                  \
-             Dual3f h; Dual3f f; Dual3f p; Dual3f q; Dual3f t; }
 
 #define MATH_UNARY_HSV_TO_RGB()                                         \
     {                                                                   \
@@ -401,38 +251,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
         }                                                               \
         result = Col3f_ctor(l0.r, l0.g, l0.b);                          \
     }
-#define MATH_DUAL_UNARY_HSV_TO_RGB()                                    \
-    {                                                                   \
-        l0.h = p0.r;                                                    \
-        if (isZero(p0.g)) {                                             \
-            l0.r = l0.g = l0.b = p0.b;                                  \
-        } else {                                                        \
-            l0.h = fmod(l0.h, 1.0f);                                    \
-            if (eval(l0.h) < 0) {                                       \
-                l0.h = l0.h + 1.0f;                                     \
-            }                                                           \
-            l0.h = l0.h * 360.0f;                                       \
-            if (isEqual(eval(l0.h), 360.0f)) {                          \
-                l0.h = Dual3f_ctor(0.0f);                               \
-            }                                                           \
-            l0.h = l0.h / 60.0f;                                        \
-            l0.sector = (int)eval(l0.h);                                \
-            l0.f = l0.h - l0.sector;                                    \
-            l0.p = p0.b * (1.0f - p0.g);                                \
-            l0.q = p0.b * (1.0f - p0.g * l0.f);                         \
-            l0.t = p0.b * (1.0f - p0.g * (1.0f - l0.f));                \
-            switch (l0.sector) {                                        \
-            case 0: l0.r = p0.b; l0.g = l0.t; l0.b = l0.p; break;       \
-            case 1: l0.r = l0.q; l0.g = p0.b; l0.b = l0.p; break;       \
-            case 2: l0.r = l0.p; l0.g = p0.b; l0.b = l0.t; break;       \
-            case 3: l0.r = l0.p; l0.g = l0.q; l0.b = p0.b; break;       \
-            case 4: l0.r = l0.t; l0.g = l0.p; l0.b = p0.b; break;       \
-            case 5: l0.r = p0.b; l0.g = l0.p; l0.b = l0.q; break;       \
-            default: l0.r = l0.p; l0.g = l0.p; l0.b = l0.p; break;      \
-            }                                                           \
-        }                                                               \
-        result = Col3Dual3f_ctor(l0.r, l0.g, l0.b);                     \
-    }
 /** \endcond */
 /**
  * @{
@@ -441,9 +259,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3Dual3f, Col3Dual3f,
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3f, Col3f,
         MATH_UNARY_HSV_TO_RGB_L0_F(),
         MATH_UNARY_HSV_TO_RGB())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
-        MATH_UNARY_HSV_TO_RGB_L0_D(),
-        MATH_DUAL_UNARY_HSV_TO_RGB())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -453,10 +268,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
 #define MATH_UNARY_HSL_TO_RGB_L0_F()                                                                \
     struct { float r; float g; float b; int sector;                                                 \
              float h; float f; float w; float p; float q; float t; }
-
-#define MATH_UNARY_HSL_TO_RGB_L0_D()                                                                \
-    struct { Dual3f r; Dual3f g; Dual3f b; int sector;                                              \
-             Dual3f h; Dual3f f; Dual3f w; Dual3f p; Dual3f q; Dual3f t; }
 
 #define MATH_UNARY_HSL_TO_RGB()                                                                     \
     {                                                                                               \
@@ -498,46 +309,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
         }                                                                                           \
         result = Col3f_ctor(l0.r, l0.g, l0.b);                                                      \
     }
-#define MATH_DUAL_UNARY_HSL_TO_RGB()                                                                \
-    {                                                                                               \
-        l0.h = p0.r;                                                                                \
-        if (isZero(p0.g)) {                                                                         \
-            l0.r = l0.g = l0.b = p0.b;                                                              \
-        } else {                                                                                    \
-            l0.h = fmod(l0.h, 1.0f);                                                                \
-            if (eval(l0.h) < 0) {                                                                   \
-                l0.h = l0.h + 1.0f;                                                                 \
-            }                                                                                       \
-            l0.h = l0.h * 360.0f;                                                                   \
-            if (isEqual(eval(l0.h), 360.0f)) {                                                      \
-                l0.h = Dual3f_ctor(0.0f);                                                           \
-            }                                                                                       \
-            l0.h = l0.h / 60.0f;                                                                    \
-            l0.sector = (int)eval(l0.h);                                                            \
-            l0.f = l0.h - l0.sector;                                                                \
-            if (eval(p0.b) < 0.5) {                                                                 \
-                l0.p = p0.b * (1.0f - p0.g);                                                        \
-                l0.w = p0.b * (1.0f + p0.g);                                                        \
-                l0.q = p0.b * (p0.g * (1.0f - 2.0f * l0.f) + 1.0f);                                 \
-                l0.t = p0.b * (p0.g * (2.0f * l0.f - 1.0f) + 1.0f);                                 \
-            } else {                                                                                \
-                l0.p = p0.b * (1.0f + p0.g) - p0.g;                                                 \
-                l0.w = p0.b * (1.0f - p0.g) + p0.g;                                                 \
-                l0.q = p0.b * (1.0f + p0.g * (2.0f * l0.f - 1.0f)) + p0.g * (1.0f - 2.0f * l0.f);   \
-                l0.t = p0.b * (1.0f + p0.g * (1.0f - 2.0f * l0.f)) + p0.g * (2.0f * l0.f - 1.0f);   \
-            }                                                                                       \
-            switch (l0.sector) {                                                                    \
-            case 0: l0.r = l0.w; l0.g = l0.t; l0.b = l0.p; break;                                   \
-            case 1: l0.r = l0.q; l0.g = l0.w; l0.b = l0.p; break;                                   \
-            case 2: l0.r = l0.p; l0.g = l0.w; l0.b = l0.t; break;                                   \
-            case 3: l0.r = l0.p; l0.g = l0.q; l0.b = l0.w; break;                                   \
-            case 4: l0.r = l0.t; l0.g = l0.p; l0.b = l0.w; break;                                   \
-            case 5: l0.r = l0.w; l0.g = l0.p; l0.b = l0.q; break;                                   \
-            default: l0.r = l0.p; l0.g = l0.p; l0.b = l0.p; break;                                  \
-            }                                                                                       \
-        }                                                                                           \
-        result = Col3Dual3f_ctor(l0.r, l0.g, l0.b);                                                 \
-    }
 /** \endcond */
 /**
  * @{
@@ -546,9 +317,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3Dual3f, Col3Dual3f,
 MATH_DEFINE_UNARY_VARIFORM_WITH_L(hslToRgb, Col3f, Col3f,
         MATH_UNARY_HSL_TO_RGB_L0_F(),
         MATH_UNARY_HSL_TO_RGB())
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(hslToRgb, Col3Dual3f, Col3Dual3f,
-        MATH_UNARY_HSL_TO_RGB_L0_D(),
-        MATH_DUAL_UNARY_HSL_TO_RGB())
 /** @} */
 
 //----------------------------------------------------------------------------
@@ -560,8 +328,6 @@ MATH_DEFINE_UNARY_VARIFORM_WITH_L(hslToRgb, Col3Dual3f, Col3Dual3f,
  */
 MATH_DEFINE_UNARY_VARIFORM(hueToRgb, Col3f, float,
     { result = hsvToRgb(Col3f_ctor(p0, 1.f, 1.f)); })
-MATH_DEFINE_UNARY_VARIFORM(hueToRgb, Col3Dual3f, Dual3f,
-    { result = hsvToRgb(Col3Dual3f_ctor(p0, Dual3f_ctor(1.f), Dual3f_ctor(1.f))); })
 /** @} */
 
 

@@ -28,15 +28,11 @@ ISPC_UTIL_EXPORT_UNIFORM_STRUCT_TO_HEADER(XformComponent3f);
 #pragma ignore warning(all)
 ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Col3f);
 #pragma ignore warning(all)
-ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Col3Dual3f);
-#pragma ignore warning(all)
 ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Mat3f);
 #pragma ignore warning(all)
 ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Vec2f);
 #pragma ignore warning(all)
 ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Vec3f);
-#pragma ignore warning(all)
-ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Vec3Dual3f);
 #pragma ignore warning(all)
 ISPC_UTIL_EXPORT_STRUCT_TO_HEADER(Xform3f);
 

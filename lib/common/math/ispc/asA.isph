@@ -10,7 +10,6 @@
 /// 2 function set variforms that differ by const / non-const
 #pragma once
 
-#include "autodiff.isph"
 #include "Col3.isph"
 #include "Col4.isph"
 #include "Color.isph"
@@ -56,15 +55,11 @@ MATH_DEFINE_ASA_VARIFORM(Vec2f, Vec4f)
 /// convert to Vec3
 MATH_DEFINE_ASA_VARIFORM(Vec3f, Vec4f)
 MATH_DEFINE_ASA_VARIFORM(Vec3f, Col3f);
-MATH_DEFINE_ASA_VARIFORM(Vec3Dual, ColorDual);
-MATH_DEFINE_ASA_VARIFORM(Vec3Dual3f, Col3Dual3f);
 /// @}
 
 /// @{
 /// convert to Col3
 MATH_DEFINE_ASA_VARIFORM(Col3f, Vec3f);
-MATH_DEFINE_ASA_VARIFORM(ColorDual, Vec3Dual);
-MATH_DEFINE_ASA_VARIFORM(Col3Dual3f, Vec3Dual3f);
 MATH_DEFINE_ASA_VARIFORM(Col3f, Col4f);
 /// @}
 

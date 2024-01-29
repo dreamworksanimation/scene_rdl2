@@ -310,8 +310,6 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Xform3f, Xform3f, Xform3f, MATH_XFORM3_MU
 /// transform a Vec3 as a point - apply both linear and translation parts
 MATH_DEFINE_BINARY_VARIFORM(transformPoint, Vec3f, Xform3f, Vec3f,
                             MATH_XFORM3_TRANSFORM_POINT())
-MATH_DEFINE_BINARY_VARIFORM(transformPoint, Vec3Dual3f, Xform3f, Vec3Dual3f,
-                            MATH_XFORM3_TRANSFORM_POINT())
 /// @}
 
 // Vec3f = transformVector(Xform3f, Vec3f)
@@ -324,8 +322,6 @@ MATH_DEFINE_BINARY_VARIFORM(transformPoint, Vec3Dual3f, Xform3f, Vec3Dual3f,
 /// @{
 /// transform a Vec3 as a vector - apply only the linear part, ignore translation
 MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3f, Xform3f, Vec3f,
-                            MATH_XFORM3_TRANSFORM_VECTOR())
-MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Xform3f, Vec3Dual3f,
                             MATH_XFORM3_TRANSFORM_VECTOR())
 /// @}
 
@@ -344,8 +340,6 @@ MATH_DEFINE_BINARY_VARIFORM(transformVector, Vec3Dual3f, Xform3f, Vec3Dual3f,
 /// translation and assume the xform matrix has already been inverted and
 /// is intended for use with normals.
 MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Xform3f, Vec3f,
-                            MATH_XFORM3_TRANSFORM_NORMAL())
-MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3Dual3f, Xform3f, Vec3Dual3f,
                             MATH_XFORM3_TRANSFORM_NORMAL())
 /// @}
 

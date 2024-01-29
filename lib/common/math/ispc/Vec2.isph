@@ -7,7 +7,6 @@
 #pragma once
 
 #include "Constants.isph"
-#include "Dual.isph"
 #include "Math.isph"
 #include "Variform.isph"
 
@@ -25,16 +24,12 @@
 /// @struct Vec2f
 /// @brief a 2 component, single precision, x-y vector
 MATH_DECLARE_VEC2(float, Vec2f);
-/// @struct Vec2Dual3f
-/// @brief a 3 component, single precision dual3, x-y vector
-MATH_DECLARE_VEC2(Dual3f, Vec2Dual3f);
 
 // ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
 
 // Vec2f = Vec2f_ctor(float);
-// Vec2Dual3f = Vec2Dual3f_ctor(Dual3f);
 /** \cond */
 #define MATH_VEC2_CTOR_1()                      \
     {                                           \
@@ -45,11 +40,9 @@ MATH_DECLARE_VEC2(Dual3f, Vec2Dual3f);
 /// @{
 /// construct a Vec2 from a single number
 MATH_DEFINE_UNARY_VARIFORM(Vec2f_ctor, Vec2f, float, MATH_VEC2_CTOR_1())
-MATH_DEFINE_UNARY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, MATH_VEC2_CTOR_1())
 /// @}
 
 // Vec2f = Vec2f_ctor(float, float);
-// Vec2Dual3f = Vec2Dual3f_ctor(Dual3f, Dual3f, Dual3f);
 /** \cond */
 #define MATH_VEC2_CTOR_2()                      \
     {                                           \
@@ -60,12 +53,9 @@ MATH_DEFINE_UNARY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, MATH_VEC2_CTOR_1
 /// @{
 /// construct a Vec2 from 2 numbers
 MATH_DEFINE_BINARY_VARIFORM(Vec2f_ctor, Vec2f, float, float, MATH_VEC2_CTOR_2())
-MATH_DEFINE_BINARY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, Dual3f,
-                            MATH_VEC2_CTOR_2())
 /// @}
 
 // Vec2f = Vec2f_ctor(float * uniform);
-// Vec2Dual3f = Vec2Dual3f_ctor(Dual3f * uniform);
 /** \cond */
 #define MATH_VEC2_CTOR_ARRAY()                  \
     {                                           \
@@ -76,7 +66,6 @@ MATH_DEFINE_BINARY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, Dual3f,
 /// @{
 /// construct a Vec2 from an array
 MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2f_ctor, Vec2f, float, MATH_VEC2_CTOR_ARRAY())
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, MATH_VEC2_CTOR_ARRAY())
 /// @}
 
 // ---------------------------------------------------------------------------
@@ -84,7 +73,6 @@ MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, MATH_VEC2_
 // ---------------------------------------------------------------------------
 
 //  Vec2f = Vec2f + Vec2f;
-//  Vec2Dual3f = Vec2Dual3f + Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_PLUS()                        \
     {                                           \
@@ -95,11 +83,9 @@ MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2Dual3f_ctor, Vec2Dual3f, Dual3f, MATH_VEC2_
 /// @{
 /// component-wise add p0 + p1
 MATH_DEFINE_BINARY_VARIFORM(operator+, Vec2f, Vec2f, Vec2f, MATH_VEC2_PLUS())
-MATH_DEFINE_BINARY_VARIFORM(operator+, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_PLUS())
 /// @}
 
 // Vec2f = Vec2f - Vec2f;
-// Vec2Dual3f = Vec2Dual3f - Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_MINUS()                       \
     {                                           \
@@ -110,11 +96,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator+, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_
 /// @{
 /// component-wise subtraction p0 - p1
 MATH_DEFINE_BINARY_VARIFORM(operator-, Vec2f, Vec2f, Vec2f, MATH_VEC2_MINUS())
-MATH_DEFINE_BINARY_VARIFORM(operator-, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_MINUS())
 /// @}
 
 // Vec2f = float * Vec2f;
-// Vec2Dual3f = [float|Dual3f] * Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_S_PRE_MULT()                  \
     {                                           \
@@ -125,11 +109,8 @@ MATH_DEFINE_BINARY_VARIFORM(operator-, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_
 /// @{
 /// scalar multiplication p0 * p1
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, float, Vec2f, MATH_VEC2_S_PRE_MULT())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Dual3f, Vec2Dual3f, MATH_VEC2_S_PRE_MULT())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, float, Vec2Dual3f, { result = Dual3f_ctor(p0) * p1; })
 
 // Vec2f = Vec2f * float;
-// Vec2Dual3f = Vec2Dual3f * [float|Dual3f];
 /** \cond */
 #define MATH_VEC2_S_POST_MULT()                 \
     {                                           \
@@ -140,12 +121,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, float, Vec2Dual3f, { result =
 /// @{
 /// scalar multiplication p0 * p1
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, Vec2f, float, MATH_VEC2_S_POST_MULT())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Vec2Dual3f, Dual3f, MATH_VEC2_S_POST_MULT())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Vec2Dual3f, float, { result = p0 * Dual3f_ctor(p1); })
 /// @}
 
 // Vec2f = Vec2f * Vec2f;
-// Vec2Dual3f = Vec2Dual3f * Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_MULT()                        \
     {                                           \
@@ -156,11 +134,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Vec2Dual3f, float, { result =
 /// @{
 /// component-wise multiplication p0 * p1
 MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, Vec2f, Vec2f, MATH_VEC2_MULT())
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_MULT())
 /// @}
 
 // Vec2f = float / Vec2f;
-// Vec2Dual3f = Dual3f / Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_S_PRE_DIV()                   \
     {                                           \
@@ -171,11 +147,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_
 /// @{
 /// scalar division p0 / p1
 MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, float, Vec2f, MATH_VEC2_S_PRE_DIV())
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Dual3f, Vec2Dual3f, MATH_VEC2_S_PRE_DIV())
 /// @}
 
 // Vec2f = Vec2f / float;
-// Vec2Dual3f = Vec2Dual3f / Dual3f;
 /** \cond */
 #define MATH_VEC2_S_POST_DIV()                  \
     {                                           \
@@ -186,11 +160,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Dual3f, Vec2Dual3f, MATH_VEC2
 /// @{
 /// scalar division p0/ p1
 MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, Vec2f, float, MATH_VEC2_S_POST_DIV())
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Vec2Dual3f, Dual3f, MATH_VEC2_S_POST_DIV())
 /// @}
 
 // Vec2f = Vec2f / Vec2f;
-// Vec2Dual3f = Vec2Dual3f / Vec2Dual3f;
 /** \cond */
 #define MATH_VEC2_DIV()                         \
     {                                           \
@@ -201,11 +173,9 @@ MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Vec2Dual3f, Dual3f, MATH_VEC2
 /// @{
 /// component-wise division of 2 Vec2
 MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, Vec2f, Vec2f, MATH_VEC2_DIV())
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_DIV())
 /// @}
 
 // bool = isEqual(Vec2f, Vec2f, tol)
-// bool isEqual(Vec2Dual3f, Vec2Dual3f, float)
 /** \cond */
 #define MATH_VEC2_IS_EQUAL()                                            \
     {                                                                   \
@@ -215,21 +185,16 @@ MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_
 /// @{
 /// are two Vec2s equal to within tolerance (p2)?
 MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Vec2f, Vec2f, float, MATH_VEC2_IS_EQUAL())
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Vec2Dual3f, Vec2Dual3f, float, MATH_VEC2_IS_EQUAL())
 /// @}
 
 // bool = isEqual(Vec2f, Vec2f);
-// bool isEqual(Vec2Dual3f, Vec2Dual3f)
 /// @{
 /// are two Vec2s equal to within the default tolerance (sEpsilon)?
 MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec2f, Vec2f,
                             { result = isEqual(p0, p1, sEpsilon); })
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec2Dual3f, Vec2Dual3f,
-                            { result = isEqual(p0, p1, sEpsilon); })
 /// @}
 
 // bool = isEqualFixedEps(Vec2f, Vec2f, tol)
-// bool isEqualFixedEps(Vec2Dual3f, Vec2Dual3f, float)
 /** \cond */
 #define MATH_VEC2_IS_EQUAL_FIXED_EPS()                                  \
     {                                                                   \
@@ -239,21 +204,16 @@ MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec2Dual3f, Vec2Dual3f,
 /// @{
 /// are two Vec2s equal to within tolerance (p2)?
 MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Vec2f, Vec2f, float, MATH_VEC2_IS_EQUAL_FIXED_EPS())
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Vec2Dual3f, Vec2Dual3f, float, MATH_VEC2_IS_EQUAL_FIXED_EPS())
 /// @}
 
 // bool = isEqualFixedEps(Vec2f, Vec2f);
-// bool isEqualFixedEps(Vec2Dual3f, Vec2Dual3f)
 /// @{
 /// are two Vec2s equal to within the default tolerance (sEpsilon)?
 MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec2f, Vec2f,
                             { result = isEqualFixedEps(p0, p1, sEpsilon); })
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec2Dual3f, Vec2Dual3f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
 /// @}
 
 // bool = isZero(Vec2f, tol)
-// bool = isZero(Vec2Dual3f, float)
 /** \cond */
 #define MATH_VEC2_IS_ZERO()                             \
     {                                                   \
@@ -263,21 +223,16 @@ MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec2Dual3f, Vec2Dual3f,
 /// @{
 /// is a Vec2 equal to zero within a tolerance (p2) ?
 MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Vec2f, float, MATH_VEC2_IS_ZERO())
-MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Vec2Dual3f, float, MATH_VEC2_IS_ZERO())
 /// @}
 
 // bool = isZero(Vec2f);
-// bool = isZero(Vec2Dual3f);
 /// @{
 /// is a Vec2 equal to zero within the default tolerance (sEpsilon)?
 MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec2f,
                            { result = isZero(p0, sEpsilon); })
-MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec2Dual3f,
-                           { result = isZero(p0, sEpsilon); })
 /// @}
 
 // float = dot(Vec2f, Vec2f)
-// Dual3f = dot(Vec2Dual3f, Vec2Dual3f)
 /** \cond */
 #define MATH_VEC2_DOT()                         \
     {                                           \
@@ -287,7 +242,6 @@ MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec2Dual3f,
 /// @{
 /// compute the dot product of 2 Vec2
 MATH_DEFINE_BINARY_VARIFORM(dot, float, Vec2f, Vec2f, MATH_VEC2_DOT())
-MATH_DEFINE_BINARY_VARIFORM(dot, Dual3f, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_DOT())
 /// @}
 
 // Vec3f = max(Vec2f, Vec2f)
@@ -321,7 +275,6 @@ MATH_DEFINE_BINARY_VARIFORM(min, Vec2f, Vec2f, Vec2f, MATH_VEC2_MIN())
 //----------------------------------------------------------------------
 
 // float = length(Vec2f);
-// Dual3f = length(Vec2Dual3f);
 /** \cond */
 #define MATH_VEC2_LENGTH()                              \
     {                                                   \
@@ -331,11 +284,9 @@ MATH_DEFINE_BINARY_VARIFORM(min, Vec2f, Vec2f, Vec2f, MATH_VEC2_MIN())
 /// @{
 /// compute the length of a Vec2
 MATH_DEFINE_UNARY_VARIFORM(length, float, Vec2f, MATH_VEC2_LENGTH())
-MATH_DEFINE_UNARY_VARIFORM(length, Dual3f, Vec2Dual3f, MATH_VEC2_LENGTH())
 /// @}
 
 // float = lengthSqr(Vec2f);
-// Dual3f = lengthSqr(Vec2Dual3f);
 /** \cond */
 #define MATH_VEC2_LENGTH_SQR()                  \
     {                                           \
@@ -345,11 +296,9 @@ MATH_DEFINE_UNARY_VARIFORM(length, Dual3f, Vec2Dual3f, MATH_VEC2_LENGTH())
 /// @{
 /// compute the length^2 of a Vec2
 MATH_DEFINE_UNARY_VARIFORM(lengthSqr, float, Vec2f, MATH_VEC2_LENGTH_SQR())
-MATH_DEFINE_UNARY_VARIFORM(lengthSqr, Dual3f, Vec2Dual3f, MATH_VEC2_LENGTH_SQR())
 /// @}
 
 // Vec2f = normalize(Vec2f)
-// Vec2Dual3f = normalize(Vec2Dual3f)
 /** \cond */
 #define MATH_VEC2_NORMALIZE()                   \
     {                                           \
@@ -359,11 +308,9 @@ MATH_DEFINE_UNARY_VARIFORM(lengthSqr, Dual3f, Vec2Dual3f, MATH_VEC2_LENGTH_SQR()
 /// @{
 /// compute a normalized Vec2
 MATH_DEFINE_UNARY_VARIFORM(normalize, Vec2f, Vec2f, MATH_VEC2_NORMALIZE())
-MATH_DEFINE_UNARY_VARIFORM(normalize, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_NORMALIZE())
 /// @}
 
 // Vec2f = abs(Vec2f)
-// Vec2Dual3f = abs(Vec2Dual3f)
 /** \cond */
 #define MATH_VEC2_ABS()                         \
     {                                           \
@@ -374,11 +321,9 @@ MATH_DEFINE_UNARY_VARIFORM(normalize, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_NORMALIZ
 /// @{
 /// compute absolute value of a Vec2
 MATH_DEFINE_UNARY_VARIFORM(abs, Vec2f, Vec2f, MATH_VEC2_ABS())
-MATH_DEFINE_UNARY_VARIFORM(abs, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_ABS())
 /// @}
 
 // Vec2f = neg(Vec2f)
-// Vec2Dual3f = neg(Vec2Dual3f)
 /** \cond */
 #define MATH_VEC2_NEG()                         \
     {                                           \
@@ -388,7 +333,6 @@ MATH_DEFINE_UNARY_VARIFORM(abs, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_ABS())
 /// @{
 /// compute negative value of a Vec2
 MATH_DEFINE_UNARY_VARIFORM(neg, Vec2f, Vec2f, MATH_VEC2_NEG())
-MATH_DEFINE_UNARY_VARIFORM(neg, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_NEG())
 /// @}
 
 // Vec2f = rcp(Vec2f)
@@ -402,25 +346,18 @@ MATH_DEFINE_UNARY_VARIFORM(neg, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_NEG())
 /// @{
 /// compute the reciprocal of a Vec2
 MATH_DEFINE_UNARY_VARIFORM(rcp, Vec2f, Vec2f, MATH_VEC2_RCP())
-MATH_DEFINE_UNARY_VARIFORM(rcp, Vec2Dual3f, Vec2Dual3f, MATH_VEC2_RCP())
 /// @}
 
 // bool = isNormalized(Vec2f)
-// bool = isNormalized(Vec2Dual3f)
 /** \cond */
 #define MATH_VEC2_IS_NORMALIZED()                       \
     {                                                   \
         result = isNormalizedLengthSqr(lengthSqr(p0));  \
     }
-#define MATH_VEC2DUAL_IS_NORMALIZED()                           \
-    {                                                           \
-        result = isNormalizedLengthSqr(eval(lengthSqr(p0))) ;   \
-    }
 /** \endcond */
 /// @{
 /// is a Vec2 normalized?
 MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec2f, MATH_VEC2_IS_NORMALIZED())
-MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec2Dual3f, MATH_VEC2DUAL_IS_NORMALIZED())
 /// @}
 
 // ---------------------------------------------------------------------------
@@ -428,13 +365,9 @@ MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec2Dual3f, MATH_VEC2DUAL_IS_NORM
 // ---------------------------------------------------------------------------
 
 // Vec2f = lerp(Vec2f, Vec2f, float)
-// Vec2Dual3f = lerp(Vec2Dual3f, Vec2Dual3f, [float|Dual3f])
 /// @{
 /// lerp two Vec2f (p0, and p1) by a value (p2)
 MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec2f, Vec2f, Vec2f, float, MATH_LERP())
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, Dual3f, MATH_LERP())
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec2Dual3f, Vec2Dual3f, Vec2Dual3f, float,
-                             { result = lerp(p0, p1, Dual3f_ctor(p2)); })
 /// @}
 
 // bool = clamp(Vec2f, Vec2f, Vec2f)

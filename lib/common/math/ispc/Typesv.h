@@ -22,11 +22,9 @@ typedef Intv Mask;
 // more ispc export math functionality from C++ side
 // (right now only partial Xform3f ispc library got exported to C++)
 ISPC_UTIL_TYPEDEF_STRUCT(Col3f, Colorv);
-ISPC_UTIL_TYPEDEF_STRUCT(Col3Dual3f, ColorDualv);
 ISPC_UTIL_TYPEDEF_STRUCT(Mat3f, Mat3fv);
 ISPC_UTIL_TYPEDEF_STRUCT(Vec2f, Vec2fv);
 ISPC_UTIL_TYPEDEF_STRUCT(Vec3f, Vec3fv);
-ISPC_UTIL_TYPEDEF_STRUCT(Vec3Dual3f, Vec3Dualv);
 ISPC_UTIL_TYPEDEF_STRUCT(Xform3f, Xform3fv);
 
 

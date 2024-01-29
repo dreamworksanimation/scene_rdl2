@@ -12,7 +12,6 @@ target_sources(${objLib}
     PRIVATE
         Test.ispc
         TestAsA.ispc
-        TestAutodiff.ispc
         TestCol3.ispc
         TestCol4.ispc
         TestColorSpace.ispc
@@ -53,7 +52,6 @@ target_sources(${target}
         ../PeakErrs.cc
         Test.cc
         TestAsA.cc
-        TestAutodiff.cc
         TestCol3.cc
         TestCol4.cc
         TestColorSpace.cc
