@@ -8,430 +8,398 @@
 
 #include "Constants.isph"
 #include "Math.isph"
-#include "Variform.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-#define MATH_DECLARE_COL3(TYPE, NAME)           \
-    struct NAME                                 \
-    {                                           \
-        TYPE r;                                 \
-        TYPE g;                                 \
-        TYPE b;                                 \
-    };
+struct Col3f
+{
+    float r;
+    float g;
+    float b;
+};
 
-/// @struct Col3f
-/// @brief a 3 channel, single precision rgb color
-MATH_DECLARE_COL3(float,  Col3f);
+//--------------------------------------------------------------------------------------------------
+// Constants
+//--------------------------------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Construction
-// ---------------------------------------------------------------------------
+static const uniform Col3f sBlack = {0.0f, 0.0f, 0.0f};
+static const uniform Col3f sWhite = {1.0f, 1.0f, 1.0f};
 
-// Col3f c = Col3f_ctor(f);
-/** \cond */
-#define MATH_COL3_CTOR_1()                      \
-    {                                           \
-        result.r = p0;                          \
-        result.g = p0;                          \
-        result.b = p0;                          \
-    }
-/** \endcond */
-/** @{
- * construct a Col3 from a single number.
- */
-MATH_DEFINE_UNARY_VARIFORM(Col3f_ctor, Col3f, float, MATH_COL3_CTOR_1())
-/**@}*/
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Col3f c = Col3f_ctor(f, f, f);
-/** \cond */
-#define MATH_COL3_CTOR_3()                      \
-    {                                           \
-        result.r = p0;                          \
-        result.g = p1;                          \
-        result.b = p2;                          \
-    }
-/** \endcond */
-/** @{
- * construct a Col3 from 3 numbers
- */
-MATH_DEFINE_TERNARY_VARIFORM(Col3f_ctor, Col3f, float, float, float, MATH_COL3_CTOR_3())
-/**@}*/
+// Col3f = {r, g, b}
+inline uniform Col3f Col3f_ctor(const uniform float r, const uniform float g, const uniform float b)
+{
+    uniform Col3f result;
+    result.r = r;
+    result.g = g;
+    result.b = b;
+    return result;
+}
 
-// Col3f = Col3f_ctor(float a[]);
-/** \cond */
-#define MATH_COL3_CTOR_ARRAY()                  \
-    {                                           \
-        result.r = p0[0];                       \
-        result.g = p0[1];                       \
-        result.b = p0[2];                       \
-    }
-/** \endcond */
-/** @{
- * construct a Col3 from an array
- */
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Col3f_ctor, Col3f, float, MATH_COL3_CTOR_ARRAY())
-/**@}*/
+// Col3f = {r, g, b}
+inline varying Col3f Col3f_ctor(const varying float r, const varying float g, const varying float b)
+{
+    varying Col3f result;
+    result.r = r;
+    result.g = g;
+    result.b = b;
+    return result;
+}
 
-//----------------------------------------------------------------------
-// unary operations
-//----------------------------------------------------------------------
+// Col3f = {f, f, f}
+inline uniform Col3f Col3f_ctor(const uniform float f)
+{
+    return Col3f_ctor(f, f, f);
+}
 
-// bool b = isBlack(Col3);
-/** \cond */
-#define MATH_COL3_IS_BLACK(FTYPE)                       \
-    {                                                   \
-        result = isEqual(p0.r, (uniform FTYPE) 0.) &&   \
-            isEqual(p0.g, (uniform FTYPE) 0.) &&        \
-            isEqual(p0.b, (uniform FTYPE) 0.);          \
-    }
-/** \endcond */
-/** @{
- * Determine is a given color is black
- */
-MATH_DEFINE_UNARY_VARIFORM(isBlack, bool, Col3f, MATH_COL3_IS_BLACK(float));
-/** @}
- */
+// Col3f = {f, f, f}
+inline varying Col3f Col3f_ctor(const varying float f)
+{
+    return Col3f_ctor(f, f, f);
+}
 
- // bool b = isWhite(Col3);
-/** \cond */
-#define MATH_COL3_IS_WHITE(FTYPE)                       \
-    {                                                   \
-        result = isEqual(p0.r, (uniform FTYPE) 1.) &&   \
-            isEqual(p0.g, (uniform FTYPE) 1.) &&        \
-            isEqual(p0.b, (uniform FTYPE) 1.);          \
-    }
-/** \endcond */
-/** @{
- * Determine is a given color is black
- */
-MATH_DEFINE_UNARY_VARIFORM(isWhite, bool, Col3f, MATH_COL3_IS_WHITE(float));
-/** @}
- */
+// Col3f = {a[0], a[1], a[2]}
+inline uniform Col3f Col3f_ctor(const uniform float a[])
+{
+    return Col3f_ctor(a[0], a[1], a[2]);
+}
 
-// ---------------------------------------------------------------------------
-// Binary Operators
-// ---------------------------------------------------------------------------
+// Col3f = {a[0], a[1], a[2]}
+inline varying Col3f Col3f_ctor(const varying float a[])
+{
+    return Col3f_ctor(a[0], a[1], a[2]);
+}
 
-// Col3f = float - Col3f;
-/** \cond */
-#define MATH_COL3_S_PRE_MINUS()                 \
-    {                                           \
-        result.r = p0 - p1.r;                   \
-        result.g = p0 - p1.g;                   \
-        result.b = p0 - p1.b;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar subtraction (scalar - Col3)
-MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, float, Col3f, MATH_COL3_S_PRE_MINUS())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
 
-// Col3f = Col3f - float;
-/** \cond */
-#define MATH_COL3_S_POST_MINUS()                \
-    {                                           \
-        result.r = p0.r - p1;                   \
-        result.g = p0.g - p1;                   \
-        result.b = p0.b - p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar subtraction (Col3d - scalar)
-MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, Col3f, float, MATH_COL3_S_POST_MINUS())
-/// @}
+// Col3f = Col3f + Col3f
+inline uniform Col3f operator+(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(c0.r+c1.r, c0.g+c1.g, c0.b+c1.b);
+}
 
+// Col3f = Col3f + Col3f
+inline varying Col3f operator+(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(c0.r+c1.r, c0.g+c1.g, c0.b+c1.b);
+}
 
-// Col3f = Col3f - Col3f;
-/** \cond */
-#define MATH_COL3_MINUS()                       \
-    {                                           \
-        result.r = p0.r - p1.r;                 \
-        result.g = p0.g - p1.g;                 \
-        result.b = p0.b - p1.b;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise subtraction of 2 colors
-MATH_DEFINE_BINARY_VARIFORM(operator-, Col3f, Col3f, Col3f, MATH_COL3_MINUS())
+// Col3f = float + Col3f
+inline uniform Col3f operator+(const uniform float f, const uniform Col3f c)
+{
+    return Col3f_ctor(f) + c;
+}
 
-// Col3f = float + Col3f;
-/** \cond */
-#define MATH_COL3_S_PRE_PLUS()                  \
-    {                                           \
-        result.r = p0 + p1.r;                   \
-        result.g = p0 + p1.g;                   \
-        result.b = p0 + p1.b;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar addition (scalar + Col3)
-MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, float, Col3f, MATH_COL3_S_PRE_PLUS())
-/// @}
+// Col3f = float + Col3f
+inline varying Col3f operator+(const varying float f, const varying Col3f c)
+{
+    return Col3f_ctor(f) + c;
+}
 
-// Col3f = Col3f + float;
-/** \cond */
-#define MATH_COL3_S_POST_PLUS()                 \
-    {                                           \
-        result.r = p0.r + p1;                   \
-        result.g = p0.g + p1;                   \
-        result.b = p0.b + p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar addition (Col3d + scalar)
-MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, Col3f, float, MATH_COL3_S_POST_PLUS())
-/// @}
+// Col3f = Col3f + float
+inline uniform Col3f operator+(const uniform Col3f c, const uniform float f)
+{
+    return f + c;
+}
 
+// Col3f = Col3f + float
+inline varying Col3f operator+(const varying Col3f c, const varying float f)
+{
+    return f + c;
+}
 
-// Col3f = Col3f + Col3f;
-/** \cond */
-#define MATH_COL3_PLUS()                        \
-    {                                           \
-        result.r = p0.r + p1.r;                 \
-        result.g = p0.g + p1.g;                 \
-        result.b = p0.b + p1.b;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise addition of 2 colors
-MATH_DEFINE_BINARY_VARIFORM(operator+, Col3f, Col3f, Col3f, MATH_COL3_PLUS())
+// Col3f = Col3f - Col3f
+inline uniform Col3f operator-(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(c0.r-c1.r, c0.g-c1.g, c0.b-c1.b);
+}
 
-// Col3f = float * Col3f;
-/** \cond */
-#define MATH_COL3_S_PRE_MULT()                  \
-    {                                           \
-        result.r = p0 * p1.r;                   \
-        result.g = p0 * p1.g;                   \
-        result.b = p0 * p1.b;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication (scalar * Col3)
-MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, float, Col3f, MATH_COL3_S_PRE_MULT())
-/// @}
+// Col3f = Col3f - Col3f
+inline varying Col3f operator-(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(c0.r-c1.r, c0.g-c1.g, c0.b-c1.b);
+}
 
-// Col3f = Col3f * float;
-/** \cond */
-#define MATH_COL3_S_POST_MULT()                 \
-    {                                           \
-        result.r = p0.r * p1;                   \
-        result.g = p0.g * p1;                   \
-        result.b = p0.b * p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication (Col3d * scalar)
-MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, Col3f, float, MATH_COL3_S_POST_MULT())
-/// @}
+// Col3f = float - Col3f
+inline uniform Col3f operator-(const uniform float f, const uniform Col3f c)
+{
+    return Col3f_ctor(f) - c;
+}
 
+// Col3f = float - Col3f
+inline varying Col3f operator-(const varying float f, const varying Col3f c)
+{
+    return Col3f_ctor(f) - c;
+}
 
-// Col3f = Col3f * Col3f;
-/** \cond */
-#define MATH_COL3_MULT()                        \
-    {                                           \
-        result.r = p0.r * p1.r;                 \
-        result.g = p0.g * p1.g;                 \
-        result.b = p0.b * p1.b;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise multiplication of 2 colors
-MATH_DEFINE_BINARY_VARIFORM(operator*, Col3f, Col3f, Col3f, MATH_COL3_MULT())
+// Col3f = Col3f - float
+inline uniform Col3f operator-(const uniform Col3f c, const uniform float f)
+{
+    return c - Col3f_ctor(f);
+}
 
-// Col3f = float / Col3f;
-/** \cond */
-#define MATH_COL3_S_PRE_DIV()                   \
-    {                                           \
-        result.r = p0 / p1.r;                   \
-        result.g = p0 / p1.g;                   \
-        result.b = p0 / p1.b;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division (scalar / Col3)
-MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, float, Col3f, MATH_COL3_S_PRE_DIV())
-/// @}
+// Col3f = Col3f - float
+inline varying Col3f operator-(const varying Col3f c, const varying float f)
+{
+    return c - Col3f_ctor(f);
+}
 
-// Col3f = Col3f / float;
-/** \cond */
-#define MATH_COL3_S_POST_DIV()                  \
-    {                                           \
-        result.r = p0.r / p1;                   \
-        result.g = p0.g / p1;                   \
-        result.b = p0.b / p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication (Col3d * scalar)
-MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, Col3f, float, MATH_COL3_S_POST_DIV())
-/// @}
+// Col3f = Col3f * Col3f
+inline uniform Col3f operator*(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(c0.r*c1.r, c0.g*c1.g, c0.b*c1.b);
+}
 
+// Col3f = Col3f * Col3f
+inline varying Col3f operator*(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(c0.r*c1.r, c0.g*c1.g, c0.b*c1.b);
+}
 
-// Col3f = Col3f / Col3f;
-/** \cond */
-#define MATH_COL3_DIV()                         \
-    {                                           \
-        result.r = p0.r / p1.r;                 \
-        result.g = p0.g / p1.g;                 \
-        result.b = p0.b / p1.b;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise division of 2 colors
-MATH_DEFINE_BINARY_VARIFORM(operator/, Col3f, Col3f, Col3f, MATH_COL3_DIV())
+// Col3f = float * Col3f
+inline uniform Col3f operator*(const uniform float f, const uniform Col3f c)
+{
+    return Col3f_ctor(f) * c;
+}
 
-/// @}
+// Col3f = float * Col3f
+inline varying Col3f operator*(const varying float f, const varying Col3f c)
+{
+    return Col3f_ctor(f) * c;
+}
 
-// ---------------------------------------------------------------------------
-// Ternary Operations
-// ---------------------------------------------------------------------------
+// Col3f = Col3f * float
+inline uniform Col3f operator*(const uniform Col3f c, const uniform float f)
+{
+    return f * c;
+}
 
-// bool = isEqual(c1, c2, tol)
-/** \cond */
-#define MATH_COL3_IS_EQUAL()                    \
-    {                                           \
-        result = isEqual(p0.r, p1.r, p2) &&     \
-            isEqual(p0.g, p1.g, p2) &&          \
-            isEqual(p0.b, p1.b, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Col3s (p1, and p2) equal to within a specified tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Col3f, Col3f, float, MATH_COL3_IS_EQUAL())
-/// @}
-/// @{
-/// are two Col3s equal to within the default (sEpsilon) tolerance?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Col3f, Col3f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+// Col3f = Col3f * float
+inline varying Col3f operator*(const varying Col3f c, const varying float f)
+{
+    return f * c;
+}
 
-// bool = isEqualFixedEps(c1, c2, tol)
-/** \cond */
-#define MATH_COL3_IS_EQUAL_FIXED_EPS()                  \
-    {                                                   \
-        result = isEqualFixedEps(p0.r, p1.r, p2) &&     \
-            isEqualFixedEps(p0.g, p1.g, p2) &&          \
-            isEqualFixedEps(p0.b, p1.b, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Col3s (p1, and p2) equal to within a specified tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Col3f, Col3f, float,
-                             MATH_COL3_IS_EQUAL_FIXED_EPS())
-/// @}
-/// @{
-/// are two Col3s equal to within the default (sEpsilon) tolerance?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Col3f, Col3f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+// Col3f = Col3f / Col3f
+inline uniform Col3f operator/(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(c0.r/c1.r, c0.g/c1.g, c0.b/c1.b);
+}
 
-// Col3 c = clamp(c, low, high);
-/** \cond */
-#define MATH_COL3_CLAMP()                       \
-    {                                           \
-        result.r = clamp(p0.r, p1, p2);         \
-        result.g = clamp(p0.g, p1, p2);         \
-        result.b = clamp(p0.b, p1, p2);         \
-    }
-/** \endcond */
-/// @{
-/// clamp a Col3 between low (p1) and high (p2)
-MATH_DEFINE_TERNARY_VARIFORM(clamp, Col3f, Col3f, float, float,
-                             MATH_COL3_CLAMP())
-/// @}
+// Col3f = Col3f / Col3f
+inline varying Col3f operator/(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(c0.r/c1.r, c0.g/c1.g, c0.b/c1.b);
+}
 
-// Col3f
-/// @{
-/// lerp two Col3 (p0, p1) by a value (p2)
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Col3f, Col3f, Col3f, float, MATH_LERP())
+// Col3f = Col3f / float
+inline uniform Col3f operator/(const uniform Col3f c, const uniform float f)
+{
+    return c / Col3f_ctor(f);
+}
 
-// Col3f
-/// @{
-/// bilerp four Col3 (p0, p1, p2, p3) by two values (p4, p5)
-MATH_DEFINE_SENARY_VARIFORM(bilerp, Col3f, Col3f, Col3f, Col3f, Col3f, float, float, MATH_BILERP())
+// Col3f = Col3f / Col3f
+inline varying Col3f operator/(const varying Col3f c, const varying float f)
+{
+    return c / Col3f_ctor(f);
+}
 
-// Col3f = min(Col3f, Col3f)
-/** \cond */
-#define MATH_COL3_MIN()                         \
-    {                                           \
-        result.r = min(p0.r, p1.r);             \
-        result.g = min(p0.g, p1.g);             \
-        result.b = min(p0.b, p1.b);             \
-    }
-/** \endcond */
-/// @{
-/// compute the component-wise min of 2 col3
-MATH_DEFINE_BINARY_VARIFORM(min, Col3f, Col3f, Col3f, MATH_COL3_MIN())
-/// @}
+// Col3f rcp(Col3f)
+inline uniform Col3f rcp(const uniform Col3f c)
+{
+    return Col3f_ctor(rcp(c.r), rcp(c.g), rcp(c.b));
+}
 
-// Col3f = max(Col3f, Col3f)
-/** \cond */
-#define MATH_COL3_MAX()                         \
-    {                                           \
-        result.r = max(p0.r, p1.r);             \
-        result.g = max(p0.g, p1.g);             \
-        result.b = max(p0.b, p1.b);             \
-    }
-/** \endcond */
-/// @{
-/// compute the component-wise max of 2 col3
-MATH_DEFINE_BINARY_VARIFORM(max, Col3f, Col3f, Col3f, MATH_COL3_MAX())
-/// @}
+// Col3f rcp(Col3f)
+inline varying Col3f rcp(const varying Col3f c)
+{
+    return Col3f_ctor(rcp(c.r), rcp(c.g), rcp(c.b));
+}
 
-// Col3f = rcp(Col3f)
-/** \cond */
-#define MATH_COL3_RCP()                         \
-    {                                           \
-        result.r = rcp(p0.r);                   \
-        result.g = rcp(p0.g);                   \
-        result.b = rcp(p0.b);                   \
-    }
-/** \endcond */
-/// @{
-/// compute the reciprocal of a Col3
-MATH_DEFINE_UNARY_VARIFORM(rcp, Col3f, Col3f, MATH_COL3_RCP())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
 
-// Col3f = sqrt(Col3f)
-/** \cond */
-#define MATH_COL3_SQRT()                        \
-    {                                           \
-        result.r = sqrt(p0.r);                  \
-        result.g = sqrt(p0.g);                  \
-        result.b = sqrt(p0.b);                  \
-    }
-/** \endcond */
-/// @{
-/// compute the component-wise sqrt of a Col3
-MATH_DEFINE_UNARY_VARIFORM(sqrt, Col3f, Col3f, MATH_COL3_SQRT())
+// bool isEqual(Col3f, Col3f, tol)
+inline uniform bool isEqual(const uniform Col3f c0, const uniform Col3f c1, const uniform float tol)
+{
+    return isEqual(c0.r, c1.r, tol) && isEqual(c0.g, c1.g, tol) && isEqual(c0.b, c1.b, tol);
+}
 
-// Col3f = log(Col3f)
-/** \cond */
-#define MATH_COL3_LOG()                        \
-    {                                          \
-        result.r = log(p0.r);                  \
-        result.g = log(p0.g);                  \
-        result.b = log(p0.b);                  \
-    }
-/** \endcond */
-/// @{
-/// compute the component-wise sqrt of a Col3
-MATH_DEFINE_UNARY_VARIFORM(log, Col3f, Col3f, MATH_COL3_LOG())
+// bool isEqual(Col3f, Col3f, tol)
+inline varying bool isEqual(const varying Col3f c0, const varying Col3f c1, const varying float tol)
+{
+    return isEqual(c0.r, c1.r, tol) && isEqual(c0.g, c1.g, tol) && isEqual(c0.b, c1.b, tol);
+}
 
-/// @}
+// bool isEqual(Col3f, Col3f)
+inline uniform bool isEqual(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return isEqual(c0, c1, sEpsilon);
+}
 
-// float = luminance(Col3f)
-/** \cond */
-#define MATH_COL3_LUMINANCE()                              \
-    {                                                      \
-        result = 0.299f*p0.r + 0.587f*p0.g + 0.114f*p0.b;  \
-    }
-/** \endcond */
-/// @{
-/// compute the luminance of a Col3
-MATH_DEFINE_UNARY_VARIFORM(luminance, float, Col3f, MATH_COL3_LUMINANCE())
-/// @}
+// bool isEqual(Col3f, Col3f)
+inline varying bool isEqual(const varying Col3f c0, const varying Col3f c1)
+{
+    return isEqual(c0, c1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Col3f, Col3f, tol)
+inline uniform bool isEqualFixedEps(const uniform Col3f c0, const uniform Col3f c1, const uniform float tol)
+{
+    return isEqualFixedEps(c0.r, c1.r, tol) && isEqualFixedEps(c0.g, c1.g, tol) && isEqualFixedEps(c0.b, c1.b, tol);
+}
+
+// bool isEqualFixedEps(Col3f, Col3f, tol)
+inline varying bool isEqualFixedEps(const varying Col3f c0, const varying Col3f c1, const uniform float tol)
+{
+    return isEqualFixedEps(c0.r, c1.r, tol) && isEqualFixedEps(c0.g, c1.g, tol) && isEqualFixedEps(c0.b, c1.b, tol);
+}
+
+// bool isEqualFixedEps(Col3f, Col3f)
+inline uniform bool isEqualFixedEps(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return isEqualFixedEps(c0, c1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Col3f, Col3f)
+inline varying bool isEqualFixedEps(const varying Col3f c0, const varying Col3f c1)
+{
+    return isEqualFixedEps(c0, c1, sEpsilon);
+}
+
+// bool isBlack(Col3f)
+inline uniform bool isBlack(const uniform Col3f c)
+{
+    return isEqual(c, sBlack);
+}
+
+// bool isBlack(Col3f)
+inline varying bool isBlack(const varying Col3f c)
+{
+    return isEqual(c, sBlack);
+}
+
+// bool isWhite(Col3f)
+inline uniform bool isWhite(const uniform Col3f c)
+{
+    return isEqual(c, sWhite);
+}
+
+// bool isWhite(Col3f)
+inline varying bool isWhite(const varying Col3f c)
+{
+    return isEqual(c, sWhite);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Common math ops
+//--------------------------------------------------------------------------------------------------
+
+// Col3f min(Col3f, Col3f)
+inline uniform Col3f min(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(min(c0.r, c1.r), min(c0.g, c1.g), min(c0.b, c1.b));
+}
+
+// Col3f min(Col3f, Col3f)
+inline varying Col3f min(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(min(c0.r, c1.r), min(c0.g, c1.g), min(c0.b, c1.b));
+}
+
+// Col3f max(Col3f, Col3f)
+inline uniform Col3f max(const uniform Col3f c0, const uniform Col3f c1)
+{
+    return Col3f_ctor(max(c0.r, c1.r), max(c0.g, c1.g), max(c0.b, c1.b));
+}
+
+// Col3f max(Col3f, Col3f)
+inline varying Col3f max(const varying Col3f c0, const varying Col3f c1)
+{
+    return Col3f_ctor(max(c0.r, c1.r), max(c0.g, c1.g), max(c0.b, c1.b));
+}
+
+// Col3f clamp(Col3f c, float lo, float hi)
+inline uniform Col3f clamp(const uniform Col3f c, const uniform float lo, const uniform float hi)
+{
+    return min(max(c, Col3f_ctor(lo)), Col3f_ctor(hi));
+}
+
+// Col3f clamp(Col3f c, float lo, float hi)
+inline varying Col3f clamp(const varying Col3f c, const uniform float lo, const uniform float hi)
+{
+    return min(max(c, Col3f_ctor(lo)), Col3f_ctor(hi));
+}
+
+// Col3f lerp(Col3f, Col3f, float)
+inline uniform Col3f lerp(const uniform Col3f c0, const uniform Col3f c1, const uniform float t)
+{
+    return (1.0f - t) * c0 + t * c1;
+}
+
+// Col3f lerp(Col3f, Col3f, float)
+inline varying Col3f lerp(const varying Col3f c0, const varying Col3f c1, const varying float t)
+{
+    return (1.0f - t) * c0 + t * c1;
+}
+
+// Col3f bilerp(Col3f, Col3f, Col3f, Col3f, float, float)
+inline uniform Col3f bilerp(const uniform Col3f c00, const uniform Col3f c01,
+                            const uniform Col3f c10, const uniform Col3f c11,
+                            const uniform float s, const uniform float t)
+{
+    return lerp(lerp(c00, c01, s), lerp(c10, c11, s), t);
+}
+
+// Col3f bilerp(Col3f, Col3f, Col3f, Col3f, float, float)
+inline varying Col3f bilerp(const varying Col3f c00, const varying Col3f c01,
+                            const varying Col3f c10, const varying Col3f c11,
+                            const varying float s, const varying float t)
+{
+    return lerp(lerp(c00, c01, s), lerp(c10, c11, s), t);
+}
+
+// Col3f sqrt(Col3f)
+inline uniform Col3f sqrt(const uniform Col3f c)
+{
+    return Col3f_ctor(sqrt(c.r), sqrt(c.g), sqrt(c.b));
+}
+
+// Col3f sqrt(Col3f)
+inline varying Col3f sqrt(const varying Col3f c)
+{
+    return Col3f_ctor(sqrt(c.r), sqrt(c.g), sqrt(c.b));
+}
+
+// Col3f log(Col3f)
+inline uniform Col3f log(const uniform Col3f c)
+{
+    return Col3f_ctor(log(c.r), log(c.g), log(c.b));
+}
+
+// Col3f log(Col3f)
+inline varying Col3f log(const varying Col3f c)
+{
+    return Col3f_ctor(log(c.r), log(c.g), log(c.b));
+}
+
+// float luminance(Col3f)
+inline uniform float luminance(const uniform Col3f c)
+{
+    return 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+}
+
+// float luminance(Col3f)
+inline varying float luminance(const varying Col3f c)
+{
+    return 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+}
 

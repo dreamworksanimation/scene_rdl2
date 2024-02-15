@@ -8,381 +8,390 @@
 
 #include "Constants.isph"
 #include "Math.isph"
-#include "Variform.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// Vec2f;
-#define MATH_DECLARE_VEC2(TYPE, NAME)           \
-    struct NAME                                 \
-    {                                           \
-        TYPE x;                                 \
-        TYPE y;                                 \
-    };
-/// @struct Vec2f
-/// @brief a 2 component, single precision, x-y vector
-MATH_DECLARE_VEC2(float, Vec2f);
+struct Vec2f
+{
+    float x;
+    float y;
+};
 
-// ---------------------------------------------------------------------------
-// Construction
-// ---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Vec2f = Vec2f_ctor(float);
-/** \cond */
-#define MATH_VEC2_CTOR_1()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p0;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec2 from a single number
-MATH_DEFINE_UNARY_VARIFORM(Vec2f_ctor, Vec2f, float, MATH_VEC2_CTOR_1())
-/// @}
+// Vec2f = {x, y}
+inline uniform Vec2f Vec2f_ctor(const uniform float x, const uniform float y)
+{
+    uniform Vec2f result;
+    result.x = x;
+    result.y = y;
+    return result;
+}
 
-// Vec2f = Vec2f_ctor(float, float);
-/** \cond */
-#define MATH_VEC2_CTOR_2()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p1;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec2 from 2 numbers
-MATH_DEFINE_BINARY_VARIFORM(Vec2f_ctor, Vec2f, float, float, MATH_VEC2_CTOR_2())
-/// @}
+// Vec2f = {x, y}
+inline varying Vec2f Vec2f_ctor(const varying float x, const varying float y)
+{
+    varying Vec2f result;
+    result.x = x;
+    result.y = y;
+    return result;
+}
 
-// Vec2f = Vec2f_ctor(float * uniform);
-/** \cond */
-#define MATH_VEC2_CTOR_ARRAY()                  \
-    {                                           \
-        result.x = p0[0];                       \
-        result.y = p0[1];                       \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec2 from an array
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec2f_ctor, Vec2f, float, MATH_VEC2_CTOR_ARRAY())
-/// @}
+// Vec2f = {f, f}
+inline uniform Vec2f Vec2f_ctor(const uniform float f)
+{
+    return Vec2f_ctor(f, f);
+}
 
-// ---------------------------------------------------------------------------
-// Binary Operators
-// ---------------------------------------------------------------------------
+// Vec2f = {f, f}
+inline varying Vec2f Vec2f_ctor(const varying float f)
+{
+    return Vec2f_ctor(f, f);
+}
 
-//  Vec2f = Vec2f + Vec2f;
-/** \cond */
-#define MATH_VEC2_PLUS()                        \
-    {                                           \
-        result.x = p0.x + p1.x;                 \
-        result.y = p0.y + p1.y;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise add p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Vec2f, Vec2f, Vec2f, MATH_VEC2_PLUS())
-/// @}
+// Vec2f = {a[0], a[1]}
+inline uniform Vec2f Vec2f_ctor(const uniform float a[])
+{
+    return Vec2f_ctor(a[0], a[1]);
+}
 
-// Vec2f = Vec2f - Vec2f;
-/** \cond */
-#define MATH_VEC2_MINUS()                       \
-    {                                           \
-        result.x = p0.x - p1.x;                 \
-        result.y = p0.y - p1.y;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise subtraction p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Vec2f, Vec2f, Vec2f, MATH_VEC2_MINUS())
-/// @}
+// Vec2f = {a[0], a[1]}
+inline varying Vec2f Vec2f_ctor(const varying float a[])
+{
+    return Vec2f_ctor(a[0], a[1]);
+}
 
-// Vec2f = float * Vec2f;
-/** \cond */
-#define MATH_VEC2_S_PRE_MULT()                  \
-    {                                           \
-        result.x = p0 * p1.x;                   \
-        result.y = p0 * p1.y;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, float, Vec2f, MATH_VEC2_S_PRE_MULT())
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
 
-// Vec2f = Vec2f * float;
-/** \cond */
-#define MATH_VEC2_S_POST_MULT()                 \
-    {                                           \
-        result.x = p0.x * p1;                   \
-        result.y = p0.y * p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, Vec2f, float, MATH_VEC2_S_POST_MULT())
-/// @}
+//  Vec2f = Vec2f + Vec2f
+inline uniform Vec2f operator+(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(v0.x+v1.x, v0.y+v1.y);
+}
 
-// Vec2f = Vec2f * Vec2f;
-/** \cond */
-#define MATH_VEC2_MULT()                        \
-    {                                           \
-        result.x = p0.x * p1.x;                 \
-        result.y = p0.y * p1.y;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise multiplication p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec2f, Vec2f, Vec2f, MATH_VEC2_MULT())
-/// @}
+//  Vec2f = Vec2f + Vec2f
+inline varying Vec2f operator+(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(v0.x+v1.x, v0.y+v1.y);
+}
 
-// Vec2f = float / Vec2f;
-/** \cond */
-#define MATH_VEC2_S_PRE_DIV()                   \
-    {                                           \
-        result.x = p0 / p1.x;                   \
-        result.y = p0 / p1.y;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, float, Vec2f, MATH_VEC2_S_PRE_DIV())
-/// @}
+//  Vec2f = Vec2f - Vec2f
+inline uniform Vec2f operator-(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(v0.x-v1.x, v0.y-v1.y);
+}
 
-// Vec2f = Vec2f / float;
-/** \cond */
-#define MATH_VEC2_S_POST_DIV()                  \
-    {                                           \
-        result.x = p0.x / p1;                   \
-        result.y = p0.y / p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division p0/ p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, Vec2f, float, MATH_VEC2_S_POST_DIV())
-/// @}
+//  Vec2f = Vec2f - Vec2f
+inline varying Vec2f operator-(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(v0.x-v1.x, v0.y-v1.y);
+}
 
-// Vec2f = Vec2f / Vec2f;
-/** \cond */
-#define MATH_VEC2_DIV()                         \
-    {                                           \
-        result.x = p0.x / p1.x;                 \
-        result.y = p0.y / p1.y;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise division of 2 Vec2
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec2f, Vec2f, Vec2f, MATH_VEC2_DIV())
-/// @}
+// Vec2f = -Vec2f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline uniform Vec2f neg(const uniform Vec2f v)
+{
+    return Vec2f_ctor(-v.x, -v.y);
+}
 
-// bool = isEqual(Vec2f, Vec2f, tol)
-/** \cond */
-#define MATH_VEC2_IS_EQUAL()                                            \
-    {                                                                   \
-        result = isEqual(p0.x, p1.x, p2) && isEqual(p0.y, p1.y, p2);    \
-    }
-/** \endcond */
-/// @{
-/// are two Vec2s equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Vec2f, Vec2f, float, MATH_VEC2_IS_EQUAL())
-/// @}
+// Vec2f = -Vec2f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline varying Vec2f neg(const varying Vec2f v)
+{
+    return Vec2f_ctor(-v.x, -v.y);
+}
 
-// bool = isEqual(Vec2f, Vec2f);
-/// @{
-/// are two Vec2s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec2f, Vec2f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+//  Vec2f = float * Vec2f
+inline uniform Vec2f operator*(const uniform float f, const uniform Vec2f v)
+{
+    return Vec2f_ctor(f*v.x, f*v.y);
+}
 
-// bool = isEqualFixedEps(Vec2f, Vec2f, tol)
-/** \cond */
-#define MATH_VEC2_IS_EQUAL_FIXED_EPS()                                  \
-    {                                                                   \
-        result = isEqualFixedEps(p0.x, p1.x, p2) && isEqualFixedEps(p0.y, p1.y, p2); \
-    }
-/** \endcond */
-/// @{
-/// are two Vec2s equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Vec2f, Vec2f, float, MATH_VEC2_IS_EQUAL_FIXED_EPS())
-/// @}
+//  Vec2f = float * Vec2f
+inline varying Vec2f operator*(const varying float f, const varying Vec2f v)
+{
+    return Vec2f_ctor(f*v.x, f*v.y);
+}
 
-// bool = isEqualFixedEps(Vec2f, Vec2f);
-/// @{
-/// are two Vec2s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec2f, Vec2f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+//  Vec2f = Vec2f * float
+inline uniform Vec2f operator*(const uniform Vec2f v, const uniform float f)
+{
+    return f * v;
+}
 
-// bool = isZero(Vec2f, tol)
-/** \cond */
-#define MATH_VEC2_IS_ZERO()                             \
-    {                                                   \
-        result = isZero(p0.x, p1) && isZero(p0.y, p1);  \
-    }
-/** \endcond */
-/// @{
-/// is a Vec2 equal to zero within a tolerance (p2) ?
-MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Vec2f, float, MATH_VEC2_IS_ZERO())
-/// @}
+//  Vec2f = Vec2f * float
+inline varying Vec2f operator*(const varying Vec2f v, const varying float f)
+{
+    return f * v;
+}
 
-// bool = isZero(Vec2f);
-/// @{
-/// is a Vec2 equal to zero within the default tolerance (sEpsilon)?
-MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec2f,
-                           { result = isZero(p0, sEpsilon); })
-/// @}
+//  Vec2f = Vec2f * Vec2f
+inline uniform Vec2f operator*(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(v0.x*v1.x, v0.y*v1.y);
+}
 
-// float = dot(Vec2f, Vec2f)
-/** \cond */
-#define MATH_VEC2_DOT()                         \
-    {                                           \
-        result = p0.x * p1.x + p0.y * p1.y;     \
-    }
-/** \endcond */
-/// @{
-/// compute the dot product of 2 Vec2
-MATH_DEFINE_BINARY_VARIFORM(dot, float, Vec2f, Vec2f, MATH_VEC2_DOT())
-/// @}
+//  Vec2f = Vec2f * Vec2f
+inline varying Vec2f operator*(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(v0.x*v1.x, v0.y*v1.y);
+}
 
-// Vec3f = max(Vec2f, Vec2f)
-/** \cond */
-#define MATH_VEC2_MAX()                \
-    {                                  \
-        result.x = max(p0.x, p1.x);    \
-        result.y = max(p0.y, p1.y);    \
-    }
-/** \endcond */
-/// @{
-/// compute the element-wise max of two Vec2f
-MATH_DEFINE_BINARY_VARIFORM(max, Vec2f, Vec2f, Vec2f, MATH_VEC2_MAX())
-/// @}
+//  Vec2f = float / Vec2f
+inline uniform Vec2f operator/(const uniform float f, const uniform Vec2f v)
+{
+    return Vec2f_ctor(f/v.x, f/v.y);
+}
 
-// Vec2f = min(Vec2f, Vec2f)
-/** \cond */
-#define MATH_VEC2_MIN()                \
-    {                                  \
-        result.x = min(p0.x, p1.x);    \
-        result.y = min(p0.y, p1.y);    \
-    }
-/** \endcond */
-/// @{
-/// compute the element-wise min of two Vec2f
-MATH_DEFINE_BINARY_VARIFORM(min, Vec2f, Vec2f, Vec2f, MATH_VEC2_MIN())
-/// @}
+//  Vec2f = float / Vec2f
+inline varying Vec2f operator/(const varying float f, const varying Vec2f v)
+{
+    return Vec2f_ctor(f/v.x, f/v.y);
+}
 
-//----------------------------------------------------------------------
-// unary operations
-//----------------------------------------------------------------------
+//  Vec2f = Vec2f / float
+inline uniform Vec2f operator/(const uniform Vec2f v, const uniform float f)
+{
+    return Vec2f_ctor(v.x/f, v.y/f);
+}
 
-// float = length(Vec2f);
-/** \cond */
-#define MATH_VEC2_LENGTH()                              \
-    {                                                   \
-        result = sqrt(p0.x * p0.x + p0.y * p0.y);       \
-    }
-/** \endcond */
-/// @{
-/// compute the length of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(length, float, Vec2f, MATH_VEC2_LENGTH())
-/// @}
+//  Vec2f = Vec2f / float
+inline varying Vec2f operator/(const varying Vec2f v, const varying float f)
+{
+    return Vec2f_ctor(v.x/f, v.y/f);
+}
 
-// float = lengthSqr(Vec2f);
-/** \cond */
-#define MATH_VEC2_LENGTH_SQR()                  \
-    {                                           \
-        result = p0.x * p0.x + p0.y * p0.y;     \
-    }
-/** \endcond */
-/// @{
-/// compute the length^2 of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(lengthSqr, float, Vec2f, MATH_VEC2_LENGTH_SQR())
-/// @}
+//  Vec2f = Vec2f / Vec2f
+inline uniform Vec2f operator/(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(v0.x/v1.x, v0.y/v1.y);
+}
 
-// Vec2f = normalize(Vec2f)
-/** \cond */
-#define MATH_VEC2_NORMALIZE()                   \
-    {                                           \
-        result = p0 * rcp(length(p0));          \
-    }
-/** \endcond */
-/// @{
-/// compute a normalized Vec2
-MATH_DEFINE_UNARY_VARIFORM(normalize, Vec2f, Vec2f, MATH_VEC2_NORMALIZE())
-/// @}
+//  Vec2f = Vec2f / Vec2f
+inline varying Vec2f operator/(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(v0.x/v1.x, v0.y/v1.y);
+}
 
-// Vec2f = abs(Vec2f)
-/** \cond */
-#define MATH_VEC2_ABS()                         \
-    {                                           \
-        result.x = abs(p0.x);                   \
-        result.y = abs(p0.y);                   \
-    }
-/** \endcond */
-/// @{
-/// compute absolute value of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(abs, Vec2f, Vec2f, MATH_VEC2_ABS())
-/// @}
+// Vec2f rcp(Vec2f)
+inline uniform Vec2f rcp(const uniform Vec2f v)
+{
+    return Vec2f_ctor(rcp(v.x), rcp(v.y));
+}
 
-// Vec2f = neg(Vec2f)
-/** \cond */
-#define MATH_VEC2_NEG()                         \
-    {                                           \
-        result = -1.0 * p0;                     \
-    }
-/** \endcond */
-/// @{
-/// compute negative value of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(neg, Vec2f, Vec2f, MATH_VEC2_NEG())
-/// @}
+// Vec2f rcp(Vec2f)
+inline varying Vec2f rcp(const varying Vec2f v)
+{
+    return Vec2f_ctor(rcp(v.x), rcp(v.y));
+}
 
-// Vec2f = rcp(Vec2f)
-/** \cond */
-#define MATH_VEC2_RCP()                         \
-    {                                           \
-        result.x = rcp(p0.x);                   \
-        result.y = rcp(p0.y);                   \
-    }
-/** \endcond */
-/// @{
-/// compute the reciprocal of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(rcp, Vec2f, Vec2f, MATH_VEC2_RCP())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
 
-// bool = isNormalized(Vec2f)
-/** \cond */
-#define MATH_VEC2_IS_NORMALIZED()                       \
-    {                                                   \
-        result = isNormalizedLengthSqr(lengthSqr(p0));  \
-    }
-/** \endcond */
-/// @{
-/// is a Vec2 normalized?
-MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec2f, MATH_VEC2_IS_NORMALIZED())
-/// @}
+// bool isEqual(Vec2f, Vec2f, tol)
+inline uniform bool isEqual(const uniform Vec2f v0, const uniform Vec2f v1, const uniform float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol);
+}
 
-// ---------------------------------------------------------------------------
-// Ternary Operations
-// ---------------------------------------------------------------------------
+// bool isEqual(Vec2f, Vec2f, tol)
+inline varying bool isEqual(const varying Vec2f v0, const varying Vec2f v1, const varying float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol);
+}
 
-// Vec2f = lerp(Vec2f, Vec2f, float)
-/// @{
-/// lerp two Vec2f (p0, and p1) by a value (p2)
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec2f, Vec2f, Vec2f, float, MATH_LERP())
-/// @}
+// bool isEqual(Vec2f, Vec2f)
+inline uniform bool isEqual(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
 
-// bool = clamp(Vec2f, Vec2f, Vec2f)
-/** \cond */
-#define MATH_VEC2_CLAMP()                         \
-    {                                             \
-        result = max(p1, min(p2, p0));            \
-    }
-/** \endcond */
-/// @{
-/// clamp the value of p0 to the range [p1, p2], element-wise
-/// @param p0 input value
-/// @param p1 min value
-/// @param p2 max value
-/// @return clamped result
-MATH_DEFINE_TERNARY_VARIFORM(clamp, Vec2f, Vec2f, Vec2f, Vec2f, MATH_VEC2_CLAMP())
-/// @}
+// bool isEqual(Vec2f, Vec2f)
+inline varying bool isEqual(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Vec2f, Vec2f, tol)
+inline uniform bool isEqualFixedEps(const uniform Vec2f v0, const uniform Vec2f v1, const uniform float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol);
+}
+
+// bool isEqualFixedEps(Vec2f, Vec2f, tol)
+inline varying bool isEqualFixedEps(const varying Vec2f v0, const varying Vec2f v1, const varying float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol);
+}
+
+// bool isEqualFixedEps(Vec2f, Vec2f)
+inline uniform bool isEqualFixedEps(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Vec2f, Vec2f)
+inline varying bool isEqualFixedEps(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
+
+// bool isZero(Vec2f, tol)
+inline uniform bool isZero(const uniform Vec2f v, const uniform float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol);
+}
+
+// bool isZero(Vec2f, tol)
+inline varying bool isZero(const varying Vec2f v, const varying float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol);
+}
+
+// bool isZero(Vec2f)
+inline uniform bool isZero(const uniform Vec2f v)
+{
+    return isZero(v, sEpsilon);
+}
+
+// bool isZero(Vec2f)
+inline varying bool isZero(const varying Vec2f v)
+{
+    return isZero(v, sEpsilon);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Common vector ops
+//--------------------------------------------------------------------------------------------------
+
+// Vec2f min(Vec2f, Vec2f)
+inline uniform Vec2f min(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(min(v0.x, v1.x), min(v0.y, v1.y));
+}
+
+// Vec2f min(Vec2f, Vec2f)
+inline varying Vec2f min(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(min(v0.x, v1.x), min(v0.y, v1.y));
+}
+
+// Vec2f max(Vec2f, Vec2f)
+inline uniform Vec2f max(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return Vec2f_ctor(max(v0.x, v1.x), max(v0.y, v1.y));
+}
+
+// Vec2f max(Vec2f, Vec2f)
+inline varying Vec2f max(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return Vec2f_ctor(max(v0.x, v1.x), max(v0.y, v1.y));
+}
+
+// Vec2f clamp(Vec2f, Vec2f lo, Vec2f hi)
+inline uniform Vec2f clamp(const uniform Vec2f v, const uniform Vec2f lo, const uniform Vec2f hi)
+{
+    return min(max(v, lo), hi);
+}
+
+// Vec2f clamp(Vec2f, Vec2f lo, Vec2f hi)
+inline varying Vec2f clamp(const varying Vec2f v, const varying Vec2f lo, const varying Vec2f hi)
+{
+    return min(max(v, lo), hi);
+}
+
+// Vec2f abs(Vec2f, Vec2f)
+inline uniform Vec2f abs(const uniform Vec2f v)
+{
+    return Vec2f_ctor(abs(v.x), abs(v.y));
+}
+
+// Vec2f abs(Vec2f, Vec2f)
+inline varying Vec2f abs(const varying Vec2f v)
+{
+    return Vec2f_ctor(abs(v.x), abs(v.y));
+}
+
+// Vec2f lerp(Vec2f, Vec2f, float)
+inline uniform Vec2f lerp(const uniform Vec2f v0, const uniform Vec2f v1, const uniform float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+// Vec2f lerp(Vec2f, Vec2f, float)
+inline varying Vec2f lerp(const varying Vec2f v0, const varying Vec2f v1, const varying float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Length et al
+//--------------------------------------------------------------------------------------------------
+
+// float dot(Vec2f, Vec2f)
+inline uniform float dot(const uniform Vec2f v0, const uniform Vec2f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y;
+}
+
+// float dot(Vec2f, Vec2f)
+inline varying float dot(const varying Vec2f v0, const varying Vec2f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y;
+}
+
+// float lengthSqr(Vec2f)
+inline uniform float lengthSqr(const uniform Vec2f v)
+{
+    return dot(v, v);
+}
+
+// float lengthSqr(Vec2f)
+inline varying float lengthSqr(const varying Vec2f v)
+{
+    return dot(v, v);
+}
+
+// float length(Vec2f)
+inline uniform float length(const uniform Vec2f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// float length(Vec2f)
+inline varying float length(const varying Vec2f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// Vec2f normalize(Vec2f)
+inline uniform Vec2f normalize(const uniform Vec2f v)
+{
+    return v * rcp(length(v));
+}
+
+// Vec2f normalize(Vec2f)
+inline varying Vec2f normalize(const varying Vec2f v)
+{
+    return v * rcp(length(v));
+}
+
+// bool isNormalized(Vec2f)
+inline uniform bool isNormalized(const uniform Vec2f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
+
+// bool isNormalized(Vec2f)
+inline varying bool isNormalized(const varying Vec2f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
 

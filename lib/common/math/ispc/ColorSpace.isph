@@ -3,331 +3,311 @@
 
 /// @file ColorSpace.isph
 /// @brief Converts between HSV and RGB colors
-
 #pragma once
 
-#include "Variform.isph"
 #include "Col3.isph"
 
-// ---------------------------------------------------------------------------
-// "private" macros.
-// ---------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-// float = rgbToHue(color, chroma, maxChannelIndex)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_TERNARY_RGB_TO_HUE_L0_F()                                  \
-    struct { float h; }
+//--------------------------------------------------------------------------------------------------
+// float rgbToHue(color, chroma, maxChannelIndex)
+//--------------------------------------------------------------------------------------------------
 
-#define MATH_TERNARY_RGB_TO_HUE()                                       \
-    {                                                                   \
-        if (isZero(p1)) {                                               \
-            l0.h = 0.0f;                                                \
-        } else {                                                        \
-            switch (p2) {                                               \
-            case 0:                                                     \
-                l0.h = (p0.g - p0.b) / p1;                              \
-                break;                                                  \
-            case 1:                                                     \
-                l0.h = 2.0f + ((p0.b - p0.r) / p1);                     \
-                break;                                                  \
-            default:                                                    \
-                l0.h = 4.0f + ((p0.r - p0.g) / p1);                     \
-                break;                                                  \
-            }                                                           \
-            l0.h = l0.h * 60.0f;                                        \
-            l0.h = fmod(l0.h, 360.0f);                                  \
-            if (l0.h < 0.0f) {                                          \
-                l0.h = l0.h + 360.0f;                                   \
-            }                                                           \
-            l0.h = l0.h / 360.0f;                                       \
-        }                                                               \
-        result = l0.h;                                                  \
-    }
-/** \endcond */
-/**
- * @{
- * converts a color to its respective hue
- */
-MATH_DEFINE_TERNARY_VARIFORM_WITH_L(rgbToHue, float, Col3f, float, int,
-                                    MATH_TERNARY_RGB_TO_HUE_L0_F(),
-                                    MATH_TERNARY_RGB_TO_HUE())
-/** @} */
+#define RGB_TO_HUE(UV)                                  \
+{                                                       \
+    UV float h;                                         \
+    if (isZero(chroma)) {                               \
+        h = 0.0f;                                       \
+    } else {                                            \
+        switch (maxChannelIndex) {                      \
+        case 0:                                         \
+            h = (color.g - color.b) / chroma;           \
+            break;                                      \
+        case 1:                                         \
+            h = 2.0f + ((color.b - color.r) / chroma);  \
+            break;                                      \
+        default:                                        \
+            h = 4.0f + ((color.r - color.g) / chroma);  \
+            break;                                      \
+        }                                               \
+        h = h * 60.0f;                                  \
+        h = fmod(h, 360.0f);                            \
+        if (h < 0.0f) {                                 \
+            h = h + 360.0f;                             \
+        }                                               \
+        h = h / 360.0f;                                 \
+    }                                                   \
+    return h;                                           \
+}
 
-//----------------------------------------------------------------------------
-// int = maxRgbChannel(color)
-//----------------------------------------------------------------------------
-#define MATH_UNARY_MAX_RGB_CHANNEL_L0_F()                               \
-    struct { float maxChannel; }
+inline uniform float rgbToHue(const uniform Col3f color, const uniform float chroma, const uniform int maxChannelIndex)
+{
+    RGB_TO_HUE(uniform);
+}
 
-#define MATH_UNARY_MAX_RGB_CHANNEL()                                    \
-    {                                                                   \
-        l0.maxChannel = p0.r;                                           \
-        result = 0;                                                     \
-        if (p0.g > l0.maxChannel) {                                     \
-            l0.maxChannel = p0.g;                                       \
-            result = 1;                                                 \
-        }                                                               \
-        if (p0.b > l0.maxChannel) {                                     \
-            result = 2;                                                 \
-        }                                                               \
-    }
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(maxRgbChannel, int, Col3f,
-                                  MATH_UNARY_MAX_RGB_CHANNEL_L0_F(),
-                                  MATH_UNARY_MAX_RGB_CHANNEL())
+inline varying float rgbToHue(const varying Col3f color, const varying float chroma, const varying int maxChannelIndex)
+{
+    RGB_TO_HUE(varying);
+}
 
-// ---------------------------------------------------------------------------
-// public macros.
-// ---------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-// float = rgbToHue(color)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_UNARY_RGB_TO_HUE_L0_F()                                    \
-    struct { float h; float maxChannel; float minChannel;               \
-                float chroma; }
+//--------------------------------------------------------------------------------------------------
+// int maxRgbChannel(color)
+//--------------------------------------------------------------------------------------------------
 
-#define MATH_UNARY_RGB_TO_HUE()                                         \
-    {                                                                   \
-        l0.maxChannel = max(p0.r, max(p0.g, p0.b));                     \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                     \
-        l0.chroma = l0.maxChannel - l0.minChannel;                      \
-        if (isZero(l0.chroma)) {                                        \
-            l0.h = 0.0f;                                                \
-        } else {                                                        \
-            if (isEqual(l0.maxChannel, p0.r)) {                         \
-                l0.h = ((p0.g - p0.b) / l0.chroma);                     \
-            } else if (isEqual(l0.maxChannel, p0.g)) {                  \
-                l0.h = 2.0f + (p0.b - p0.r) / l0.chroma;                \
-            } else {                                                    \
-                l0.h = 4.0f + (p0.r - p0.g) / l0.chroma;                \
-            }                                                           \
-            l0.h = l0.h * 60.0f;                                        \
-            l0.h = fmod(l0.h, 360.0f);                                  \
-            if (l0.h < 0.0f) {                                          \
-                l0.h = l0.h + 360.0f;                                   \
-            }                                                           \
-            l0.h = l0.h / 360.0f;                                       \
-        }                                                               \
-        result = l0.h;                                                  \
-    }
-/** \endcond */
-/**
- * @{
- * converts a color to its respective hue
- */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHue, float, Col3f,
-                                  MATH_UNARY_RGB_TO_HUE_L0_F(),
-                                  MATH_UNARY_RGB_TO_HUE())
-/** @} */
+#define MAX_RGB_CHANNEL(UV)         \
+{                                   \
+    UV float maxChannel = color.r;  \
+    UV int result = 0;              \
+    if (color.g > maxChannel) {     \
+        maxChannel = color.g;       \
+        result = 1;                 \
+    }                               \
+    if (color.b > maxChannel) {     \
+        result = 2;                 \
+    }                               \
+    return result;                  \
+}
 
-//----------------------------------------------------------------------------
-// Col3f = rgbToHsv(rgb)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_UNARY_RGB_TO_HSV_L0_F()                                    \
-    struct { float h; float s; float v; int maxChannelIndex;            \
-             float maxChannel; float minChannel; float chroma; }
+inline uniform int maxRgbChannel(const uniform Col3f color)
+{
+    MAX_RGB_CHANNEL(uniform);
+}
 
-#define MATH_UNARY_RGB_TO_HSV()                                         \
-    {                                                                   \
-        l0.maxChannelIndex = maxRgbChannel(p0);                         \
-        l0.maxChannel = p0.r;                                           \
-        if (l0.maxChannelIndex == 1) {                                  \
-            l0.maxChannel = p0.g;                                       \
-        } else if (l0.maxChannelIndex == 2) {                           \
-            l0.maxChannel = p0.b;                                       \
-        }                                                               \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                     \
-        l0.v = l0.maxChannel;                                           \
-        l0.chroma = l0.maxChannel - l0.minChannel;                      \
-        if (!isZero(l0.maxChannel)) {                                   \
-            l0.s = l0.chroma / l0.maxChannel;                           \
-            l0.h = rgbToHue(p0, l0.chroma, l0.maxChannelIndex);         \
-        } else {                                                        \
-            l0.s = 0.f;                                                 \
-            l0.h = 0.f;                                                 \
-        }                                                               \
-        result = Col3f_ctor(l0.h, l0.s, l0.v);                          \
-    }
-/** \endcond */
-/**
- * @{
- * rgbToHsv color conversion
- */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsv, Col3f, Col3f,
-        MATH_UNARY_RGB_TO_HSV_L0_F(),
-        MATH_UNARY_RGB_TO_HSV())
-/** @} */
+inline varying int maxRgbChannel(const varying Col3f color)
+{
+    MAX_RGB_CHANNEL(varying);
+}
 
-//----------------------------------------------------------------------------
-// Col3f = rgbToHsl(rgb)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_UNARY_RGB_TO_HSL_L0_F()                                                \
-    struct { float h; float s; float l; int maxChannelIndex;                        \
-             float maxChannel; float minChannel; float chroma; }
+//--------------------------------------------------------------------------------------------------
+// float rgbToHue(color)
+//--------------------------------------------------------------------------------------------------
 
-#define MATH_UNARY_RGB_TO_HSL()                                                     \
-    {                                                                               \
-        l0.maxChannelIndex = maxRgbChannel(p0);                                     \
-        l0.maxChannel = p0.r;                                                       \
-        if (l0.maxChannelIndex == 1) {                                              \
-            l0.maxChannel = p0.g;                                                   \
-        } else if (l0.maxChannelIndex == 2) {                                       \
-            l0.maxChannel = p0.b;                                                   \
-        }                                                                           \
-        l0.minChannel = min(p0.r, min(p0.g, p0.b));                                 \
-        l0.l = (l0.maxChannel + l0.minChannel) * 0.5f;                              \
-        l0.chroma = l0.maxChannel - l0.minChannel;                                  \
-        if (isZero(l0.chroma)) {                                                    \
-            l0.h = 0.0f;                                                            \
-            l0.s = 0.0f;                                                            \
-        } else {                                                                    \
-            if (l0.l > 0.5) {                                                       \
-                if (isEqual(l0.maxChannel + l0.minChannel, 2.0f) ) {                \
-                    l0.s = 1.0f;                                                    \
-                } else {                                                            \
-                    l0.s = abs(l0.chroma / (2.0 - l0.maxChannel - l0.minChannel));  \
-                }                                                                   \
-            } else {                                                                \
-                if (l0.maxChannel + l0.minChannel <= 0) {                           \
-                    l0.s = l0.chroma;                                               \
-                } else {                                                            \
-                    l0.s = l0.chroma / (l0.maxChannel + l0.minChannel);             \
-                }                                                                   \
-            }                                                                       \
-            l0.h = rgbToHue(p0, l0.chroma, l0.maxChannelIndex);                     \
-        }                                                                           \
-        result = Col3f_ctor(l0.h, l0.s, l0.l);                                      \
-    }
-/** \endcond */
-/**
- * @{
- * rgbToHsv color conversion
- */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(rgbToHsl, Col3f, Col3f,
-        MATH_UNARY_RGB_TO_HSL_L0_F(),
-        MATH_UNARY_RGB_TO_HSL())
-/** @} */
+#define RGB_TO_HUE_1(UV)                                        \
+{                                                               \
+    UV float minChannel = min(color.r, min(color.g, color.b));  \
+    UV float maxChannel = max(color.r, max(color.g, color.b));  \
+    UV float chroma = maxChannel - minChannel;                  \
+    UV float h;                                                 \
+    if (isZero(chroma)) {                                       \
+        h = 0.0f;                                               \
+    } else {                                                    \
+        if (isEqual(maxChannel, color.r)) {                     \
+            h = ((color.g - color.b) / chroma);                 \
+        } else if (isEqual(maxChannel, color.g)) {              \
+            h = 2.0f + (color.b - color.r) / chroma;            \
+        } else {                                                \
+            h = 4.0f + (color.r - color.g) / chroma;            \
+        }                                                       \
+        h = h * 60.0f;                                          \
+        h = fmod(h, 360.0f);                                    \
+        if (h < 0.0f) {                                         \
+            h = h + 360.0f;                                     \
+        }                                                       \
+        h = h / 360.0f;                                         \
+    }                                                           \
+    return h;                                                   \
+}
 
-//----------------------------------------------------------------------------
-// Col3f = hsvToRgb(hsv)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_UNARY_HSV_TO_RGB_L0_F()                                    \
-    struct { float r; float g; float b; int sector;                     \
-             float h; float f; float p; float q; float t; }
+inline uniform float rgbToHue(const uniform Col3f color)
+{
+    RGB_TO_HUE_1(uniform);
+}
 
-#define MATH_UNARY_HSV_TO_RGB()                                         \
-    {                                                                   \
-        l0.h = p0.r;                                                    \
-        if (isZero(p0.g)) {                                             \
-            l0.r = l0.g = l0.b = p0.b;                                  \
-        } else {                                                        \
-            l0.h = fmod(l0.h, 1.0f);                                    \
-            if (l0.h < 0) {                                             \
-                l0.h = l0.h + 1.0f;                                     \
-            }                                                           \
-            l0.h = l0.h * 360.0f;                                       \
-            if (isEqual(l0.h, 360.0f)) {                                \
-                l0.h = 0.0f;                                            \
-            }                                                           \
-            l0.h = l0.h / 60.0f;                                        \
-            l0.sector = (int)l0.h;                                      \
-            l0.f = l0.h - l0.sector;                                    \
-            l0.p = p0.b * (1.0f - p0.g);                                \
-            l0.q = p0.b * (1.0f - p0.g * l0.f);                         \
-            l0.t = p0.b * (1.0f - p0.g * (1.0f - l0.f));                \
-            switch (l0.sector) {                                        \
-            case 0: l0.r = p0.b; l0.g = l0.t; l0.b = l0.p; break;       \
-            case 1: l0.r = l0.q; l0.g = p0.b; l0.b = l0.p; break;       \
-            case 2: l0.r = l0.p; l0.g = p0.b; l0.b = l0.t; break;       \
-            case 3: l0.r = l0.p; l0.g = l0.q; l0.b = p0.b; break;       \
-            case 4: l0.r = l0.t; l0.g = l0.p; l0.b = p0.b; break;       \
-            case 5: l0.r = p0.b; l0.g = l0.p; l0.b = l0.q; break;       \
-            default: l0.r = l0.p; l0.g = l0.p; l0.b = l0.p; break;      \
-            }                                                           \
-        }                                                               \
-        result = Col3f_ctor(l0.r, l0.g, l0.b);                          \
-    }
-/** \endcond */
-/**
- * @{
- * hsvToRgb color conversion
- */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(hsvToRgb, Col3f, Col3f,
-        MATH_UNARY_HSV_TO_RGB_L0_F(),
-        MATH_UNARY_HSV_TO_RGB())
-/** @} */
+inline varying float rgbToHue(const varying Col3f color)
+{
+    RGB_TO_HUE_1(varying);
+}
 
-//----------------------------------------------------------------------------
-// Col3f = hslToRgb(hsl)
-//----------------------------------------------------------------------------
-/** \cond */
-#define MATH_UNARY_HSL_TO_RGB_L0_F()                                                                \
-    struct { float r; float g; float b; int sector;                                                 \
-             float h; float f; float w; float p; float q; float t; }
+//--------------------------------------------------------------------------------------------------
+// Col3f rgbToHsv(rgb)
+//--------------------------------------------------------------------------------------------------
 
-#define MATH_UNARY_HSL_TO_RGB()                                                                     \
-    {                                                                                               \
-        l0.h = p0.r;                                                                                \
-        if (isZero(p0.g)) {                                                                         \
-            l0.r = l0.g = l0.b = p0.b;                                                              \
-        } else {                                                                                    \
-            l0.h = fmod(l0.h, 1.0f);                                                                \
-            if (l0.h < 0) {                                                                         \
-                l0.h = l0.h + 1.0f;                                                                 \
-            }                                                                                       \
-            l0.h = l0.h * 360.0f;                                                                   \
-            if (isEqual(l0.h, 360.0f)) {                                                            \
-                l0.h = 0.0f;                                                                        \
-            }                                                                                       \
-            l0.h = l0.h / 60.0f;                                                                    \
-            l0.sector = (int)l0.h;                                                                  \
-            l0.f = l0.h - l0.sector;                                                                \
-            if (p0.b < 0.5) {                                                                       \
-                l0.p = p0.b * (1.0f - p0.g);                                                        \
-                l0.w = p0.b * (1.0f + p0.g);                                                        \
-                l0.q = p0.b * (p0.g * (1.0f - 2.0f * l0.f) + 1.0f);                                 \
-                l0.t = p0.b * (p0.g * (2.0f * l0.f - 1.0f) + 1.0f);                                 \
-            } else {                                                                                \
-                l0.p = p0.b * (1.0f + p0.g) - p0.g;                                                 \
-                l0.w = p0.b * (1.0f - p0.g) + p0.g;                                                 \
-                l0.q = p0.b * (1.0f + p0.g * (2.0f * l0.f - 1.0f)) + p0.g * (1.0f - 2.0f * l0.f);   \
-                l0.t = p0.b * (1.0f + p0.g * (1.0f - 2.0f * l0.f)) + p0.g * (2.0f * l0.f - 1.0f);   \
-            }                                                                                       \
-            switch (l0.sector) {                                                                    \
-            case 0: l0.r = l0.w; l0.g = l0.t; l0.b = l0.p; break;                                   \
-            case 1: l0.r = l0.q; l0.g = l0.w; l0.b = l0.p; break;                                   \
-            case 2: l0.r = l0.p; l0.g = l0.w; l0.b = l0.t; break;                                   \
-            case 3: l0.r = l0.p; l0.g = l0.q; l0.b = l0.w; break;                                   \
-            case 4: l0.r = l0.t; l0.g = l0.p; l0.b = l0.w; break;                                   \
-            case 5: l0.r = l0.w; l0.g = l0.p; l0.b = l0.q; break;                                   \
-            default: l0.r = l0.p; l0.g = l0.p; l0.b = l0.p; break;                                  \
-            }                                                                                       \
-        }                                                                                           \
-        result = Col3f_ctor(l0.r, l0.g, l0.b);                                                      \
-    }
-/** \endcond */
-/**
- * @{
- * hsvToRgb color conversion
- */
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(hslToRgb, Col3f, Col3f,
-        MATH_UNARY_HSL_TO_RGB_L0_F(),
-        MATH_UNARY_HSL_TO_RGB())
-/** @} */
+#define RGB_TO_HSV(UV)                                      \
+{                                                           \
+    UV int maxChannelIndex = maxRgbChannel(rgb);            \
+    UV float minChannel = min(rgb.r, min(rgb.g, rgb.b));    \
+    UV float maxChannel = max(rgb.r, max(rgb.g, rgb.b));    \
+    UV float chroma = maxChannel - minChannel;              \
+    UV float h = 0.0f;                                      \
+    UV float s = 0.0f;                                      \
+    if (!isZero(maxChannel)) {                              \
+        h = rgbToHue(rgb, chroma, maxChannelIndex);         \
+        s = chroma / maxChannel;                            \
+    }                                                       \
+    UV float v = maxChannel;                                \
+    return Col3f_ctor(h, s, v);                             \
+} 
 
-//----------------------------------------------------------------------------
-// Col3f = hueToRgb(hue)
-//----------------------------------------------------------------------------
-/**
- * @{
- * converts a hue to its respective pure color with saturation and value set to 1
- */
-MATH_DEFINE_UNARY_VARIFORM(hueToRgb, Col3f, float,
-    { result = hsvToRgb(Col3f_ctor(p0, 1.f, 1.f)); })
-/** @} */
+inline uniform Col3f rgbToHsv(const uniform Col3f rgb)
+{
+    RGB_TO_HSV(uniform);
+}
 
+inline varying Col3f rgbToHsv(const varying Col3f rgb)
+{
+    RGB_TO_HSV(varying);
+} 
+
+//--------------------------------------------------------------------------------------------------
+// Col3f rgbToHsl(rgb)
+//--------------------------------------------------------------------------------------------------
+
+#define RGB_TO_HSL(UV)                                       \
+{                                                           \
+    UV int maxChannelIndex = maxRgbChannel(rgb);            \
+    UV float minChannel = min(rgb.r, min(rgb.g, rgb.b));    \
+    UV float maxChannel = max(rgb.r, max(rgb.g, rgb.b));    \
+    UV float chroma = maxChannel - minChannel;              \
+    UV float h = 0.0f;                                      \
+    UV float s = 0.0f;                                      \
+    UV float l = (maxChannel + minChannel) * 0.5f;          \
+    if (!isZero(chroma)) {                                  \
+        if (l > 0.5) {                                      \
+            if (isEqual(l, 1.0f) ) {                        \
+                s = 1.0f;                                   \
+            } else {                                        \
+                s = abs(chroma * 0.5f / (1.0f - l));        \
+            }                                               \
+        } else {                                            \
+            if (l <= 0) {                                   \
+                s = chroma;                                 \
+            } else {                                        \
+                s = chroma * 0.5f / l;                      \
+            }                                               \
+        }                                                   \
+        h = rgbToHue(rgb, chroma, maxChannelIndex);         \
+    }                                                       \
+    return Col3f_ctor(h, s, l);                             \
+}
+
+inline uniform Col3f rgbToHsl(const uniform Col3f rgb)
+{
+    RGB_TO_HSL(uniform);
+}
+
+inline varying Col3f rgbToHsl(const varying Col3f rgb)
+{
+    RGB_TO_HSL(varying);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Col3f hsvToRgb(hsv)
+//--------------------------------------------------------------------------------------------------
+
+#define HSV_TO_RGB(UV)                              \
+{                                                   \
+    UV float h = hsv.r;                             \
+    UV float s = hsv.g;                             \
+    UV float v = hsv.b;                             \
+    UV float r, g, b;                               \
+    if (isZero(s)) {                                \
+        r = g = b = v;                              \
+    } else {                                        \
+        h = fmod(h, 1.0f);                          \
+        if (h < 0) {                                \
+            h = h + 1.0f;                           \
+        }                                           \
+        h = h * 360.0f;                             \
+        if (isEqual(h, 360.0f)) {                   \
+            h = 0.0f;                               \
+        }                                           \
+        h = h / 60.0f;                              \
+        UV int sector = (UV int)h;                  \
+        UV float f = h - (UV float)sector;          \
+        UV float p = v * (1.0f - s);                \
+        UV float q = v * (1.0f - s * f);            \
+        UV float t = v * (1.0f - s * (1.0f - f));   \
+        switch (sector) {                           \
+        case 0:  r = v; g = t; b = p; break;        \
+        case 1:  r = q; g = v; b = p; break;        \
+        case 2:  r = p; g = v; b = t; break;        \
+        case 3:  r = p; g = q; b = v; break;        \
+        case 4:  r = t; g = p; b = v; break;        \
+        case 5:  r = v; g = p; b = q; break;        \
+        default: r = p; g = p; b = p; break;        \
+        }                                           \
+    }                                               \
+    return Col3f_ctor(r, g, b);                     \
+}
+
+inline uniform Col3f hsvToRgb(const uniform Col3f hsv)
+{
+    HSV_TO_RGB(uniform);
+}
+
+inline varying Col3f hsvToRgb(const varying Col3f hsv)
+{
+    HSV_TO_RGB(varying);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Col3f hslToRgb(hsl)
+//--------------------------------------------------------------------------------------------------
+
+#define HSL_TO_RGB(UV)                                                       \
+{                                                                           \
+    UV float h = hsl.r;                                                     \
+    UV float s = hsl.g;                                                     \
+    UV float l = hsl.b;                                                     \
+    UV float r, g, b;                                                       \
+    if (isZero(s)) {                                                        \
+        r = g = b = l;                                                      \
+    } else {                                                                \
+        h = fmod(h, 1.0f);                                                  \
+        if (h < 0) {                                                        \
+            h = h + 1.0f;                                                   \
+        }                                                                   \
+        h = h * 360.0f;                                                     \
+        if (isEqual(h, 360.0f)) {                                           \
+            h = 0.0f;                                                       \
+        }                                                                   \
+        h = h / 60.0f;                                                      \
+        UV int sector = (UV int)h;                                          \
+        UV float f = h - (UV float)sector;                                  \
+        UV float p, w, q, t;                                                \
+        if (l < 0.5) {                                                      \
+            p = l * (1.0f - s);                                             \
+            w = l * (1.0f + s);                                             \
+            q = l * (s * (1.0f - 2.0f * f) + 1.0f);                         \
+            t = l * (s * (2.0f * f - 1.0f) + 1.0f);                         \
+        } else {                                                            \
+            p = l * (1.0f + s) - s;                                         \
+            w = l * (1.0f - s) + s;                                         \
+            q = l * (1.0f + s * (2.0f * f - 1.0f)) + s * (1.0f - 2.0f * f); \
+            t = l * (1.0f + s * (1.0f - 2.0f * f)) + s * (2.0f * f - 1.0f); \
+        }                                                                   \
+        switch (sector) {                                                   \
+        case 0:  r = w; g = t; b = p; break;                                \
+        case 1:  r = q; g = w; b = p; break;                                \
+        case 2:  r = p; g = w; b = t; break;                                \
+        case 3:  r = p; g = q; b = w; break;                                \
+        case 4:  r = t; g = p; b = w; break;                                \
+        case 5:  r = w; g = p; b = q; break;                                \
+        default: r = p; g = p; b = p; break;                                \
+        }                                                                   \
+    }                                                                       \
+    return Col3f_ctor(r, g, b);                                             \
+}
+
+inline uniform Col3f hslToRgb(const uniform Col3f hsl)
+{
+    HSL_TO_RGB(uniform);
+}
+
+inline varying Col3f hslToRgb(const varying Col3f hsl)
+{
+    HSL_TO_RGB(varying);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Col3f hueToRgb(hue)
+//--------------------------------------------------------------------------------------------------
+
+inline uniform Col3f hueToRgb(const uniform float hue)
+{
+    return hsvToRgb(Col3f_ctor(hue, 1.0f, 1.0f));
+}
+
+inline varying Col3f hueToRgb(const varying float hue)
+{
+    return hsvToRgb(Col3f_ctor(hue, 1.0f, 1.0f));
+}
 

@@ -7,39 +7,51 @@
 #pragma once
 
 #include "Col3.isph"
-#include "Variform.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
-/// @typdef Color
-/// @brief Color is a simple alias to a Col3f
+//--------------------------------------------------------------------------------------------------
+
+// Color is a simple alias for Col3f
 typedef Col3f Color;
 
-//----------------------------------------------------------------------
-// Construction
-//----------------------------------------------------------------------
-// Color = Color_ctor(float);
-/// @{
-/// construct a Color from a single number
-MATH_DEFINE_UNARY_VARIFORM(Color_ctor, Color, float, { result = Col3f_ctor(p0); });
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Color = Color_ctor(float, float, float);
-/// @{
-/// construct a Color from 3 floats
-MATH_DEFINE_TERNARY_VARIFORM(Color_ctor, Color, float, float, float, { result = Col3f_ctor(p0, p1, p2); });
-/// @}
+// Color = {f, f, f}
+inline uniform Color Color_ctor(const uniform float f)
+{
+    return Col3f_ctor(f);
+}
 
-// Color = Color_ctor(float a[])
-/// @{
-/// construct a Color from float array
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Color_ctor, Color, float, { result = Col3f_ctor(p0); });
-/// @}
+// Color = {f, f, f}
+inline varying Color Color_ctor(const varying float f)
+{
+    return Col3f_ctor(f);
+}
 
+// Color = {r, g, b}
+inline uniform Color Color_ctor(const uniform float r, const uniform float g, const uniform float b)
+{
+    return Col3f_ctor(r, g, b);
+}
 
-// Convenience constants
-static const uniform Color sBlack = {0.0f, 0.0f, 0.0f};
-static const uniform Color sWhite = {1.0f, 1.0f, 1.0f};
+// Color = {r, g, b}
+inline varying Color Color_ctor(const varying float r, const varying float g, const varying float b)
+{
+    return Col3f_ctor(r, g, b);
+}
 
+// Color = {a[0], a[1], a[2]}
+inline uniform Color Color_ctor(const uniform float a[])
+{
+    return Col3f_ctor(a);
+}
+
+// Color = {a[0], a[1], a[2]}
+inline varying Color Color_ctor(const varying float a[])
+{
+    return Col3f_ctor(a);
+}
 

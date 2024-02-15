@@ -8,399 +8,420 @@
 
 #include "Constants.isph"
 #include "Math.isph"
-#include "Variform.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// Vec3f;
-#define MATH_DECLARE_VEC3(TYPE, NAME)           \
-    struct NAME                                 \
-    {                                           \
-        TYPE x;                                 \
-        TYPE y;                                 \
-        TYPE z;                                 \
-    };
-/// @struct Vec3f
-/// @brief a 3 component, single precision, x-y-z vector
-MATH_DECLARE_VEC3(float, Vec3f);
+struct Vec3f
+{
+    float x;
+    float y;
+    float z;
+};
 
-// ---------------------------------------------------------------------------
-// Construction
-// ---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Vec3f = Vec3f_ctor(float);
-/** \cond */
-#define MATH_VEC3_CTOR_1()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p0;                          \
-        result.z = p0;                          \
-    }
-/** \endcond */
-/// @{
-/// Construct a Vec3 from a single number
-MATH_DEFINE_UNARY_VARIFORM(Vec3f_ctor, Vec3f, float, MATH_VEC3_CTOR_1())
-/// @}
+// Vec3f = {x, y, z}
+inline uniform Vec3f Vec3f_ctor(const uniform float x, const uniform float y, const uniform float z)
+{
+    uniform Vec3f result;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+}
 
-// Vec3f = Vec3f_ctor(float, float, float);
-/** \cond */
-#define MATH_VEC3_CTOR_3()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p1;                          \
-        result.z = p2;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec3 from 3 numbers
-MATH_DEFINE_TERNARY_VARIFORM(Vec3f_ctor, Vec3f, float, float, float, MATH_VEC3_CTOR_3())
-/// @}
+// Vec3f = {x, y, z}
+inline varying Vec3f Vec3f_ctor(const varying float x, const varying float y, const varying float z)
+{
+    varying Vec3f result;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+}
 
-// Vec3f = Vec3f_ctor(float * uniform);
-/** \cond */
-#define MATH_VEC3_CTOR_ARRAY()                  \
-    {                                           \
-        result.x = p0[0];                       \
-        result.y = p0[1];                       \
-        result.z = p0[2];                       \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec3 from an array
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec3f_ctor, Vec3f, float, MATH_VEC3_CTOR_ARRAY())
-/// @}
+// Vec3f = {f, f, f}
+inline uniform Vec3f Vec3f_ctor(const uniform float f)
+{
+    return Vec3f_ctor(f, f, f);
+}
 
-// ---------------------------------------------------------------------------
-// Binary Operators
-// ---------------------------------------------------------------------------
+// Vec3f = {f, f, f}
+inline varying Vec3f Vec3f_ctor(const varying float f)
+{
+    return Vec3f_ctor(f, f, f);
+}
 
-//    Vec3f = Vec3f + Vec3f;
-/** \cond */
-#define MATH_VEC3_PLUS()                        \
-    {                                           \
-        result.x = p0.x + p1.x;                 \
-        result.y = p0.y + p1.y;                 \
-        result.z = p0.z + p1.z;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise add of 2 Vec3, p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Vec3f, Vec3f, Vec3f, MATH_VEC3_PLUS())
-/// @}
+// Vec3f = {a[0], a[1], a[2]}
+inline uniform Vec3f Vec3f_ctor(const uniform float a[])
+{
+    return Vec3f_ctor(a[0], a[1], a[2]);
+}
 
-// Vec3f = Vec3f - Vec3f;
-/** \cond */
-#define MATH_VEC3_MINUS()                       \
-    {                                           \
-        result.x = p0.x - p1.x;                 \
-        result.y = p0.y - p1.y;                 \
-        result.z = p0.z - p1.z;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise subtraction of 2 Vec3, p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Vec3f, Vec3f, Vec3f, MATH_VEC3_MINUS())
-/// @}
+// Vec3f = {a[0], a[1], a[2]}
+inline varying Vec3f Vec3f_ctor(const varying float a[])
+{
+    return Vec3f_ctor(a[0], a[1], a[2]);
+}
 
-// Vec3f = float * Vec3f;
-/** \cond */
-#define MATH_VEC3_S_PRE_MULT()                  \
-    {                                           \
-        result.x = p0 * p1.x;                   \
-        result.y = p0 * p1.y;                   \
-        result.z = p0 * p1.z;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, float, Vec3f, MATH_VEC3_S_PRE_MULT())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
 
-// Vec3f = Vec3f * float;
-/** \cond */
-#define MATH_VEC3_S_POST_MULT()                 \
-    {                                           \
-        result.x = p0.x * p1;                   \
-        result.y = p0.y * p1;                   \
-        result.z = p0.z * p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Vec3f, float, MATH_VEC3_S_POST_MULT())
-/// @}
+//  Vec3f = Vec3f + Vec3f
+inline uniform Vec3f operator+(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(v0.x+v1.x, v0.y+v1.y, v0.z+v1.z);
+}
 
-// Vec3f = Vec3f * Vec3f;
-/** \cond */
-#define MATH_VEC3_MULT()                        \
-    {                                           \
-        result.x = p0.x * p1.x;                 \
-        result.y = p0.y * p1.y;                 \
-        result.z = p0.z * p1.z;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise multiplication of 2 Vec3, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Vec3f, Vec3f, MATH_VEC3_MULT())
-/// @}
+//  Vec3f = Vec3f + Vec3f
+inline varying Vec3f operator+(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(v0.x+v1.x, v0.y+v1.y, v0.z+v1.z);
+}
 
-// Vec3f = float / Vec3f;
-/** \cond */
-#define MATH_VEC3_S_PRE_DIV()                   \
-    {                                           \
-        result.x = p0 / p1.x;                   \
-        result.y = p0 / p1.y;                   \
-        result.z = p0 / p1.z;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec3f, float, Vec3f, MATH_VEC3_S_PRE_DIV())
-/// @}
+//  Vec3f = Vec3f - Vec3f
+inline uniform Vec3f operator-(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(v0.x-v1.x, v0.y-v1.y, v0.z-v1.z);
+}
 
-// Vec3f = Vec3f / float;
-/** \cond */
-#define MATH_VEC3_S_POST_DIV()                  \
-    {                                           \
-        result.x = p0.x / p1;                   \
-        result.y = p0.y / p1;                   \
-        result.z = p0.z / p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec3f, Vec3f, float, MATH_VEC3_S_POST_DIV())
-/// @}
+//  Vec3f = Vec3f - Vec3f
+inline varying Vec3f operator-(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(v0.x-v1.x, v0.y-v1.y, v0.z-v1.z);
+}
 
-// Vec3f = Vec3f / Vec3f;
-/** \cond */
-#define MATH_VEC3_DIV()                         \
-    {                                           \
-        result.x = p0.x / p1.x;                 \
-        result.y = p0.y / p1.y;                 \
-        result.z = p0.z / p1.z;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise division of 2 Vec3, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec3f, Vec3f, Vec3f, MATH_VEC3_DIV())
-/// @}
+// Vec3f = -Vec3f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline uniform Vec3f neg(const uniform Vec3f v)
+{
+    return Vec3f_ctor(-v.x, -v.y, -v.z);
+}
 
-// bool isEqual(Vec3f, Vec3f, float)
-/** \cond */
-#define MATH_VEC3_IS_EQUAL()                    \
-    {                                           \
-        result = isEqual(p0.x, p1.x, p2) &&     \
-            isEqual(p0.y, p1.y, p2) &&          \
-            isEqual(p0.z, p1.z, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Vec3s (p0, p1) equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Vec3f, Vec3f, float, MATH_VEC3_IS_EQUAL())
-/// @}
+// Vec3f = -Vec3f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline varying Vec3f neg(const varying Vec3f v)
+{
+    return Vec3f_ctor(-v.x, -v.y, -v.z);
+}
+
+//  Vec3f = float * Vec3f
+inline uniform Vec3f operator*(const uniform float f, const uniform Vec3f v)
+{
+    return Vec3f_ctor(f*v.x, f*v.y, f*v.z);
+}
+
+//  Vec3f = float * Vec3f
+inline varying Vec3f operator*(const varying float f, const varying Vec3f v)
+{
+    return Vec3f_ctor(f*v.x, f*v.y, f*v.z);
+}
+
+//  Vec3f = Vec3f * float
+inline uniform Vec3f operator*(const uniform Vec3f v, const uniform float f)
+{
+    return f * v;
+}
+
+//  Vec3f = Vec3f * float
+inline varying Vec3f operator*(const varying Vec3f v, const varying float f)
+{
+    return f * v;
+}
+
+//  Vec3f = Vec3f * Vec3f
+inline uniform Vec3f operator*(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(v0.x*v1.x, v0.y*v1.y, v0.z*v1.z);
+}
+
+//  Vec3f = Vec3f * Vec3f
+inline varying Vec3f operator*(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(v0.x*v1.x, v0.y*v1.y, v0.z*v1.z);
+}
+
+//  Vec3f = float / Vec3f
+inline uniform Vec3f operator/(const uniform float f, const uniform Vec3f v)
+{
+    return Vec3f_ctor(f/v.x, f/v.y, f/v.z);
+}
+
+//  Vec3f = float / Vec3f
+inline varying Vec3f operator/(const varying float f, const varying Vec3f v)
+{
+    return Vec3f_ctor(f/v.x, f/v.y, f/v.z);
+}
+
+//  Vec3f = Vec3f / float
+inline uniform Vec3f operator/(const uniform Vec3f v, const uniform float f)
+{
+    return Vec3f_ctor(v.x/f, v.y/f, v.z/f);
+}
+
+//  Vec3f = Vec3f / float
+inline varying Vec3f operator/(const varying Vec3f v, const varying float f)
+{
+    return Vec3f_ctor(v.x/f, v.y/f, v.z/f);
+}
+
+//  Vec3f = Vec3f / Vec3f
+inline uniform Vec3f operator/(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(v0.x/v1.x, v0.y/v1.y, v0.z/v1.z);
+}
+
+//  Vec3f = Vec3f / Vec3f
+inline varying Vec3f operator/(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(v0.x/v1.x, v0.y/v1.y, v0.z/v1.z);
+}
+
+// Vec3f rcp(Vec3f)
+inline uniform Vec3f rcp(const uniform Vec3f v)
+{
+    return Vec3f_ctor(rcp(v.x), rcp(v.y), rcp(v.z));
+}
+
+// Vec3f rcp(Vec3f)
+inline varying Vec3f rcp(const varying Vec3f v)
+{
+    return Vec3f_ctor(rcp(v.x), rcp(v.y), rcp(v.z));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
+
+// bool isEqual(Vec3f, Vec3f, tol)
+inline uniform bool isEqual(const uniform Vec3f v0, const uniform Vec3f v1, const uniform float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol) && isEqual(v0.z, v1.z, tol);
+}
+
+// bool isEqual(Vec3f, Vec3f, tol)
+inline varying bool isEqual(const varying Vec3f v0, const varying Vec3f v1, const varying float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol) && isEqual(v0.z, v1.z, tol);
+}
 
 // bool isEqual(Vec3f, Vec3f)
-/// @{
-/// are two Vec3s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec3f, Vec3f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+inline uniform bool isEqual(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
 
-// bool isEqualFixedEps(Vec3f, Vec3f, float)
-/** \cond */
-#define MATH_VEC3_IS_EQUAL_FIXED_EPS()                  \
-    {                                                   \
-        result = isEqualFixedEps(p0.x, p1.x, p2) &&     \
-            isEqualFixedEps(p0.y, p1.y, p2) &&          \
-            isEqualFixedEps(p0.z, p1.z, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Vec3s (p0, p1) equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Vec3f, Vec3f, float, MATH_VEC3_IS_EQUAL_FIXED_EPS())
-/// @}
+// bool isEqual(Vec3f, Vec3f)
+inline varying bool isEqual(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Vec3f, Vec3f, tol)
+inline uniform bool isEqualFixedEps(const uniform Vec3f v0, const uniform Vec3f v1, const uniform float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol) && isEqualFixedEps(v0.z, v1.z, tol);
+}
+
+// bool isEqualFixedEps(Vec3f, Vec3f, tol)
+inline varying bool isEqualFixedEps(const varying Vec3f v0, const varying Vec3f v1, const varying float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol) && isEqualFixedEps(v0.z, v1.z, tol);
+}
 
 // bool isEqualFixedEps(Vec3f, Vec3f)
-/// @{
-/// are two Vec3s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec3f, Vec3f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+inline uniform bool isEqualFixedEps(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
 
-// bool = isZero(Vec3f, tol)
-/** \cond */
-#define MATH_VEC3_IS_ZERO()                                             \
-    {                                                                   \
-        result = isZero(p0.x, p1) && isZero(p0.y, p1) && isZero(p0.z, p1); \
-    }
-/** \endcond */
-/// @{
-/// is a Vec3 equal to zero within a tolerance (p2) ?
-MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Vec3f, float, MATH_VEC3_IS_ZERO())
-/// @}
+// bool isEqualFixedEps(Vec3f, Vec3f)
+inline varying bool isEqualFixedEps(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
 
-// bool = isZero(Vec3f);
-/// @{
-/// is a Vec3 equal to zero within the default tolerance (sEpsilon)?
-MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec3f,
-                           { result = isZero(p0, sEpsilon); })
-/// @}
+// bool isZero(Vec3f, tol)
+inline uniform bool isZero(const uniform Vec3f v, const uniform float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol) && isZero(v.z, tol);
+}
 
-// float = dot(Vec3f, Vec3f)
-/** \cond */
-#define MATH_VEC3_DOT()                                         \
-    {                                                           \
-        result = p0.x * p1.x + p0.y * p1.y + p0.z * p1.z;       \
-    }
-/** \endcond */
-/// @{
-/// compute the dot product of 2 Vec3
-MATH_DEFINE_BINARY_VARIFORM(dot, float, Vec3f, Vec3f, MATH_VEC3_DOT())
+// bool isZero(Vec3f, tol)
+inline varying bool isZero(const varying Vec3f v, const varying float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol) && isZero(v.z, tol);
+}
 
-/// @}
+// bool isZero(Vec3f)
+inline uniform bool isZero(const uniform Vec3f v)
+{
+    return isZero(v, sEpsilon);
+}
 
-// Vec3f = cross(Vec3f, Vec3f)
-/** \cond */
-#define MATH_VEC3_CROSS()                       \
-    {                                           \
-        result.x = p0.y * p1.z - p0.z * p1.y;   \
-        result.y = p0.z * p1.x - p0.x * p1.z;   \
-        result.z = p0.x * p1.y - p0.y * p1.x;   \
-    }
-/** \endcond */
-/// @{
-/// compute the cross product of 2 Vec3
-MATH_DEFINE_BINARY_VARIFORM(cross, Vec3f, Vec3f, Vec3f, MATH_VEC3_CROSS())
-/// @}
+// bool isZero(Vec3f)
+inline varying bool isZero(const varying Vec3f v)
+{
+    return isZero(v, sEpsilon);
+}
 
-// Vec3f = max(Vec3f, Vec3f)
-/** \cond */
-#define MATH_VEC3_MAX()                \
-    {                                  \
-        result.x = max(p0.x, p1.x);    \
-        result.y = max(p0.y, p1.y);    \
-        result.z = max(p0.z, p1.z);    \
-    }
-/** \endcond */
-/// @{
-/// compute the element-wise max of 2 Vec3
-MATH_DEFINE_BINARY_VARIFORM(max, Vec3f, Vec3f, Vec3f, MATH_VEC3_MAX())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Common vector ops
+//--------------------------------------------------------------------------------------------------
 
-//----------------------------------------------------------------------
-// unary operations
-//----------------------------------------------------------------------
+// Vec3f min(Vec3f, Vec3f)
+inline uniform Vec3f min(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z));
+}
 
-// float = length(Vec3f);
-/** \cond */
-#define MATH_VEC3_LENGTH()                                      \
-    {                                                           \
-        result = sqrt(p0.x * p0.x + p0.y * p0.y + p0.z * p0.z); \
-    }
-/** \endcond */
-/// @{
-/// compute the length of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(length, float, Vec3f, MATH_VEC3_LENGTH())
-/// @}
+// Vec3f min(Vec3f, Vec3f)
+inline varying Vec3f min(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z));
+}
 
-// float = lengthSqr(Vec3f);
-/** \cond */
-#define MATH_VEC3_LENGTH_SQR()                                  \
-    {                                                           \
-        result = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;       \
-    }
-/** \endcond */
-/// @{
-/// compute the length^2 of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(lengthSqr, float, Vec3f, MATH_VEC3_LENGTH_SQR())
-/// @}
+// Vec3f max(Vec3f, Vec3f)
+inline uniform Vec3f max(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z));
+}
 
-// Vec3f = normalize(Vec3f)
-/** \cond */
-#define MATH_VEC3_NORMALIZE()                   \
-    {                                           \
-        result = p0 * rcp(length(p0));          \
-    }
-/** \endcond */
-/// @{
-/// compute a normalized Vec3
-MATH_DEFINE_UNARY_VARIFORM(normalize, Vec3f, Vec3f, MATH_VEC3_NORMALIZE())
-/// @}
+// Vec3f max(Vec3f, Vec3f)
+inline varying Vec3f max(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z));
+}
 
-// Vec3f = abs(Vec3f)
-/** \cond */
-#define MATH_VEC3_ABS()                         \
-    {                                           \
-        result.x = abs(p0.x);                   \
-        result.y = abs(p0.y);                   \
-        result.z = abs(p0.z);                   \
-    }
-/** \endcond */
-/// @{
-/// compute absolute value of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(abs, Vec3f, Vec3f, MATH_VEC3_ABS())
-/// @}
+// float reduce_max(Vec3f)
+inline uniform float reduce_max(const uniform Vec3f v)
+{
+    return max(v.x, max(v.y, v.z));
+}
 
-// Vec3f = neg(Vec3f)
-/** \cond */
-#define MATH_VEC3_NEG()                         \
-    {                                           \
-        result = -1.0 * p0;                     \
-    }
-/** \endcond */
-/// @{
-/// compute negative value of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(neg, Vec3f, Vec3f, MATH_VEC3_NEG())
-/// @}
+// float reduce_max(Vec3f)
+inline varying float reduce_max(const varying Vec3f v)
+{
+    return max(v.x, max(v.y, v.z));
+}
 
-// Vec3f = rcp(Vec3f)
-/** \cond */
-#define MATH_VEC3_RCP()                         \
-    {                                           \
-        result.x = rcp(p0.x);                   \
-        result.y = rcp(p0.y);                   \
-        result.z = rcp(p0.z);                   \
-    }
-/** \endcond */
-/// @{
-/// compute the reciprocal of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(rcp, Vec3f, Vec3f, MATH_VEC3_RCP())
-/// @}
+// Vec3f clamp(Vec3f, Vec3f lo, Vec3f hi)
+inline uniform Vec3f clamp(const uniform Vec3f v, const uniform Vec3f lo, const uniform Vec3f hi)
+{
+    return min(max(v, lo), hi);
+}
 
-// bool = isNormalized(Vec3f)
-/** \cond */
-#define MATH_VEC3_IS_NORMALIZED()                       \
-    {                                                   \
-        result = isNormalizedLengthSqr(lengthSqr(p0));  \
-    }
-/** \endcond */
-/// @{
-/// is a Vec3 normalized?
-MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec3f, MATH_VEC3_IS_NORMALIZED())
-/// @}
+// Vec3f clamp(Vec3f, Vec3f lo, Vec3f hi)
+inline varying Vec3f clamp(const varying Vec3f v, const varying Vec3f lo, const varying Vec3f hi)
+{
+    return min(max(v, lo), hi);
+}
 
-// float = reduce_max(Vec3f);
-/** \cond */
-#define MATH_VEC3_REDUCE_MAX()                \
-    {                                         \
-        result = max(p0.x, max(p0.y, p0.z));  \
-    }
-/** \endcond */
-/// @{
-/// find the maximum element of a Vec3
-MATH_DEFINE_UNARY_VARIFORM(reduce_max, float, Vec3f, MATH_VEC3_REDUCE_MAX())
-/// @}
+// Vec3f abs(Vec3f, Vec3f)
+inline uniform Vec3f abs(const uniform Vec3f v)
+{
+    return Vec3f_ctor(abs(v.x), abs(v.y), abs(v.z));
+}
 
-// ---------------------------------------------------------------------------
-// Ternary Operations
-// ---------------------------------------------------------------------------
+// Vec3f abs(Vec3f, Vec3f)
+inline varying Vec3f abs(const varying Vec3f v)
+{
+    return Vec3f_ctor(abs(v.x), abs(v.y), abs(v.z));
+}
 
-// Vec3f = lerp(Vec3f, Vec3f, float)
-/// @{
-/// lerp two Vec3 (p0, p1) by a value (p2)
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec3f, Vec3f, Vec3f, float, MATH_LERP())
-/// @}
+// Vec3f lerp(Vec3f, Vec3f, float)
+inline uniform Vec3f lerp(const uniform Vec3f v0, const uniform Vec3f v1, const uniform float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+// Vec3f lerp(Vec3f, Vec3f, float)
+inline varying Vec3f lerp(const varying Vec3f v0, const varying Vec3f v1, const varying float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+// Vec3f cross(Vec3f, Vec3f)
+inline uniform Vec3f cross(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return Vec3f_ctor(v0.y*v1.z - v0.z*v1.y,
+                      v0.z*v1.x - v0.x*v1.z,
+                      v0.x*v1.y - v0.y*v1.x);
+}
+
+// Vec3f cross(Vec3f, Vec3f)
+inline varying Vec3f cross(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return Vec3f_ctor(v0.y*v1.z - v0.z*v1.y,
+                      v0.z*v1.x - v0.x*v1.z,
+                      v0.x*v1.y - v0.y*v1.x);
+}
+//--------------------------------------------------------------------------------------------------
+// Length et al
+//--------------------------------------------------------------------------------------------------
+
+// float dot(Vec3f, Vec3f)
+inline uniform float dot(const uniform Vec3f v0, const uniform Vec3f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y + v0.z*v1.z;
+}
+
+// float dot(Vec3f, Vec3f)
+inline varying float dot(const varying Vec3f v0, const varying Vec3f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y + v0.z*v1.z;
+}
+
+// float lengthSqr(Vec3f)
+inline uniform float lengthSqr(const uniform Vec3f v)
+{
+    return dot(v, v);
+}
+
+// float lengthSqr(Vec3f)
+inline varying float lengthSqr(const varying Vec3f v)
+{
+    return dot(v, v);
+}
+
+// float length(Vec3f)
+inline uniform float length(const uniform Vec3f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// float length(Vec3f)
+inline varying float length(const varying Vec3f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// Vec3f normalize(Vec3f)
+inline uniform Vec3f normalize(const uniform Vec3f v)
+{
+    return v * rcp(length(v));
+}
+
+// Vec3f normalize(Vec3f)
+inline varying Vec3f normalize(const varying Vec3f v)
+{
+    return v * rcp(length(v));
+}
+
+// bool isNormalized(Vec3f)
+inline uniform bool isNormalized(const uniform Vec3f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
+
+// bool isNormalized(Vec3f)
+inline varying bool isNormalized(const varying Vec3f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
 

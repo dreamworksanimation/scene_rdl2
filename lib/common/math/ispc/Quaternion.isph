@@ -8,478 +8,437 @@
 
 #include "Constants.isph"
 #include "Math.isph"
-#include "Variform.isph"
 #include "Vec3.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// Quaternion3f;
-#define MATH_DECLARE_QUATERNION(TYPE, NAME)     \
-    struct NAME                                 \
-    {                                           \
-        TYPE r;                                 \
-        TYPE i;                                 \
-        TYPE j;                                 \
-        TYPE k;                                 \
-    };
-/// @struct Vec3f
-/// @brief a 4 component, single precision, r-i-j-k Quaternion
-MATH_DECLARE_QUATERNION(float, Quaternion3f);
+// TODO - call the members as w,x,y,z like the rest of the world does
+struct Quaternion3f
+{
+    float r;
+    float i;
+    float j;
+    float k;
+};
 
-// ---------------------------------------------------------------------------
-// Construction
-// ---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Quaternion3f = Quaternion3f_ctor(float);
-/** \cond */
-#define MATH_QUATERNION_CTOR_1()                \
-    {                                           \
-        result.r = p0;                          \
-        result.i = 0.;                          \
-        result.j = 0.;                          \
-        result.k = 0.;                          \
-    }
-/** \endcond */
-/// @{
-/// Construct a Quaternion from a single number
-MATH_DEFINE_UNARY_VARIFORM(Quaternion3f_ctor, Quaternion3f, float,
-                           MATH_QUATERNION_CTOR_1())
-/// @}
+// Quaternion3f = {w, x, y, z}
+inline uniform Quaternion3f Quaternion3f_ctor(const uniform float w, const uniform float x,
+                                              const uniform float y, const uniform float z)
+{
+    uniform Quaternion3f result;
+    result.r = w;
+    result.i = x;
+    result.j = y;
+    result.k = z;
+    return result;
+}
 
-// Quaternion3f = Quaternion3f_ctor(float, float, float, float);
-/** \cond */
-#define MATH_QUATERNION_CTOR_4()                \
-    {                                           \
-        result.r = p0;                          \
-        result.i = p1;                          \
-        result.j = p2;                          \
-        result.k = p3;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Quaternion from 4 numbers
-MATH_DEFINE_QUATERNION_VARIFORM(Quaternion3f_ctor, Quaternion3f,
-                                float, float, float, float,
-                                MATH_QUATERNION_CTOR_4())
-/// @}
+// Quaternion3f = {w, x, y, z}
+inline varying Quaternion3f Quaternion3f_ctor(const varying float w, const varying float x,
+                                              const varying float y, const varying float z)
+{
+    varying Quaternion3f result;
+    result.r = w;
+    result.i = x;
+    result.j = y;
+    result.k = z;
+    return result;
+}
 
-// Quaternion3f = Quaternion3f_ctor(Vec3f);
-/** \cond */
-#define MATH_QUATERNION_CTOR_V()                \
-    {                                           \
-        result.r = 0.;                          \
-        result.i = p0.x;                        \
-        result.j = p0.y;                        \
-        result.k = p0.z;                        \
-    }
-/** \endcond */
-/// @{
-/// construct a Quaternion from a Vec3
-MATH_DEFINE_UNARY_VARIFORM(Quaternion3f_ctor, Quaternion3f, Vec3f,
-                           MATH_QUATERNION_CTOR_V())
-/// @}
+// Quaternion3f = {f, 0, 0, 0}
+inline uniform Quaternion3f Quaternion3f_ctor(const uniform float f)
+{
+    return Quaternion3f_ctor(f, 0.0f, 0.0f, 0.0f);
+}
 
-// Quaternion3f = Quaternion3f_ctor(Vec3f, floatf);
-/** \cond */
-#define MATH_QUATERNION_CTOR_AR_L0_F()          \
-    struct { Vec3f a; }
+// Quaternion3f = {f, 0, 0, 0}
+inline varying Quaternion3f Quaternion3f_ctor(const varying float f)
+{
+    return Quaternion3f_ctor(f, 0.0f, 0.0f, 0.0f);
+}
 
-#define MATH_QUATERNION_CTOR_AR()               \
-    {                                           \
-        l0.a = sin(0.5 * p1) * normalize(p0);   \
-        result.r = cos(0.5 * p1);               \
-        result.i = l0.a.x;                      \
-        result.j = l0.a.y;                      \
-        result.k = l0.a.z;                      \
-    }
-/** \endcond */
-/// @{
-/// construct a Quaternion for rotation around arbitrary axis
-MATH_DEFINE_BINARY_VARIFORM_WITH_L(Quaternion3f_ctor, Quaternion3f,
-                                   Vec3f, float,
-                                   MATH_QUATERNION_CTOR_AR_L0_F(),
-                                   MATH_QUATERNION_CTOR_AR())
-/// @}
+// Quaternion3f = {0, v.x, v.y, v.z}
+inline uniform Quaternion3f Quaternion3f_ctor(const uniform Vec3f v)
+{
+    return Quaternion3f_ctor(0.0f, v.x, v.y, v.z);
+}
 
-// TODO ctor takes 3 rows of Mat3,
-//      ctor takes 3 floats(yaw, pitch, roll),
-//      ctor takes float and Vec3 (r, v.x, v.y, v.z)
+// Quaternion3f = {0, v.x, v.y, v.z}
+inline varying Quaternion3f Quaternion3f_ctor(const varying Vec3f v)
+{
+    return Quaternion3f_ctor(0.0f, v.x, v.y, v.z);
+}
 
-// Vec3f = asVec3(Quaternion3);
-/** \cond */
-#define MATH_QUATERNION_AS_VEC3()               \
-    {                                           \
-        result.x = p0.i;                        \
-        result.y = p0.j;                        \
-        result.z = p0.k;                        \
-    }
-/** \endcond */
-/// @{
-/// returns the rotation axis of the quaternion as a vector
-MATH_DEFINE_UNARY_VARIFORM(asVec3, Vec3f, Quaternion3f, MATH_QUATERNION_AS_VEC3())
-/// @}
+// Quaternion3f Quaternion3f_ctor(axis, angle)
+inline uniform Quaternion3f Quaternion3f_ctor(const uniform Vec3f axis, const uniform float angle)
+{
+    uniform float s, c;
+    sincos(0.5f * angle, &s, &c);
+    const uniform Vec3f a = s * normalize(axis);
+    return Quaternion3f_ctor(c, a.x, a.y, a.z);
+}
 
-// ---------------------------------------------------------------------------
-// Unary Operators
-// ---------------------------------------------------------------------------
+// Quaternion3f Quaternion3f_ctor(axis, angle)
+inline varying Quaternion3f Quaternion3f_ctor(const varying Vec3f axis, const varying float angle)
+{
+    varying float s, c;
+    sincos(0.5f * angle, &s, &c);
+    const varying Vec3f a = s * normalize(axis);
+    return Quaternion3f_ctor(c, a.x, a.y, a.z);
+}
 
-// Quaternion = conjugate(Quaternion)
-/** \cond */
-#define MATH_QUATERNION_CONJUGATE()             \
-    {                                           \
-        result.r =  p0.r;                       \
-        result.i = -p0.i;                       \
-        result.j = -p0.j;                       \
-        result.k = -p0.k;                       \
-    }
-/** \endcond */
-/// @{
-/// compute the conjugate of a Quaternion
-MATH_DEFINE_UNARY_VARIFORM(conjugate, Quaternion3f, Quaternion3f,
-        MATH_QUATERNION_CONJUGATE())
-/// @}
+// Vec3f asVec3(Quaternion3f)
+// Returns the rotation axis of the quaternion as a vector
+inline uniform Vec3f asVec3(const uniform Quaternion3f q)
+{
+    return Vec3f_ctor(q.i, q.j, q.k);
+}
 
+// Vec3f asVec3(Quaternion3f)
+// Returns the rotation axis of the quaternion as a vector
+inline varying Vec3f asVec3(const varying Quaternion3f q)
+{
+    return Vec3f_ctor(q.i, q.j, q.k);
+}
 
-// ---------------------------------------------------------------------------
-// Binary Operators
-// ---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Conjugate
+//--------------------------------------------------------------------------------------------------
 
-// Quaternion3f = float + Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_S_PRE_PLUS()            \
-    {                                           \
-        result.r = p0 + p1.r;                   \
-        result.i = p1.i;                        \
-        result.j = p1.j;                        \
-        result.k = p1.k;                        \
-    }
-/** \endcond */
-/// @{
-/// scalar pre-plus, p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, float, Quaternion3f,
-                            MATH_QUATERNION_S_PRE_PLUS())
-/// @}
+// Quaternion3f conjugate(Quaternion3f)
+inline uniform Quaternion3f conjugate(const uniform Quaternion3f q)
+{
+    return Quaternion3f_ctor(q.r, -q.i, -q.j, -q.k);
+}
 
-// Quaternion3f = Quaternion3f + float;
-/** \cond */
-#define MATH_QUATERNION_S_POST_PLUS()           \
-    {                                           \
-        result.r = p0.r + p1;                   \
-        result.i = p0.i;                        \
-        result.j = p0.j;                        \
-        result.k = p0.k;                        \
-    }
-/** \endcond */
-/// @{
-/// scalar post-plus, p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, Quaternion3f, float,
-                            MATH_QUATERNION_S_POST_PLUS())
-/// @}
+// Quaternion3f conjugate(Quaternion3f)
+inline varying Quaternion3f conjugate(const varying Quaternion3f q)
+{
+    return Quaternion3f_ctor(q.r, -q.i, -q.j, -q.k);
+}
 
-// Quaternion3f = Quaternion3f + Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_PLUS()                  \
-    {                                           \
-        result.r = p0.r + p1.r;                 \
-        result.i = p0.i + p1.i;                 \
-        result.j = p0.j + p1.j;                 \
-        result.k = p0.k + p1.k;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise add of 2 Quaternion, p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Quaternion3f, Quaternion3f, Quaternion3f,
-                            MATH_QUATERNION_PLUS())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
+ 
+// Quaternion3f = float + Quaternion3f
+inline uniform Quaternion3f operator+(const uniform float f, const uniform Quaternion3f q)
+{
+    return Quaternion3f_ctor(f+q.r, q.i, q.j, q.k);
+}
 
-// Quaternion3f = float - Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_S_PRE_MINUS()           \
-    {                                           \
-        result.r = p0 - p1.r;                   \
-        result.i = p1.i;                        \
-        result.j = p1.j;                        \
-        result.k = p1.k;                        \
-    }
-/** \endcond */
-/// @{
-/// scalar pre-minus, p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, float, Quaternion3f,
-                            MATH_QUATERNION_S_PRE_MINUS())
-/// @}
+// Quaternion3f = float + Quaternion3f
+inline varying Quaternion3f operator+(const varying float f, const varying Quaternion3f q)
+{
+    return Quaternion3f_ctor(f+q.r, q.i, q.j, q.k);
+}
 
-// Quaternion3f = Quaternion3f - float;
-/** \cond */
-#define MATH_QUATERNION_S_POST_MINUS()          \
-    {                                           \
-        result.r = p0.r - p1;                   \
-        result.i = p0.i;                        \
-        result.j = p0.j;                        \
-        result.k = p0.k;                        \
-    }
-/** \endcond */
-/// @{
-/// scalar post-minus, p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, Quaternion3f, float,
-                            MATH_QUATERNION_S_POST_MINUS())
-/// @}
+// Quaternion3f = Quaternion3f + float
+inline uniform Quaternion3f operator+(const uniform Quaternion3f q, const uniform float f)
+{
+    return f + q;
+}
 
-// Quaternion3f = Quaternion3f - Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_MINUS()                 \
-    {                                           \
-        result.r = p0.r - p1.r;                 \
-        result.i = p0.i - p1.i;                 \
-        result.j = p0.j - p1.j;                 \
-        result.k = p0.k - p1.k;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise minus of 2 Quaternion, p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Quaternion3f, Quaternion3f, Quaternion3f,
-                            MATH_QUATERNION_MINUS())
-/// @}
+// Quaternion3f = Quaternion3f + float
+inline varying Quaternion3f operator+(const varying Quaternion3f q, const varying float f)
+{
+    return f + q;
+}
 
-// Quaternion3f = float * Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_S_PRE_MULT()            \
-    {                                           \
-        result.r = p0 * p1.r;                   \
-        result.i = p0 * p1.i;                   \
-        result.j = p0 * p1.j;                   \
-        result.k = p0 * p1.k;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar pre-multiply, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, float, Quaternion3f,
-                            MATH_QUATERNION_S_PRE_MULT())
-/// @}
+// Quaternion3f = Quaternion3f + Quaternion3f
+inline uniform Quaternion3f operator+(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r+q1.r, q0.i+q1.i, q0.j+q1.j, q0.k+q1.k);
+}
 
-// Quaternion3f = Quaternion3f * float;
-/** \cond */
-#define MATH_QUATERNION_S_POST_MULT()           \
-    {                                           \
-        result.r = p0.r * p1;                   \
-        result.i = p0.i * p1;                   \
-        result.j = p0.j * p1;                   \
-        result.k = p0.k * p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar post-multiply, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, Quaternion3f, float,
-                            MATH_QUATERNION_S_POST_MULT())
-/// @}
+// Quaternion3f = Quaternion3f + Quaternion3f
+inline varying Quaternion3f operator+(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r+q1.r, q0.i+q1.i, q0.j+q1.j, q0.k+q1.k);
+}
 
-// Quaternion3f = Quaternion3f * Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_MULT()                                                 \
-    {                                                                          \
-        result.r = p0.r*p1.r - p0.i*p1.i - p0.j*p1.j - p0.k*p1.k;              \
-        result.i = p0.r*p1.i + p0.i*p1.r + p0.j*p1.k - p0.k*p1.j;              \
-        result.j = p0.r*p1.j - p0.i*p1.k + p0.j*p1.r + p0.k*p1.i;              \
-        result.k = p0.r*p1.k + p0.i*p1.j - p0.j*p1.i + p0.k*p1.r;              \
-    }
-/** \endcond */
-/// @{
-/// component-wise multiply of 2 Quaternion, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Quaternion3f, Quaternion3f, Quaternion3f,
-                            MATH_QUATERNION_MULT())
-/// @}
+// Quaternion3f = float - Quaternion3f
+inline uniform Quaternion3f operator-(const uniform float f, const uniform Quaternion3f q)
+{
+    return Quaternion3f_ctor(f-q.r, q.i, q.j, q.k);
+}
 
-// Vec3f = Quaternion3f * Vec3f;
-/** \cond */
-#define MATH_QUATERNION_V_POST_MULT()                                          \
-    {                                                                          \
-        result = asVec3(p0 * Quaternion3f_ctor(p1) * conjugate(p0));           \
-    }
-/** \endcond */
-/// @{
-///
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Quaternion3f, Vec3f,
-                            MATH_QUATERNION_V_POST_MULT())
-/// @}
+// Quaternion3f = float - Quaternion3f
+inline varying Quaternion3f operator-(const varying float f, const varying Quaternion3f q)
+{
+    return Quaternion3f_ctor(f-q.r, q.i, q.j, q.k);
+}
 
-// Vec3f = transform(Quaternion3f, Vec3f)
-/// @{
-/// transform a Vec3 (p1) by a Quaternion (p0).
-MATH_DEFINE_BINARY_VARIFORM(transform, Vec3f, Quaternion3f, Vec3f,
-                            { result = p0 * p1; })
+// Quaternion3f = Quaternion3f - float
+inline uniform Quaternion3f operator-(const uniform Quaternion3f q, const uniform float f)
+{
+    return Quaternion3f_ctor(q.r-f, q.i, q.j, q.k);
+}
 
-// Quaternion = rcp(Quaternion)
-/** \cond */
-#define MATH_QUATERNION_RCP()                                                  \
-    {                                                                          \
-        result = conjugate(p0) *                                               \
-            rcp(p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);        \
-    }
-/** \endcond */
-/// @{
-/// compute the reciprocal of a Quaternion
-MATH_DEFINE_UNARY_VARIFORM(rcp, Quaternion3f, Quaternion3f,
-                           MATH_QUATERNION_RCP())
-/// @}
+// Quaternion3f = Quaternion3f - float
+inline varying Quaternion3f operator-(const varying Quaternion3f q, const varying float f)
+{
+    return Quaternion3f_ctor(q.r-f, q.i, q.j, q.k);
+}
 
-// Quaternion3f = float / Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_S_PRE_DIV()             \
-    {                                           \
-        result = p0 * rcp(p1);                  \
-    }
-/** \endcond */
-/// @{
-/// scalar pre-divide, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, float, Quaternion3f,
-                            MATH_QUATERNION_S_PRE_DIV())
-/// @}
+// Quaternion3f = Quaternion3f - Quaternion3f
+inline uniform Quaternion3f operator-(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r-q1.r, q0.i-q1.i, q0.j-q1.j, q0.k-q1.k);
+}
 
-// Quaternion3f = Quaternion3f / float;
-/** \cond */
-#define MATH_QUATERNION_S_POST_DIV()            \
-    {                                           \
-        result = p0 * rcp(p1);                  \
-    }
-/** \endcond */
-/// @{
-/// scalar post-divide, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, Quaternion3f, float,
-                            MATH_QUATERNION_S_POST_DIV())
-/// @}
+// Quaternion3f = Quaternion3f - Quaternion3f
+inline varying Quaternion3f operator-(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r-q1.r, q0.i-q1.i, q0.j-q1.j, q0.k-q1.k);
+}
 
-// Quaternion3f = Quaternion3f / Quaternion3f;
-/** \cond */
-#define MATH_QUATERNION_DIV()                   \
-    {                                           \
-        result = p0 * rcp(p1);                  \
-    }
-/** \endcond */
-/// @{
-/// scalar post-divide, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Quaternion3f, Quaternion3f, Quaternion3f,
-                            MATH_QUATERNION_DIV())
-/// @}
+// Quaternion3f = float * Quaternion3f
+inline uniform Quaternion3f operator*(const uniform float f, const uniform Quaternion3f q)
+{
+    return Quaternion3f_ctor(f*q.r, f*q.i, f*q.j, f*q.k);
+}
 
+// Quaternion3f = float * Quaternion3f
+inline varying Quaternion3f operator*(const varying float f, const varying Quaternion3f q)
+{
+    return Quaternion3f_ctor(f*q.r, f*q.i, f*q.j, f*q.k);
+}
 
-// float = dot(Quaternion3f, Quaternion3f);
-/** \cond */
-#define MATH_QUATERNION_DOT()                                                  \
-    {                                                                          \
-        result = p0.r*p1.r + p0.i*p1.i + p0.j*p1.j + p0.k*p1.k;                \
-    }
-/** \endcond */
-/// @{
-/// dot product of 2 Quaternion, dot(p0, p1)
-MATH_DEFINE_BINARY_VARIFORM(dot, float, Quaternion3f, Quaternion3f,
-                            MATH_QUATERNION_DOT())
-/// @}
+// Quaternion3f = Quaternion3f * float
+inline uniform Quaternion3f operator*(const uniform Quaternion3f q, const uniform float f)
+{
+    return f * q;
+}
 
-// Quaternion = normalize(Quaternion)
-/** \cond */
-#define MATH_QUATERNION_NORMALIZE()                                            \
-    {                                                                          \
-        result = p0 *                                                          \
-            rsqrt(p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);      \
-    }
-/** \endcond */
-/// @{
-/// normalize a Quaternion
-MATH_DEFINE_UNARY_VARIFORM(normalize, Quaternion3f, Quaternion3f,
-                           MATH_QUATERNION_NORMALIZE())
-/// @}
+// Quaternion3f = Quaternion3f * float
+inline varying Quaternion3f operator*(const varying Quaternion3f q, const varying float f)
+{
+    return f * q;
+}
 
-// bool = isNormalized(Quaternion)
-/** \cond */
-#define MATH_QUATERNION_IS_NORMALIZED()                                        \
-    {                                                                          \
-        result = isNormalizedLengthSqr(                                        \
-            p0.r * p0.r + p0.i * p0.i + p0.j * p0.j + p0.k * p0.k);            \
-    }
-/** \endcond */
-/// @{
-/// is a Quaternion normalized?
-MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Quaternion3f,
-                           MATH_QUATERNION_IS_NORMALIZED())
-/// @}
+// Quaternion3f = Quaternion3f * Quaternion3f
+inline uniform Quaternion3f operator*(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r*q1.r - q0.i*q1.i - q0.j*q1.j - q0.k*q1.k,
+                             q0.r*q1.i + q0.i*q1.r + q0.j*q1.k - q0.k*q1.j,
+                             q0.r*q1.j - q0.i*q1.k + q0.j*q1.r + q0.k*q1.i,
+                             q0.r*q1.k + q0.i*q1.j - q0.j*q1.i + q0.k*q1.r);
+}
+
+// Quaternion3f = Quaternion3f * Quaternion3f
+inline varying Quaternion3f operator*(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return Quaternion3f_ctor(q0.r*q1.r - q0.i*q1.i - q0.j*q1.j - q0.k*q1.k,
+                             q0.r*q1.i + q0.i*q1.r + q0.j*q1.k - q0.k*q1.j,
+                             q0.r*q1.j - q0.i*q1.k + q0.j*q1.r + q0.k*q1.i,
+                             q0.r*q1.k + q0.i*q1.j - q0.j*q1.i + q0.k*q1.r);
+}
+
+// float dot(Quaternion3f, Quaternion3f)
+inline uniform float dot(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return q0.r*q1.r + q0.i*q1.i + q0.j*q1.j + q0.k*q1.k;
+}
+
+// float dot(Quaternion3f, Quaternion3f)
+inline varying float dot(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return q0.r*q1.r + q0.i*q1.i + q0.j*q1.j + q0.k*q1.k;
+}
+
+// Quaternion3f rcp(Quaternion3f)
+inline uniform Quaternion3f rcp(const uniform Quaternion3f q)
+{
+    return conjugate(q) * rcp(dot(q,q));
+}
+
+// Quaternion3f rcp(Quaternion3f)
+inline varying Quaternion3f rcp(const varying Quaternion3f q)
+{
+    return conjugate(q) * rcp(dot(q,q));
+}
+
+// Quaternion3f = Quaternion3f / float
+inline uniform Quaternion3f operator/(const uniform Quaternion3f q, const uniform float f)
+{
+    return q * rcp(f);
+}
+
+// Quaternion3f = Quaternion3f / float
+inline varying Quaternion3f operator/(const varying Quaternion3f q, const varying float f)
+{
+    return q * rcp(f);
+}
+
+// Quaternion3f = float / Quaternion3f
+inline uniform Quaternion3f operator/(const uniform float f, const uniform Quaternion3f q)
+{
+    return f * rcp(q);
+}
+
+// Quaternion3f = float / Quaternion3f
+inline varying Quaternion3f operator/(const varying float f, const varying Quaternion3f q)
+{
+    return f * rcp(q);
+}
+
+// Quaternion3f = Quaternion3f / Quaternion3f
+inline uniform Quaternion3f operator/(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return q0 * rcp(q1);
+}
+
+// Quaternion3f = Quaternion3f / Quaternion3f
+inline varying Quaternion3f operator/(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return q0 * rcp(q1);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
+ 
+//  bool = isEqual(Quaternion3f, Quaternion3f, float)
+inline uniform bool isEqual(const uniform Quaternion3f q0, const uniform Quaternion3f q1, const uniform float tol)
+{
+    return isEqual(q0.r, q1.r, tol) && isEqual(q0.i, q1.i, tol) &&
+           isEqual(q0.j, q1.j, tol) && isEqual(q0.k, q1.k, tol);
+}
 
 //  bool = isEqual(Quaternion3f, Quaternion3f, float)
-/** \cond */
-#define MATH_QUATERNION_IS_EQUAL()              \
-    {                                           \
-        result = isEqual(p0.r, p1.r, p2) &&     \
-            isEqual(p0.i, p1.i, p2) &&          \
-            isEqual(p0.j, p1.j, p2) &&          \
-            isEqual(p0.k, p1.k, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Quaternion (p0, p1) equal to within tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Quaternion3f, Quaternion3f, float,
-                             MATH_QUATERNION_IS_EQUAL())
-/// @}
+inline varying bool isEqual(const varying Quaternion3f q0, const varying Quaternion3f q1, const varying float tol)
+{
+    return isEqual(q0.r, q1.r, tol) && isEqual(q0.i, q1.i, tol) &&
+           isEqual(q0.j, q1.j, tol) && isEqual(q0.k, q1.k, tol);
+}
 
-// bool isEqual(Quaternion3f, Quaternion3f)
-/// @{
-/// are two Quaternion3f equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Quaternion3f, Quaternion3f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+//  bool = isEqual(Quaternion3f, Quaternion3f)
+inline uniform bool isEqual(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return isEqual(q0, q1, sEpsilon);
+}
+
+//  bool = isEqual(Quaternion3f, Quaternion3f)
+inline varying bool isEqual(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return isEqual(q0, q1, sEpsilon);
+}
 
 //  bool = isEqualFixedEps(Quaternion3f, Quaternion3f, float)
-/** \cond */
-#define MATH_QUATERNION_IS_EQUAL_FIXED_EPS()            \
-    {                                                   \
-        result = isEqualFixedEps(p0.r, p1.r, p2) &&     \
-            isEqualFixedEps(p0.i, p1.i, p2) &&          \
-            isEqualFixedEps(p0.j, p1.j, p2) &&          \
-            isEqualFixedEps(p0.k, p1.k, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Quaternion (p0, p1) equal to within tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Quaternion3f, Quaternion3f,
-                             float, MATH_QUATERNION_IS_EQUAL_FIXED_EPS())
-/// @}
+inline uniform bool isEqualFixedEps(const uniform Quaternion3f q0, const uniform Quaternion3f q1, const uniform float tol)
+{
+    return isEqualFixedEps(q0.r, q1.r, tol) && isEqualFixedEps(q0.i, q1.i, tol) &&
+           isEqualFixedEps(q0.j, q1.j, tol) && isEqualFixedEps(q0.k, q1.k, tol);
+}
 
-// bool isEqualFixedEps(Quaternion3f, Quaternion3f)
-/// @{
-/// are two Quaternion3f equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Quaternion3f, Quaternion3f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+//  bool = isEqualFixedEps(Quaternion3f, Quaternion3f, float)
+inline varying bool isEqualFixedEps(const varying Quaternion3f q0, const varying Quaternion3f q1, const varying float tol)
+{
+    return isEqualFixedEps(q0.r, q1.r, tol) && isEqualFixedEps(q0.i, q1.i, tol) &&
+           isEqualFixedEps(q0.j, q1.j, tol) && isEqualFixedEps(q0.k, q1.k, tol);
+}
 
-//  Quaternion = slerp(Quaternion3f, Quaternion3f, float)
-/** \cond */
-#define MATH_QUATERNION_SLERP_L0_F()                                           \
-    struct { float angle; float sinAngle; float cosAngle; float rcpSin;        \
-             float rA; float rB; }
+//  bool = isEqualFixedEps(Quaternion3f, Quaternion3f)
+inline uniform bool isEqualFixedEps(const uniform Quaternion3f q0, const uniform Quaternion3f q1)
+{
+    return isEqualFixedEps(q0, q1, sEpsilon);
+}
 
-#define MATH_QUATERNION_SLERP()                                                \
-    {                                                                          \
-        l0.angle = 0.;                                                         \
-        l0.sinAngle = 0.;                                                      \
-        l0.cosAngle = dot(p0, p1);                                             \
-        if (abs(l0.cosAngle) < 1.) {                                           \
-            l0.angle = dw_acos(l0.cosAngle);                                   \
-            l0.sinAngle = sin(l0.angle);                                       \
-        }                                                                      \
-        if (abs(l0.sinAngle) < 0.00001) {                                      \
-            result = (1. - p2) * p0 + p2 * p1;                                 \
-        } else {                                                               \
-            l0.rcpSin = rcp(l0.sinAngle);                                      \
-            l0.rA = sin((1. - p2) * l0.angle) * l0.rcpSin;                     \
-            l0.rB = sin(p2 * l0.angle) * l0.rcpSin;                            \
-            result = l0.rA * p0 + l0.rB * p1;                                  \
-        }                                                                      \
-    }
-/** \endcond */
-/// @{
-///
-MATH_DEFINE_TERNARY_VARIFORM_WITH_L(slerp, Quaternion3f,
-                                    Quaternion3f, Quaternion3f, float,
-                                    MATH_QUATERNION_SLERP_L0_F(),
-                                    MATH_QUATERNION_SLERP())
+//  bool = isEqualFixedEps(Quaternion3f, Quaternion3f)
+inline varying bool isEqualFixedEps(const varying Quaternion3f q0, const varying Quaternion3f q1)
+{
+    return isEqualFixedEps(q0, q1, sEpsilon);
+}
 
+//--------------------------------------------------------------------------------------------------
+// Common math ops
+//--------------------------------------------------------------------------------------------------
+ 
+// Quaternion = normalize(Quaternion)
+inline uniform Quaternion3f normalize(const uniform Quaternion3f q)
+{
+    return q * (1.0f / sqrt(dot(q,q)));
+}
+
+// Quaternion = normalize(Quaternion)
+inline varying Quaternion3f normalize(const varying Quaternion3f q)
+{
+    return q * (1.0f / sqrt(dot(q,q)));
+}
+
+// bool = isNormalized(Quaternion)
+inline uniform bool isNormalized(const uniform Quaternion3f q)
+{
+    return isNormalizedLengthSqr(dot(q, q));
+}
+
+// bool = isNormalized(Quaternion)
+inline varying bool isNormalized(const varying Quaternion3f q)
+{
+    return isNormalizedLengthSqr(dot(q, q));
+}
+
+// Vec3f = Quaternion3f * Vec3f
+// Rotate vector v by quaternion q
+inline uniform Vec3f operator*(const uniform Quaternion3f q, const uniform Vec3f v)
+{
+    return asVec3(q * Quaternion3f_ctor(v) * conjugate(q));
+}
+
+// Vec3f = Quaternion3f * Vec3f
+// Rotate vector v by quaternion q
+inline varying Vec3f operator*(const varying Quaternion3f q, const varying Vec3f v)
+{
+    return asVec3(q * Quaternion3f_ctor(v) * conjugate(q));
+}
+
+// Vec3f transform Vec3f by Quaternion3f
+inline uniform Vec3f transform(const uniform Quaternion3f q, const uniform Vec3f v)
+{
+    return q * v;
+}
+
+// Vec3f transform Vec3f by Quaternion3f
+inline varying Vec3f transform(const varying Quaternion3f q, const varying Vec3f v)
+{
+    return q * v;
+}
+
+// Quaternion3f slerp(Quaternion3f, Quaternion3f, float)
+#define Q3F_SLERP(UV)                                   \
+{                                                       \
+    UV float angle = 0.0f;                              \
+    UV float sinAngle = 0.0f;                           \
+    UV float cosAngle = dot(q0, q1);                    \
+    if (abs(cosAngle) < 1.0f) {                         \
+        angle = dw_acos(cosAngle);                      \
+        sinAngle = sin(angle);                          \
+    }                                                   \
+    if (abs(sinAngle) < 0.00001f) {                     \
+        return (1.0f-t)*q0 + t*q1;                      \
+    }                                                   \
+    UV float rcpSin = rcp(sinAngle);                    \
+    UV float t0 = sin((1.0f - t) * angle) * rcpSin;     \
+    UV float t1 = sin(t * angle) * rcpSin;              \
+    return t0*q0 + t1*q1;                               \
+}
+
+// Quaternion3f slerp(Quaternion3f, Quaternion3f, float)
+inline uniform Quaternion3f slerp(const uniform Quaternion3f q0, const uniform Quaternion3f q1, const uniform float t)
+{
+    Q3F_SLERP(uniform);
+}
+
+// Quaternion3f slerp(Quaternion3f, Quaternion3f, float)
+inline varying Quaternion3f slerp(const varying Quaternion3f q0, const varying Quaternion3f q1, const varying float t)
+{
+    Q3F_SLERP(varying);
+}
 

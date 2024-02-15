@@ -22,397 +22,420 @@
 #include "Constants.isph"
 #include "Math.isph"
 #include "Quaternion.isph"
-#include "Variform.isph"
 #include "Vec3.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// Mat3f;
-#define MATH_DECLARE_MAT3(TYPE, NAME)           \
-    struct NAME                                 \
-    {                                           \
-        TYPE vx;                                \
-        TYPE vy;                                \
-        TYPE vz;                                \
-    };
-/// @struct Mat3f
-/// @brief a single precision 3x3 matrix
-MATH_DECLARE_MAT3(Vec3f, Mat3f);
+struct Mat3f
+{
+    Vec3f vx;
+    Vec3f vy;
+    Vec3f vz;
+};
 
-//---------------------------------------------------------------------------
-// Construction
-//---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Mat3f = Mat3f_ctor(Vec3f, Vec3f, Vec3f);
-/** \cond */
-#define MATH_MAT3_CTOR_3()                      \
-    {                                           \
-        result.vx = p0;                         \
-        result.vy = p1;                         \
-        result.vz = p2;                         \
-    }
-/** \endcond */
-/// @{
-/// construct a mat3 from 3 vec3
-MATH_DEFINE_TERNARY_VARIFORM(Mat3f_ctor, Mat3f,
-                             Vec3f, Vec3f, Vec3f,
-                             MATH_MAT3_CTOR_3())
-/// @}
+// Mat3f = {vx, vy, vz}
+inline uniform Mat3f Mat3f_ctor(const uniform Vec3f vx, const uniform Vec3f vy, const uniform Vec3f vz)
+{
+    uniform Mat3f result;
+    result.vx = vx;
+    result.vy = vy;
+    result.vz = vz;
+    return result;
+}
 
-// Mat3f = Mat3f_ctor(Quaternion3f);
-/** \cond */
-#define MATH_MAT3_CTOR_Q()                      \
-    {                                           \
-        result.vx = Vec3f_ctor(                 \
-            1.0f-2.0f*(p0.j*p0.j + p0.k*p0.k),  \
-                 2.0f*(p0.i*p0.j + p0.r*p0.k),  \
-                 2.0f*(p0.i*p0.k - p0.r*p0.j)); \
-        result.vy = Vec3f_ctor(                 \
-                 2.0f*(p0.i*p0.j - p0.r*p0.k),  \
-            1.0f-2.0f*(p0.i*p0.i + p0.k*p0.k),  \
-                 2.0f*(p0.j*p0.k + p0.r*p0.i)); \
-        result.vz = Vec3f_ctor(                 \
-                 2.0f*(p0.i*p0.k + p0.r*p0.j),  \
-                 2.0f*(p0.j*p0.k - p0.r*p0.i),  \
-            1.0f-2.0f*(p0.i*p0.i + p0.j*p0.j)); \
-    }
-/** \endcond */
-/// @{
-/// construct a mat3 from 3 vec3
-MATH_DEFINE_UNARY_VARIFORM(Mat3f_ctor, Mat3f, Quaternion3f, MATH_MAT3_CTOR_Q())
-/// @}
+// Mat3f = {vx, vy, vz}
+inline varying Mat3f Mat3f_ctor(const varying Vec3f vx, const varying Vec3f vy, const varying Vec3f vz)
+{
+    varying Mat3f result;
+    result.vx = vx;
+    result.vy = vy;
+    result.vz = vz;
+    return result;
+}
 
-//  Mat3f = Mat3f_ctor(float, float, float,
-//                     float, float, float,
-//                     float, float, float)
-/** \cond */
-#define MATH_MAT3_CTOR_9()                                      \
-    {                                                           \
-        result.vx.x = p0; result.vx.y = p1; result.vx.z = p2;   \
-        result.vy.x = p3; result.vy.y = p4; result.vy.z = p5;   \
-        result.vz.x = p6; result.vz.y = p7; result.vz.z = p8;   \
-    }
-/** \endcond */
-/// @{
-/// construct a Mat3 from 9 floats
-MATH_DEFINE_P9_UNIVAR_VARIFORM(Mat3f_ctor, Mat3f,
-                               float, MATH_MAT3_CTOR_9())
-/// @}
+// Mat3f = {m00, ..., m22}
+inline uniform Mat3f Mat3f_ctor(const uniform float m00, const uniform float m01, const uniform float m02,
+                                const uniform float m10, const uniform float m11, const uniform float m12,
+                                const uniform float m20, const uniform float m21, const uniform float m22)
+{
+    return Mat3f_ctor(Vec3f_ctor(m00, m01, m02),
+                      Vec3f_ctor(m10, m11, m12),
+                      Vec3f_ctor(m20, m21, m22));
+}
 
-//----------------------------------------------------------------------
-// Binary operators
-//----------------------------------------------------------------------
+// Mat3f = {m00, ..., m22}
+inline varying Mat3f Mat3f_ctor(const varying float m00, const varying float m01, const varying float m02,
+                                const varying float m10, const varying float m11, const varying float m12,
+                                const varying float m20, const varying float m21, const varying float m22)
+{
+    return Mat3f_ctor(Vec3f_ctor(m00, m01, m02),
+                      Vec3f_ctor(m10, m11, m12),
+                      Vec3f_ctor(m20, m21, m22));
+}
 
-// Mat3f = Mat3f + Mat3f;
-/** \cond */
-#define MATH_MAT3_ADD()                         \
-    {                                           \
-        result.vx = p0.vx + p1.vx;              \
-        result.vy = p0.vy + p1.vy;              \
-        result.vz = p0.vz + p1.vz;              \
-    }
-/** \endcond */
-/// @{
-/// add two matrices
-MATH_DEFINE_BINARY_VARIFORM(operator+, Mat3f, Mat3f, Mat3f, MATH_MAT3_ADD())
-/// @}
+// Mat3f Mat3f_ctor(Quaternion3f)
+inline uniform Mat3f Mat3f_ctor(const uniform Quaternion3f q)
+{
+    return Mat3f_ctor(1.0f-2.0f*(q.j*q.j + q.k*q.k),      2.0f*(q.i*q.j + q.r*q.k),      2.0f*(q.i*q.k - q.r*q.j),
+                           2.0f*(q.i*q.j - q.r*q.k), 1.0f-2.0f*(q.i*q.i + q.k*q.k),      2.0f*(q.j*q.k + q.r*q.i),
+                           2.0f*(q.i*q.k + q.r*q.j),      2.0f*(q.j*q.k - q.r*q.i), 1.0f-2.0f*(q.i*q.i + q.j*q.j));
+}
 
-//  Mat3f = Mat3f - Mat3f;
-/** \cond */
-#define MATH_MAT3_MINUS()                       \
-    {                                           \
-        result.vx = p0.vx - p1.vx;              \
-        result.vy = p0.vy - p1.vy;              \
-        result.vz = p0.vz - p1.vz;              \
-    }
-/** \endcond */
-/// @{
-/// subtract two matrices
-MATH_DEFINE_BINARY_VARIFORM(operator-, Mat3f, Mat3f, Mat3f, MATH_MAT3_MINUS())
-/// @}
+// Mat3f Mat3f_ctor(Quaternion3f)
+inline varying Mat3f Mat3f_ctor(const varying Quaternion3f q)
+{
+    return Mat3f_ctor(1.0f-2.0f*(q.j*q.j + q.k*q.k),      2.0f*(q.i*q.j + q.r*q.k),      2.0f*(q.i*q.k - q.r*q.j),
+                           2.0f*(q.i*q.j - q.r*q.k), 1.0f-2.0f*(q.i*q.i + q.k*q.k),      2.0f*(q.j*q.k + q.r*q.i),
+                           2.0f*(q.i*q.k + q.r*q.j),      2.0f*(q.j*q.k - q.r*q.i), 1.0f-2.0f*(q.i*q.i + q.j*q.j));
+}
 
-// Mat3f = float * Mat3f;
-/// @{
-/// scalar * Mat3
-/** \cond */
-#define MATH_S_MULT_MAT3()                      \
-    {                                           \
-        result.vx = p0 * p1.vx;                 \
-        result.vy = p0 * p1.vy;                 \
-        result.vz = p0 * p1.vz;                 \
-    }
-/** \endcond */
-MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, float, Mat3f, MATH_S_MULT_MAT3())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
 
-//  Mat3f = Mat3f * float;
-/** \cond */
-#define MATH_MAT3_MULT_S()                      \
-    {                                           \
-        result.vx = p0.vx * p1;                 \
-        result.vy = p0.vy * p1;                 \
-        result.vz = p0.vz * p1;                 \
-    }
-/** \endcond */
-/// @{
-/// Mat3 * scalar
-MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, Mat3f, float, MATH_MAT3_MULT_S())
-/// @}
+// Mat3f = Mat3f + Mat3f
+inline uniform Mat3f operator+(const uniform Mat3f m0, const uniform Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx+m1.vx, m0.vy+m1.vy, m0.vz+m1.vz);
+}
 
-// Vec3f = Vec3f * Mat3f;
-/** \cond */
-#define MATH_VEC3_MULT_MAT3()                                           \
-    {                                                                   \
-        result.x = p0.x * p1.vx.x + p0.y * p1.vy.x + p0.z * p1.vz.x;    \
-        result.y = p0.x * p1.vx.y + p0.y * p1.vy.y + p0.z * p1.vz.y;    \
-        result.z = p0.x * p1.vx.z + p0.y * p1.vy.z + p0.z * p1.vz.z;    \
-    }
-/** \endcond */
-/// @{
-/// Vec3 * Mat3
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Vec3f, Mat3f, MATH_VEC3_MULT_MAT3())
-/// @}
+// Mat3f = Mat3f + Mat3f
+inline varying Mat3f operator+(const varying Mat3f m0, const varying Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx+m1.vx, m0.vy+m1.vy, m0.vz+m1.vz);
+}
 
-// Vec3f = Mat3f * Vec3f;
-/** \cond */
-#define MATH_MAT3_MULT_VEC3()                   \
-    {                                           \
-        result.x = dot(p0.vx, p1);              \
-        result.y = dot(p0.vy, p1);              \
-        result.z = dot(p0.vz, p1);              \
-    }
-/** \endcond */
-/// @{
-/// Mat3 * Vec3
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec3f, Mat3f, Vec3f, MATH_MAT3_MULT_VEC3())
-/// @}
+// Mat3f = Mat3f - Mat3f
+inline uniform Mat3f operator-(const uniform Mat3f m0, const uniform Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx-m1.vx, m0.vy-m1.vy, m0.vz-m1.vz);
+}
 
-// Mat3f = Mat3f * Mat3f;
-/** \cond */
-#define MATH_MAT3_MULT()                        \
-    {                                           \
-        result.vx = p0.vx * p1;                 \
-        result.vy = p0.vy * p1;                 \
-        result.vz = p0.vz * p1;                 \
-    }
-/** \endcond */
-/// @{
-/// Mat3 * Mat3
-MATH_DEFINE_BINARY_VARIFORM(operator*, Mat3f, Mat3f, Mat3f, MATH_MAT3_MULT())
-/// @}
+// Mat3f = Mat3f - Mat3f
+inline varying Mat3f operator-(const varying Mat3f m0, const varying Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx-m1.vx, m0.vy-m1.vy, m0.vz-m1.vz);
+}
 
-//  bool = isEqual(Mat3f, Mat3f, float);
-/** \cond */
-#define MATH_MAT3_ISEQUAL()                     \
-    {                                           \
-        result =                                \
-            isEqual(p0.vx, p1.vx, p2) &&        \
-            isEqual(p0.vy, p1.vy, p2) &&        \
-            isEqual(p0.vz, p1.vz, p2);          \
-    }
-/** \endcond */
-/// @{
-/// are two matrices equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Mat3f, Mat3f, float, MATH_MAT3_ISEQUAL())
-/// @}
+// Mat3f = float * Mat3f
+inline uniform Mat3f operator*(const uniform float f, const uniform Mat3f m)
+{
+    return Mat3f_ctor(f*m.vx, f*m.vy, f*m.vz);
+}
 
-// bool = isEqual(Mat3f, Mat3f);
-/// @{
-/// are two matrices equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Mat3f, Mat3f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+// Mat3f = float * Mat3f
+inline varying Mat3f operator*(const varying float f, const varying Mat3f m)
+{
+    return Mat3f_ctor(f*m.vx, f*m.vy, f*m.vz);
+}
 
-//  bool = isEqualFixedEps(Mat3f, Mat3f, float);
-/** \cond */
-#define MATH_MAT3_IS_EQUAL_FIXED_EPS()                  \
-    {                                                   \
-        result =                                        \
-            isEqualFixedEps(p0.vx, p1.vx, p2) &&        \
-            isEqualFixedEps(p0.vy, p1.vy, p2) &&        \
-            isEqualFixedEps(p0.vz, p1.vz, p2);          \
-    }
-/** \endcond */
-/// @{
-/// are two matrices equal to within tolerance (p2)?
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Mat3f, Mat3f, float, MATH_MAT3_IS_EQUAL_FIXED_EPS())
-/// @}
+// Mat3f = Mat3f * float
+inline uniform Mat3f operator*(const uniform Mat3f m, const uniform float f)
+{
+    return f * m;
+}
 
-// bool = isEqualFixedEps(Mat3f, Mat3f);
-/// @{
-/// are two matrices equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Mat3f, Mat3f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+// Mat3f = Mat3f * float
+inline varying Mat3f operator*(const varying Mat3f m, const varying float f)
+{
+    return f * m;
+}
 
-// ---------------------------------------------------------------------------
-// Ternary Operations
-// ---------------------------------------------------------------------------
+// Vec3f = Vec3f * Mat3f
+inline uniform Vec3f operator*(const uniform Vec3f v, const uniform Mat3f m)
+{
+    return v.x*m.vx + v.y*m.vy + v.z*m.vz;
+}
 
-// Mat3f = lerp(Mat3f, Mat3f, float)
-/// @{
-/// lerp two Mat3f (p0, p1) by a value (p2)
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Mat3f, Mat3f, Mat3f, float, MATH_LERP())
-/// @}
+// Vec3f = Vec3f * Mat3f
+inline varying Vec3f operator*(const varying Vec3f v, const varying Mat3f m)
+{
+    return v.x*m.vx + v.y*m.vy + v.z*m.vz;
+}
 
-//----------------------------------------------------------------------
-// unary operations
-//----------------------------------------------------------------------
+// Vec3f = Mat3f * Vec3f
+inline uniform Vec3f operator*(const uniform Mat3f m, const uniform Vec3f v)
+{
+    return Vec3f_ctor(dot(m.vx,v), dot(m.vy,v), dot(m.vz,v));
+}
 
-//  float = det(Mat3f);
-/** \cond */
-#define MATH_MAT3_DET()                                 \
-    {                                                   \
-        result = dot(p0.vx, cross(p0.vy, p0.vz));       \
-    }
-/** \endcond */
-/// @{
-/// compute the determinant of a Mat3
-MATH_DEFINE_UNARY_UNIVAR_VARIFORM(det, float, Mat3f, MATH_MAT3_DET())
-/// @}
+// Vec3f = Mat3f * Vec3f
+inline varying Vec3f operator*(const varying Mat3f m, const varying Vec3f v)
+{
+    return Vec3f_ctor(dot(m.vx,v), dot(m.vy,v), dot(m.vz,v));
+}
 
-//  Mat3f = transpose(Mat3f);
-/** \cond */
-#define MATH_MAT3_TRANSPOSE(MTYPE)                              \
-    {                                                           \
-        result = MTYPE##_ctor(p0.vx.x, p0.vy.x, p0.vz.x,        \
-                              p0.vx.y, p0.vy.y, p0.vz.y,        \
-                              p0.vx.z, p0.vy.z, p0.vz.z);       \
-    }
-/** \endcond */
-/// @{
-/// Compute the transpose of a Mat3
-MATH_DEFINE_UNARY_UNIVAR_VARIFORM(transpose, Mat3f, Mat3f, MATH_MAT3_TRANSPOSE(Mat3f))
-/// @}
+// Mat3f = Mat3f * Mat3f
+inline uniform Mat3f operator*(const uniform Mat3f m0, const uniform Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx*m1, m0.vy*m1, m0.vz*m1);
+}
 
-// Mat3f = adjoint(Mat3f);
-/** \cond */
-#define MATH_MAT3_ADJOINT(MTYPE)                                \
-    {                                                           \
-        result = transpose(MTYPE##_ctor(cross(p0.vy, p0.vz),    \
-                                        cross(p0.vz, p0.vx),    \
-                                        cross(p0.vx, p0.vy)));  \
-    }
-/** \endcond */
-/// @{
-/// compute the adjoint (transpose of the cofactor matrix) of a Mat3
-MATH_DEFINE_UNARY_UNIVAR_VARIFORM(adjoint, Mat3f, Mat3f, MATH_MAT3_ADJOINT(Mat3f))
-/// @}
+// Mat3f = Mat3f * Mat3f
+inline varying Mat3f operator*(const varying Mat3f m0, const varying Mat3f m1)
+{
+    return Mat3f_ctor(m0.vx*m1, m0.vy*m1, m0.vz*m1);
+}
 
-// Mat3f = inverse(Mat3f);
-// Mat3f = rcp(Mat3f);
-/** \cond */
-#define MATH_MAT3_INVERSE()                     \
-    {                                           \
-        result = rcp(det(p0)) * adjoint(p0);    \
-    }
-/** \endcond */
-/// @{
-/// compute the inverse of a Mat3
-MATH_DEFINE_UNARY_UNIVAR_VARIFORM(inverse, Mat3f, Mat3f, MATH_MAT3_INVERSE())
-MATH_DEFINE_UNARY_UNIVAR_VARIFORM(rcp, Mat3f, Mat3f, { result = inverse(p0); })
-/// @}
+// Mat3f lerp(Mat3f, Mat3f, float)
+inline uniform Mat3f lerp(const uniform Mat3f m0, const uniform Mat3f m1, const uniform float t)
+{
+    return (1.0f - t) * m0 + t * m1;
+}
 
-//----------------------------------------------------------------------
+// Mat3f lerp(Mat3f, Mat3f, float)
+inline varying Mat3f lerp(const varying Mat3f m0, const varying Mat3f m1, const varying float t)
+{
+    return (1.0f - t) * m0 + t * m1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
+
+// bool isEqual(Mat3f, Mat3f, float)
+inline uniform bool isEqual(const uniform Mat3f m0, const uniform Mat3f m1, const uniform float tol)
+{
+    return isEqual(m0.vx, m1.vx, tol) && isEqual(m0.vy, m1.vy, tol) && isEqual(m0.vz, m1.vz, tol);
+}
+
+// bool isEqual(Mat3f, Mat3f, float)
+inline varying bool isEqual(const varying Mat3f m0, const varying Mat3f m1, const varying float tol)
+{
+    return isEqual(m0.vx, m1.vx, tol) && isEqual(m0.vy, m1.vy, tol) && isEqual(m0.vz, m1.vz, tol);
+}
+
+// bool isEqual(Mat3f, Mat3f)
+inline uniform bool isEqual(const uniform Mat3f m0, const uniform Mat3f m1)
+{
+    return isEqual(m0, m1, sEpsilon);
+}
+
+// bool isEqual(Mat3f, Mat3f)
+inline varying bool isEqual(const varying Mat3f m0, const varying Mat3f m1)
+{
+    return isEqual(m0, m1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Mat3f, Mat3f, float)
+inline uniform bool isEqualFixedEps(const uniform Mat3f m0, const uniform Mat3f m1, const uniform float tol)
+{
+    return isEqualFixedEps(m0.vx, m1.vx, tol) &&
+           isEqualFixedEps(m0.vy, m1.vy, tol) &&
+           isEqualFixedEps(m0.vz, m1.vz, tol);
+}
+
+// bool isEqualFixedEps(Mat3f, Mat3f, float)
+inline varying bool isEqualFixedEps(const varying Mat3f m0, const varying Mat3f m1, const varying float tol)
+{
+    return isEqualFixedEps(m0.vx, m1.vx, tol) &&
+           isEqualFixedEps(m0.vy, m1.vy, tol) &&
+           isEqualFixedEps(m0.vz, m1.vz, tol);
+}
+
+// bool isEqualFixedEps(Mat3f, Mat3f)
+inline uniform bool isEqualFixedEps(const uniform Mat3f m0, const uniform Mat3f m1)
+{
+    return isEqualFixedEps(m0, m1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Mat3f, Mat3f)
+inline varying bool isEqualFixedEps(const varying Mat3f m0, const varying Mat3f m1)
+{
+    return isEqualFixedEps(m0, m1, sEpsilon);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Inverse et al
+//--------------------------------------------------------------------------------------------------
+
+// float det(Mat3f)
+inline uniform float det(const uniform Mat3f m)
+{
+    return dot(m.vx, cross(m.vy, m.vz));
+}
+
+// float = det(Mat3f)
+inline varying float det(const varying Mat3f m)
+{
+    return dot(m.vx, cross(m.vy, m.vz));
+}
+
+// Mat3f transpose(Mat3f)
+inline uniform Mat3f transpose(const uniform Mat3f m)
+{
+    return Mat3f_ctor(m.vx.x, m.vy.x, m.vz.x,
+                      m.vx.y, m.vy.y, m.vz.y,
+                      m.vx.z, m.vy.z, m.vz.z);
+}
+
+// Mat3f transpose(Mat3f)
+inline varying Mat3f transpose(const varying Mat3f m)
+{
+    return Mat3f_ctor(m.vx.x, m.vy.x, m.vz.x,
+                      m.vx.y, m.vy.y, m.vz.y,
+                      m.vx.z, m.vy.z, m.vz.z);
+}
+
+// Mat3f transpose(Mat3f)
+inline uniform Mat3f adjoint(const uniform Mat3f m)
+{
+    return transpose(Mat3f_ctor(cross(m.vy, m.vz), cross(m.vz, m.vx), cross(m.vx, m.vy)));
+}
+
+// Mat3f transpose(Mat3f)
+inline varying Mat3f adjoint(const varying Mat3f m)
+{
+    return transpose(Mat3f_ctor(cross(m.vy, m.vz), cross(m.vz, m.vx), cross(m.vx, m.vy)));
+}
+
+// Mat3f inverse(Mat3f)
+inline uniform Mat3f inverse(const uniform Mat3f m)
+{
+    return rcp(det(m)) * adjoint(m);
+}
+
+// Mat3f inverse(Mat3f)
+inline varying Mat3f inverse(const varying Mat3f m)
+{
+    return rcp(det(m)) * adjoint(m);
+}
+
+// Mat3f rcp(Mat3f)
+inline uniform Mat3f rcp(const uniform Mat3f m)
+{
+    return inverse(m);
+}
+
+// Mat3f rcp(Mat3f)
+inline varying Mat3f rcp(const varying Mat3f m)
+{
+    return inverse(m);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Transformations
-//----------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// setToIdentity(Mat3f);
-/** \cond */
-#define MATH_MAT3_SET_TO_IDENTITY()                     \
-    {                                                   \
-        p0.vx.x = 1.; p0.vx.y = 0.; p0.vx.z = 0.;       \
-        p0.vy.x = 0.; p0.vy.y = 1.; p0.vy.z = 0.;       \
-        p0.vz.x = 0.; p0.vz.y = 0.; p0.vz.z = 1.;       \
-    }
-/** \endcond */
-/// @{
-/// create an identity transform
-MATH_DEFINE_SET_VARIFORM(setToIdentity, Mat3f, MATH_MAT3_SET_TO_IDENTITY())
+// Mat3f Mat3f_identity()
+// Note: we can only define the uniform version, since overloaded functions cannot differ by return type alone.
+// For the varying case, we rely on the compiler to convert to varying when the LHS of the assignment is varying.
+inline uniform Mat3f Mat3f_identity()
+{
+    return Mat3f_ctor(1.0f, 0.0f, 0.0f,
+                      0.0f, 1.0f, 0.0f,
+                      0.0f, 0.0f, 1.0f);
+}
 
-// Mat3f = Mat3f_identity()
-// note that this is not a variform!  we can only define the
-// uniform return value case and rely on the compiler to convert to
-// varying when the lhs of the assignment is varying.
-/** \cond */
-#define MATH_MAT3_IDENTITY(MTYPE)               \
-    uniform MTYPE res;                          \
-    setToIdentity(res);                         \
-    return res;
-/** \endcond */
-inline uniform Mat3f Mat3f_identity() { MATH_MAT3_IDENTITY(Mat3f) }
-/// @}
+// setToIdentity(Mat3f)
+inline void setToIdentity(uniform Mat3f &m)
+{
+    m = Mat3f_identity();
+}
+
+// setToIdentity(Mat3f)
+inline void setToIdentity(varying Mat3f &m)
+{
+    m = Mat3f_identity();
+}
+
+// Mat3f Mat3f_scale(Vec3f)
+inline uniform Mat3f Mat3f_scale(const uniform Vec3f scale)
+{
+    return Mat3f_ctor(scale.x, 0.0f, 0.0f,
+                      0.0f, scale.y, 0.0f,
+                      0.0f, 0.0f, scale.z);
+}
+
+// Mat3f Mat3f_scale(Vec3f)
+inline varying Mat3f Mat3f_scale(const varying Vec3f scale)
+{
+    return Mat3f_ctor(scale.x, 0.0f, 0.0f,
+                      0.0f, scale.y, 0.0f,
+                      0.0f, 0.0f, scale.z);
+}
 
 // setToScale(Mat3f, Vec3f)
-/** \cond */
-#define MATH_MAT3_SET_TO_SCALE()                        \
-    {                                                   \
-        p0.vx.x = p1.x; p0.vx.y = 0.;   p0.vx.z = 0.;   \
-        p0.vy.x = 0.;   p0.vy.y = p1.y; p0.vy.z = 0.;   \
-        p0.vz.x = 0.;   p0.vz.y = 0.;   p0.vz.z = p1.z; \
-    }
-/** \endcond */
-/// @{
-/// xyz scale transform specified by a Vec3 param
-MATH_DEFINE_UNARY_SET_VARIFORM(setToScale, Mat3f, Vec3f, MATH_MAT3_SET_TO_SCALE())
+inline void setToScale(uniform Mat3f &m, const uniform Vec3f scale)
+{
+    m = Mat3f_scale(scale);
+}
 
-// Mat3f = Mat3f_scale(Vec3f)
-MATH_DEFINE_UNARY_VARIFORM(Mat3f_scale, Mat3f, Vec3f, { setToScale(result, p0); })
-/// @}
+// setToScale(Mat3f, Vec3f)
+inline void setToScale(varying Mat3f &m, const varying Vec3f scale)
+{
+    m = Mat3f_scale(scale);
+}
 
-//   setToRotation(Mat3f, Vec3f, float)
-/** \cond */
-#define MATH_MAT3_SET_TO_ROTATION_L0_F()                \
-    struct { Vec3f v; float s; float c; float t; }
-#define MATH_MAT3_SET_TO_ROTATION_L0_D()                \
-    struct { Vec3d v; double s; double c; double t; }
-#define MATH_MAT3_SET_TO_ROTATION()                             \
-    {                                                           \
-        l0.v = normalize(p1);                                   \
-        l0.s = sin(p2);                                         \
-        l0.c = cos(p2);                                         \
-        l0.t = 1. - l0.c;                                       \
-        p0.vx.x = l0.v.x * l0.v.x * l0.t + l0.c;                \
-        p0.vx.y = l0.v.x * l0.v.y * l0.t + l0.v.z * l0.s;       \
-        p0.vx.z = l0.v.x * l0.v.z * l0.t - l0.v.y * l0.s;       \
-        p0.vy.x = l0.v.y * l0.v.x * l0.t - l0.v.z * l0.s;       \
-        p0.vy.y = l0.v.y * l0.v.y * l0.t + l0.c;                \
-        p0.vy.z = l0.v.y * l0.v.z * l0.t + l0.v.x * l0.s;       \
-        p0.vz.x = l0.v.z * l0.v.x * l0.t + l0.v.y * l0.s;       \
-        p0.vz.y = l0.v.z * l0.v.y * l0.t - l0.v.x * l0.s;       \
-        p0.vz.z = l0.v.z * l0.v.z * l0.t + l0.c;                \
-    }
-/** \endcond */
-/// @{
-/// rotation transform specified by an xyz axis of
-/// rotation in a Vec3 param and a ccw radian angle specified by a scalar
-/// parameter
-MATH_DEFINE_BINARY_SET_VARIFORM_WITH_L(setToRotation, Mat3f, Vec3f, float,
-                                       MATH_MAT3_SET_TO_ROTATION_L0_F(),
-                                       MATH_MAT3_SET_TO_ROTATION());
+// Mat3f Mat3f_rotate(Vec3f axis, float angle)
+inline uniform Mat3f Mat3f_rotate(const uniform Vec3f axis, const uniform float angle)
+{
+    uniform float s, c;
+    sincos(angle, &s, &c);
+    const uniform Vec3f v = normalize(axis);
+    uniform float t = 1.0f - c;
+    return Mat3f_ctor(v.x*v.x*t+c,     v.x*v.y*t+v.z*s, v.x*v.z*t-v.y*s,
+                      v.y*v.x*t-v.z*s, v.y*v.y*t+c,     v.y*v.z*t+v.x*s,
+                      v.z*v.x*t+v.y*s, v.z*v.y*t-v.x*s, v.z*v.z*t+c);
+}
 
-// Mat3f = Mat3f_rotate(Vec3f, float)
-MATH_DEFINE_BINARY_VARIFORM(Mat3f_rotate, Mat3f, Vec3f, float,
-                            { setToRotation(result, p0, p1); })
-/// @}
+// Mat3f Mat3f_rotate(Vec3f axis, float angle)
+inline varying Mat3f Mat3f_rotate(const varying Vec3f axis, const varying float angle)
+{
+    varying float s, c;
+    sincos(angle, &s, &c);
+    const varying Vec3f v = normalize(axis);
+    varying float t = 1.0f - c;
+    return Mat3f_ctor(v.x*v.x*t+c,     v.x*v.y*t+v.z*s, v.x*v.z*t-v.y*s,
+                      v.y*v.x*t-v.z*s, v.y*v.y*t+c,     v.y*v.z*t+v.x*s,
+                      v.z*v.x*t+v.y*s, v.z*v.y*t-v.x*s, v.z*v.z*t+c);
+}
 
+// setToRotation(Mat3f, Vec3f axis, Vec3f angle)
+inline void setToRotation(uniform Mat3f &m, const uniform Vec3f axis, const uniform float angle)
+{
+    m = Mat3f_rotate(axis, angle);
+}
+
+// setToRotation(Mat3f, Vec3f axis, Vec3f angle)
+inline void setToRotation(varying Mat3f &m, const varying Vec3f axis, const varying float angle)
+{
+    m = Mat3f_rotate(axis, angle);
+}
 
 // Vec3f = transform(Mat3f, Vec3f)
-/// @{
-/// transform a Vec3 (p1) by a Mat3 (p0).  use this if p1 represents a position or
-/// non-normal vector.
-MATH_DEFINE_BINARY_VARIFORM(transform, Vec3f, Mat3f, Vec3f,
-                            { result = p1 * p0; })
-/// @}
+// Use this if v is a position vector
+inline uniform Vec3f transform(const uniform Mat3f m, const uniform Vec3f v)
+{
+    return v * m;
+}
+
+// Vec3f = transform(Mat3f, Vec3f)
+// Use this if v is a position vector
+inline varying Vec3f transform(const varying Mat3f m, const varying Vec3f v)
+{
+    return v * m;
+}
 
 // Vec3f = transformNormal(Mat3f, Vec3f)
-/// @{
-/// transform a Vec3 (p1) as a normal by a Mat3 (p0).  use this if Vec3 represents
-/// a normal.  we assume that Mat3 is already an inverse of the Mat3 used to
-/// transform non normals.  so all we do is multiply by the transpose.
-MATH_DEFINE_BINARY_VARIFORM(transformNormal, Vec3f, Mat3f, Vec3f,
-                            { result = p0 * p1; })
-/// @}
+// Use this if v is a normal.
+// We assume that m is already the inverse of the Mat3 used to transform positions
+inline uniform Vec3f transformNormal(const uniform Mat3f m, const uniform Vec3f v)
+{
+    return m * v;
+}
+
+// Vec3f = transformNormal(Mat3f, Vec3f)
+// Use this if v is a normal.
+// We assume that m is already the inverse of the Mat3 used to transform positions
+inline varying Vec3f transformNormal(const varying Mat3f m, const varying Vec3f v)
+{
+    return m * v;
+}
 

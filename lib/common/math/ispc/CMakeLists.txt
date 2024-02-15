@@ -34,7 +34,6 @@ set_property(TARGET ${component}
         ReferenceFrame.isph
         Transcendental.isph
         Typesv.h
-        Variform.isph
         Vec2.isph
         Vec3.isph
         Vec4.isph

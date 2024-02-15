@@ -118,342 +118,358 @@
 
 #include "Constants.isph"
 #include "Transcendental.isph"
-#include "Variform.isph"
 
-// bool = isEqual(float, float, float)
-/** \cond */
-#define MATH_IS_EQUAL(ONE)                                      \
-    {                                                           \
-        result = (abs(p0 - p1) <= (max(abs(p0), ONE) * p2));    \
-    }
-/** \endcond */
-/// @{
-/// deterimine if two numbers are equal within a tolerance
-/// parameter (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, float, float, float, MATH_IS_EQUAL(1.f))
-/// @}
+// bool isEqual(float, float, float)
+inline uniform bool isEqual(const uniform float x, const uniform float y, const uniform float tol)
+{
+    return (abs(x-y) <= max(abs(x), 1.0f) * tol);
+}
 
-// bool = isEqual(float, float);
-/// @{
-/// deterimine if two numbers are equal within the default tolerance (sEpsilon)
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, float, float,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+// bool isEqual(float, float, float)
+inline varying bool isEqual(const varying float x, const varying float y, const varying float tol)
+{
+    return (abs(x-y) <= max(abs(x), 1.0f) * tol);
+}
 
-// bool = isEqualFixedEps(float, float, float)
-/** \cond */
-#define MATH_IS_EQUAL_FIXED_EPS()               \
-    {                                           \
-        result = (abs(p0 - p1) <= p2);          \
-    }
-/** \endcond */
-/// @{
-/// deterimine if two numbers are equal within a tolerance
-/// parameter (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, float, float, float, MATH_IS_EQUAL_FIXED_EPS())
-/// @}
+// bool isEqual(float, float)
+inline uniform bool isEqual(const uniform float x, const uniform float y)
+{
+    return isEqual(x, y, sEpsilon);
+}
 
-// bool = isEqualFixedEps(float, float);
-/// @{
-/// deterimine if two numbers are equal within the default tolerance (sEpsilon)
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, float, float,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+// bool isEqual(float, float)
+inline varying bool isEqual(const varying float x, const varying float y)
+{
+    return isEqual(x, y, sEpsilon);
+}
 
-// bool = isZero(float, float);
-/** \cond */
-#define MATH_IS_ZERO()                          \
-    {                                           \
-        result = (abs(p0) <= p1);               \
-    }
-/** \endcond */
-/// @{
-/// deterimine if a number (p0) is equal to 0 within a given tolerance (p1)
-MATH_DEFINE_BINARY_VARIFORM(isZero, bool, float, float, MATH_IS_ZERO())
-/// @}
+// bool isEqualFixedEps(float, float, float)
+inline uniform bool isEqualFixedEps(const uniform float x, const uniform float y, const uniform float tol)
+{
+    return (abs(x-y) <= tol);
+}
 
-// bool = isZero(float);
-/// @{
-/// deterimine if a number (p0) is equal to 0 within the default tolerance (sEpsilon)
-MATH_DEFINE_UNARY_VARIFORM(isZero, bool, float,
-                           { result = isZero(p0, sEpsilon); })
-/// @}
+// bool isEqualFixedEps(float, float, float)
+inline varying bool isEqualFixedEps(const varying float x, const varying float y, const varying float tol)
+{
+    return (abs(x-y) <= tol);
+}
 
-// bool = isOne(float, float);
-/** \cond */
-#define MATH_IS_ONE()                           \
-    {                                           \
-        result = (abs(1.0f - p0) <= p1);        \
-    }
-/** \endcond */
-/// @{
-/// deterimine if a number (p0) is equal to 1 within a given tolerance (p1)
-MATH_DEFINE_BINARY_VARIFORM(isOne, bool, float, float, MATH_IS_ONE())
-/// @}
+// bool isEqualFixedEps(float, float)
+inline uniform bool isEqualFixedEps(const uniform float x, const uniform float y)
+{
+    return isEqualFixedEps(x, y, sEpsilon);
+}
 
-// bool = isOne(float);
-/// @{
-/// deterimine if a number (p0) is equal to 1 within the default tolerance (sEpsilon)
-MATH_DEFINE_UNARY_VARIFORM(isOne, bool, float,
-                           { result = isOne(p0, sEpsilon); })
-/// @}
+// bool isEqualFixedEps(float, float)
+inline varying bool isEqualFixedEps(const varying float x, const varying float y)
+{
+    return isEqualFixedEps(x, y, sEpsilon);
+}
 
-// bool = isNormalizedLengthSqr(float)
-/** \cond */
-#define MATH_IS_NORMALIZED_LEN_SQR()            \
-    {                                           \
-        result =                                \
-            (p0 > sNormalizedLengthSqrMin &&    \
-             p0 < sNormalizedLengthSqrMax);     \
-    }
-/** \endcond */
-/// @{
-/// determine if a squared length value implies a unit length
-MATH_DEFINE_UNARY_VARIFORM(isNormalizedLengthSqr, bool, float, MATH_IS_NORMALIZED_LEN_SQR())
-/// @}
+// bool isZero(float, float)
+inline uniform bool isZero(const uniform float x, const uniform float tol)
+{
+    return (abs(x) <= tol);
+}
 
-// unsigned int privateGet754Fraction(float);
-/** \cond */
-#define MATH_GET_754_FLOAT_FRACTION()          \
-    {                                          \
-        result = intbits(p0);                  \
-        /* Mask off the 23 bits of fraction */ \
-        result &= 0x7FFFFFu;                   \
-    }
-// Get the fractional part of a IEEE-754 float
-MATH_DEFINE_UNARY_VARIFORM(privateGet754Fraction, unsigned int, float, MATH_GET_754_FLOAT_FRACTION())
+// bool isZero(float, float)
+inline varying bool isZero(const varying float x, const varying float tol)
+{
+    return (abs(x) <= tol);
+}
 
-// unsigned int privateGet754BiasedExponent(float);
-#define MATH_GET_754_FLOAT_BIASED_EXPONENT()    \
-    {                                           \
-        result = intbits(p0);                   \
-        result >>= 23; /* Shift by fraction */  \
-        /* Mask off the 8 bits of exponent */   \
-        result &= 0xFFu;                        \
-    }
-// Get the fractional part of a IEEE-754 float
-MATH_DEFINE_UNARY_VARIFORM(privateGet754BiasedExponent, unsigned int, float, MATH_GET_754_FLOAT_BIASED_EXPONENT())
-/** \endcond */
+// bool isZero(float)
+inline uniform bool isZero(const uniform float x)
+{
+    return isZero(x, sEpsilon);
+}
 
-// bool issubnormal(float);
-/** \cond */
-#define MATH_IS_SUBNORMAL()                               \
-    {                                                     \
-        result = (privateGet754BiasedExponent(p0) == 0);  \
-    }
-/** \endcond */
-/// @{
-/// Determine if a value is subnormal
-MATH_DEFINE_UNARY_VARIFORM(issubnormal, bool, float, MATH_IS_SUBNORMAL())
-/// @}
+// bool isZero(float, float)
+inline varying bool isZero(const varying float x)
+{
+    return isZero(x, sEpsilon);
+}
+
+// bool isOne(float, float)
+inline uniform bool isOne(const uniform float x, const uniform float tol)
+{
+    return (abs(1.0f - x) <= tol);
+}
+
+// bool isOne(float, float)
+inline varying bool isOne(const varying float x, const varying float tol)
+{
+    return (abs(1.0f - x) <= tol);
+}
+
+// bool isOne(float)
+inline uniform bool isOne(const uniform float x)
+{
+    return isOne(x, sEpsilon);
+}
+
+// bool isOne(float, float)
+inline varying bool isOne(const varying float x)
+{
+    return isOne(x, sEpsilon);
+}
+
+// bool isNormalizedLengthSqr(float)
+inline uniform bool isNormalizedLengthSqr(const uniform float x)
+{
+    return (x > sNormalizedLengthSqrMin && x < sNormalizedLengthSqrMax);
+}
+
+// bool isNormalizedLengthSqr(float)
+inline varying bool isNormalizedLengthSqr(const varying float x)
+{
+    return (x > sNormalizedLengthSqrMin && x < sNormalizedLengthSqrMax);
+}
+
+// unsigned int privateGet754Fraction(float)
+inline uniform unsigned int privateGet754Fraction(const uniform float x)
+{
+    return intbits(x) & 0x7FFFFFu;
+}
+
+// unsigned int privateGet754Fraction(float)
+inline varying unsigned int privateGet754Fraction(const varying float x)
+{
+    return intbits(x) & 0x7FFFFFu;
+}
+
+// unsigned int privateGet754BiasedExponent(float)
+inline uniform unsigned int privateGet754BiasedExponent(const uniform float x)
+{
+    return (intbits(x) >> 23) & 0xFFu;
+}
+
+// unsigned int privateGet754BiasedExponent(float)
+inline varying unsigned int privateGet754BiasedExponent(const varying float x)
+{
+    return (intbits(x) >> 23) & 0xFFu;
+}
+
+// bool issubnormal(float)
+inline uniform unsigned int issubnormal(const uniform float x)
+{
+    return (privateGet754BiasedExponent(x) == 0);
+}
+
+// bool issubnormal(float)
+inline varying unsigned int issubnormal(const varying float x)
+{
+    return (privateGet754BiasedExponent(x) == 0);
+}
 
 // bool isinf(float)
-/// @{
-/** \cond */
-#define MATH_IS_INF_FLOAT()                                    \
-    {                                                          \
-        result = (privateGet754BiasedExponent(p0) == 0xFFu &&  \
-                  privateGet754Fraction(p0) == 0);             \
-    }
-/** \endcond */
-/// Mimics std::isinf(float)
-MATH_DEFINE_UNARY_VARIFORM(isinf, bool, float, MATH_IS_INF_FLOAT())
-/// @}
+inline uniform unsigned int isinf(const uniform float x)
+{
+    return (privateGet754BiasedExponent(x) == 0xFFu && privateGet754Fraction(x) == 0);
+}
+
+// bool isinf(float)
+inline varying unsigned int isinf(const varying float x)
+{
+    return (privateGet754BiasedExponent(x) == 0xFFu && privateGet754Fraction(x) == 0);
+}
 
 // bool isfinite(float)
-// bool = isFinite(float);
-/** \cond */
-#define MATH_IS_FINITE()                      \
-    {                                         \
-        result = (!isnan(p0) && !isinf(p0));  \
-    }
-/** \endcond */
-/// @{
-/// Mimics std::isfinite(float): deterimine if a number (p0) is neither NaN nor infinite
-MATH_DEFINE_UNARY_VARIFORM(isfinite, bool, float, MATH_IS_FINITE())
-/// @}
+inline uniform unsigned int isfinite(const uniform float x)
+{
+    return (!isnan(x) && !isinf(x));
+}
+
+// bool isfinite(float)
+inline varying unsigned int isfinite(const varying float x)
+{
+    return (!isnan(x) && !isinf(x));
+}
 
 // bool isnormal(float)
-/// @{
-/** \cond */
-#define MATH_IS_NORMAL()             \
-    {                                \
-        result = (p0 != 0.0f &&      \
-                  isfinite(p0) &&    \
-                  !issubnormal(p0)); \
-    }
-/** \endcond */
-/// Mimics std::isnormal(float)
-MATH_DEFINE_UNARY_VARIFORM(isnormal, bool, float, MATH_IS_NORMAL())
+inline uniform unsigned int isnormal(const uniform float x)
+{
+    return (x != 0.0f && isfinite(x) && !issubnormal(x));
+}
+
+// bool isnormal(float)
+inline varying unsigned int isnormal(const varying float x)
+{
+    return (x != 0.0f && isfinite(x) && !issubnormal(x));
+}
 
 // float trunc(float)
-/// @{
-/** \cond */
-#define MATH_TRUNC()                              \
-    {                                             \
-        result = (p0 > 0) ? floor(p0) : ceil(p0); \
-    }
-/** \endcond */
-/// Mimics std::trunc(float)
-MATH_DEFINE_UNARY_VARIFORM(trunc, float, float, MATH_TRUNC())
+inline uniform float trunc(const uniform float x)
+{
+    return (x > 0) ? floor(x) : ceil(x);
+}
 
-// lerp anything that supports - * and +
-// float = lerp(float p0, float p1, float p2);
-/** \cond */
-#define MATH_LERP()                             \
-    {                                           \
-        result = (1 - p2) * p0 + p2 * p1;       \
-    }
-/** \endcond */
-/// @{
-/// linearly interpolate p0 and p1 by weight p2
-MATH_DEFINE_TERNARY_VARIFORM(lerp, float, float, float, float, MATH_LERP())
-/// @}
+// float trunc(float)
+inline varying float trunc(const varying float x)
+{
+    return (x > 0) ? floor(x) : ceil(x);
+}
 
-/** \cond */
-#define MATH_BILERP()                           \
-    {                                           \
-        result = lerp(lerp(p0, p1, p4), lerp(p2, p3, p4), p5); \
-    }
-/** \endcond */
-/// @{
-MATH_DEFINE_SENARY_VARIFORM(bilerp, float, float, float, float, float, float, float, MATH_BILERP())
-/// @}
+// float lerp(float, float, float)
+inline uniform float lerp(const uniform float x0, const uniform float x1, const uniform float t)
+{
+    return (1.0f - t) * x0 + t * x1;
+}
 
-// float = deg2rad(float deg)
-/** \cond */
-#define MATH_DEG_2_RAD()                        \
-    {                                           \
-        result = p0 * sPi / 180.0;              \
-    }
-/** \endcond */
-/// @{
-/// convert degrees to radians
-/// @param p0 input degrees
-/// @return result in radians
-MATH_DEFINE_UNARY_VARIFORM(deg2rad, float, float, MATH_DEG_2_RAD())
-/// @}
+// float lerp(float, float, float)
+inline varying float lerp(const varying float x0, const varying float x1, const varying float t)
+{
+    return (1.0f - t) * x0 + t * x1;
+}
 
-// float = rad2deg(float rad)
-/** \cond */
-#define MATH_RAD_2_DEG()                        \
-    {                                           \
-        result = p0 * 180.0 * sOneOverPi;       \
-    }
-/** \endcond */
-/// @{
-/// convert radians to degrees
-/// @param p0 input radians
-/// @return result in degrees
-MATH_DEFINE_UNARY_VARIFORM(rad2deg, float, float, MATH_RAD_2_DEG())
-/// @}
+// float bilerp(float, float, float, float, float, float)
+inline uniform float bilerp(const uniform float x00, const uniform float x01,
+                            const uniform float x10, const uniform float x11,
+                            const uniform float s,   const uniform float t)
+{
+    return lerp(lerp(x00, x01, s), lerp(x10, x11, s), t);
+}
 
-// float = bias(float val, float bias)
-/** \cond */
-#define MATH_BIAS()                                             \
-    {                                                           \
-        if (p1 == 0.5f || p0 <= 0.0f || p0 >= 1.0f)             \
-            result = p0;                                        \
-        else if (p1 <= 0.0f)                                    \
-            result = 0.0f;                                      \
-        else {                                                  \
-            const uniform float sFactor = 1.0f / log(0.5f);     \
-            result = pow(p0, log(p1) * sFactor);                \
-        }                                                       \
-    }
-/** \endcond */
-/// @{
-/// The classic PDI lib/shading definition of "bias"
-/// @param p0 input value
-/// @param p1 bias value
-/// @return biased result
-MATH_DEFINE_BINARY_VARIFORM(bias, float, float, float, MATH_BIAS())
-/// @}
+// float bilerp(float, float, float, float, float, float)
+inline varying float bilerp(const varying float x00, const varying float x01,
+                            const varying float x10, const varying float x11,
+                            const varying float s,   const varying float t)
+{
+    return lerp(lerp(x00, x01, s), lerp(x10, x11, s), t);
+}
 
-// float = gain(float val, float gain)
-/** \cond */
-#define MATH_GAIN()                                                     \
-    {                                                                   \
-        if (p1 == 0.5f) {                                               \
-            result = p0;                                                \
-        } else {                                                        \
-            result = p0 < 0.5f ?                                        \
-                bias(2.0f * p0, 1.0f - p1) * 0.5f :                     \
-                1.0f - bias(2.0f - 2.0f * p0, 1.0f - p1) * 0.5f;        \
-        }                                                               \
-    }
-/** \endcond */
-/// @{
-/// The classic PDI lib/shading defintion of "gain"
-/// @param p0 input value
-/// @param p1 gain value
-/// @return gained result
-MATH_DEFINE_BINARY_VARIFORM(gain, float, float, float, MATH_GAIN())
-/// @}
+// float deg2rad(float deg)
+inline uniform float deg2rad(const uniform float deg)
+{
+    return deg * (sPi / 180.0f);
+}
 
-// float = fmod(float, float)
-/** \cond */
-#define MATH_FMOD()                                             \
-    {                                                           \
-        MNRY_ASSERT(!isEqual(p1, 0.0f));                         \
-        result = p0 - trunc(p0/p1) * p1;                        \
-    }                                                           
-/** \endcond */
-/// @{
-/// Floating point modulus operation
-/// @param p0 input dividend value
-/// @param p1 input divisor value
-/// @return modulus result
-MATH_DEFINE_BINARY_VARIFORM(fmod, float, float, float, MATH_FMOD())
-/// @}
+// float deg2rad(float deg)
+inline varying float deg2rad(const varying float deg)
+{
+    return deg * (sPi / 180.0f);
+}
 
-// float = saturate(float p0);
-/// @{
-/// clamp p0 to range [0,1]
-/// @param p0 input value
-/// @return clamped result
-MATH_DEFINE_UNARY_VARIFORM(saturate, float, float,
-                           { result = clamp(p0, 0.0f, 1.0f); })
-/// @}
+// float rad2deg(float rad)
+inline uniform float rad2deg(const uniform float rad)
+{
+    return rad * (180.0 / sPi);
+}
 
-// float = copysign(float, float)
-/** \cond */
-#define MATH_COPYSIGN()                                                \
-    {                                                                  \
-        l0 = (intbits(p0) & 0x7fffffff) | (intbits(p1) & 0x80000000);  \
-        result = floatbits(l0);                                        \
-    }
-/** \endcond */
-/// @{
-/// Composes a value with the magnitude of p0 and the sign of p1
-/// @param p0 input magnitude
-/// @param p1 input sign
-/// @return result
-MATH_DEFINE_BINARY_VARIFORM_WITH_L(copysign, float, float, float, unsigned int, MATH_COPYSIGN())
-/// @}
+// float rad2deg(float rad)
+inline varying float rad2deg(const varying float rad)
+{
+    return rad * (180.0 / sPi);
+}
+
+// float bias(float val, float bias)
+// The classic PDI lib/shading definition of "bias"
+inline uniform float bias(const uniform float val, const uniform float bias_)
+{
+    if (bias_ == 0.5f || val <= 0.0f || val >= 1.0f)
+        return val;
+    else if (bias_ <= 0.0f)
+        return 0.0f;
+    else return pow(val, log(bias_) * (1.0f / log(0.5f)));
+}
+
+// float bias(float val, float bias)
+// The classic PDI lib/shading definition of "bias"
+inline varying float bias(const varying float val, const varying float bias_)
+{
+    if (bias_ == 0.5f || val <= 0.0f || val >= 1.0f)
+        return val;
+    else if (bias_ <= 0.0f)
+        return 0.0f;
+    else return pow(val, log(bias_) * (1.0f / log(0.5f)));
+}
+
+// float gain(float val, float gain)
+// The classic PDI lib/shading definition of "gain"
+inline uniform float gain(const uniform float val, const uniform float gain_)
+{
+    if (gain_ == 0.5f)
+        return val;
+    else if (val < 0.5f)
+        return bias(2.0f * val, 1.0f - gain_) * 0.5f;
+    else return 1.0f - bias(2.0f - 2.0f * val, 1.0f - gain_) * 0.5f;
+}
+
+// float gain(float val, float gain)
+// The classic PDI lib/shading definition of "gain"
+inline varying float gain(const varying float val, const varying float gain_)
+{
+    if (gain_ == 0.5f)
+        return val;
+    else if (val < 0.5f)
+        return bias(2.0f * val, 1.0f - gain_) * 0.5f;
+    else return 1.0f - bias(2.0f - 2.0f * val, 1.0f - gain_) * 0.5f;
+}
+
+// float fmod(float, float)
+inline uniform float fmod(const uniform float x, const uniform float y)
+{
+    MNRY_ASSERT(!isEqual(y, 0.0f));
+    return x - trunc(x/y) * y;
+}
+
+// float fmod(float, float)
+inline varying float fmod(const varying float x, const varying float y)
+{
+    MNRY_ASSERT(!isEqual(y, 0.0f));
+    return x - trunc(x/y) * y;
+}
+
+// float saturate(float)
+inline uniform float saturate(const uniform float x)
+{
+    return clamp(x, 0.0f, 1.0f);
+}
+
+// float saturate(float)
+inline varying float saturate(const varying float x)
+{
+    return clamp(x, 0.0f, 1.0f);
+}
+
+// float copysign(float, float)
+// Composes a value with the magnitude of x and the sign of y
+inline uniform float copysign(const uniform float x, const uniform float y)
+{
+    return floatbits((intbits(x) & 0x7fffffff) | (intbits(y) & 0x80000000));
+}
+
+// float copysign(float, float)
+// Composes a value with the magnitude of x and the sign of y
+inline varying float copysign(const varying float x, const varying float y)
+{
+    return floatbits((intbits(x) & 0x7fffffff) | (intbits(y) & 0x80000000));
+}
 
 // float = erf(float)
 // Algorithm 7.1.25 in Abromowitz and Stegun, Handbook of Mathematical
 // Functions With Formulas, Graphs, and Mathematical Tables (pg. 299)
-// (maximum error: 2.5×10−5)
+// (maximum error: 2.5e-05)
 // http://www.math.ubc.ca/~cbm/aands/abramowitz_and_stegun.pdf (pg. 88)
-/** \cond */
-#define MATH_ERF()                                              \
-    {                                                           \
-        const uniform float p  =  0.47047f;                     \
-        const uniform float a1 =  0.3480242f;                   \
-        const uniform float a2 = -0.0958798f;                   \
-        const uniform float a3 =  0.7478556f;                   \
-        l0 = 1.0f / (1.0f + p * abs(p0));                       \
-        result = 1.0f - l0 * (a1 + l0 * (a2 + l0 * a3)) *       \
-                exp( -(p0 * p0) );                              \
-        result = copysign(result, p0);                          \
-    }                                                           
-/** \endcond */
-/// @{
-/// Approximates the error function at p0
-/// @param p0 input
-/// @return result
-MATH_DEFINE_UNARY_VARIFORM_WITH_L(erf, float, float, float, MATH_ERF())
-/// @}
+static const uniform float sErfP  =  0.47047f;  
+static const uniform float sErfA1 =  0.3480242f;
+static const uniform float sErfA2 = -0.0958798f;
+static const uniform float sErfA3 =  0.7478556f;
+
+// float erf(float)
+inline uniform float erf(const uniform float x)
+{
+    const uniform float y  = 1.0f / (1.0f + sErfP * abs(x));
+    const uniform float z  = 1.0f - y * (sErfA1 + y * (sErfA2 + y * sErfA3)) * exp(-x*x);
+    return copysign(z, x);
+}
+
+// float erf(float)
+inline varying float erf(const varying float x)
+{
+    const varying float y  = 1.0f / (1.0f + sErfP * abs(x));
+    const varying float z  = 1.0f - y * (sErfA1 + y * (sErfA2 + y * sErfA3)) * exp(-x*x);
+    return copysign(z, x);
+}
 

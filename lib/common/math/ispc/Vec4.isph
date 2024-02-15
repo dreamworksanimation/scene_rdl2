@@ -8,376 +8,402 @@
 
 #include "Constants.isph"
 #include "Math.isph"
-#include "Variform.isph"
 
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // Types
-//---------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-// Vec4f;
-#define MATH_DECLARE_VEC4(TYPE, NAME)           \
-    struct NAME                                 \
-    {                                           \
-        TYPE x;                                 \
-        TYPE y;                                 \
-        TYPE z;                                 \
-        TYPE w;                                 \
-    };
-/// @struct Vec4f
-/// @brief a 4 component, single precision, x-y-z-w vector
-MATH_DECLARE_VEC4(float, Vec4f);
+struct Vec4f
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
 
-// ---------------------------------------------------------------------------
-// Construction
-// ---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Constructors
+//--------------------------------------------------------------------------------------------------
 
-// Vec4f = Vec4f_ctor(float);
-/** \cond */
-#define MATH_VEC4_CTOR_1()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p0;                          \
-        result.z = p0;                          \
-        result.w = p0;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec4 from a single number
-MATH_DEFINE_UNARY_VARIFORM(Vec4f_ctor, Vec4f, float, MATH_VEC4_CTOR_1())
-/// @}
+// Vec4f = {x, y, z, w}
+inline uniform Vec4f Vec4f_ctor(const uniform float x, const uniform float y,
+                                const uniform float z, const uniform float w)
+{
+    uniform Vec4f result;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+}
 
-// Vec4f = Vec4f_ctor(float, float, float, float);
-/** \cond */
-#define MATH_VEC4_CTOR_4()                      \
-    {                                           \
-        result.x = p0;                          \
-        result.y = p1;                          \
-        result.z = p2;                          \
-        result.w = p3;                          \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec4 from 4 numbers
-MATH_DEFINE_QUATERNION_VARIFORM(Vec4f_ctor, Vec4f, float, float, float, float, MATH_VEC4_CTOR_4())
-/// @}
+// Vec4f = {x, y, z, w}
+inline varying Vec4f Vec4f_ctor(const varying float x, const varying float y,
+                                const varying float z, const varying float w)
+{
+    varying Vec4f result;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+}
 
-// Vec4f = Vec4f_ctor(float * uniform);
-/** \cond */
-#define MATH_VEC4_CTOR_ARRAY()                  \
-    {                                           \
-        result.x = p0[0];                       \
-        result.y = p0[1];                       \
-        result.z = p0[2];                       \
-        result.w = p0[3];                       \
-    }
-/** \endcond */
-/// @{
-/// construct a Vec4 from an array
-MATH_DEFINE_UNARY_ARRAY_VARIFORM(Vec4f_ctor, Vec4f, float, MATH_VEC4_CTOR_ARRAY())
-/// @}
+// Vec4f = {f, f, f, f}
+inline uniform Vec4f Vec4f_ctor(const uniform float f)
+{
+    return Vec4f_ctor(f, f, f, f);
+}
 
-// ---------------------------------------------------------------------------
-// Binary Operators
-// ---------------------------------------------------------------------------
+// Vec4f = {f, f, f, f}
+inline varying Vec4f Vec4f_ctor(const varying float f)
+{
+    return Vec4f_ctor(f, f, f, f);
+}
 
-// Vec4f = Vec4f + Vec4f;
-/** \cond */
-#define MATH_VEC4_PLUS()                        \
-    {                                           \
-        result.x = p0.x + p1.x;                 \
-        result.y = p0.y + p1.y;                 \
-        result.z = p0.z + p1.z;                 \
-        result.w = p0.w + p1.w;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise add of 2 Vec4, p0 + p1
-MATH_DEFINE_BINARY_VARIFORM(operator+, Vec4f, Vec4f, Vec4f, MATH_VEC4_PLUS())
-/// @}
+// Vec4f = {a[0], a[1], a[2], a[3]}
+inline uniform Vec4f Vec4f_ctor(const uniform float a[])
+{
+    return Vec4f_ctor(a[0], a[1], a[2], a[3]);
+}
 
-//  Vec4f = Vec4f - Vec4f;
-/** \cond */
-#define MATH_VEC4_MINUS()                       \
-    {                                           \
-        result.x = p0.x - p1.x;                 \
-        result.y = p0.y - p1.y;                 \
-        result.z = p0.z - p1.z;                 \
-        result.w = p0.w - p1.w;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise subtraction of 2 Vec4, p0 - p1
-MATH_DEFINE_BINARY_VARIFORM(operator-, Vec4f, Vec4f, Vec4f, MATH_VEC4_MINUS())
-/// @}
+// Vec4f = {a[0], a[1], a[2], a[3]}
+inline varying Vec4f Vec4f_ctor(const varying float a[])
+{
+    return Vec4f_ctor(a[0], a[1], a[2], a[3]);
+}
 
-// Vec4f = float * Vec4f;
-/** \cond */
-#define MATH_VEC4_S_PRE_MULT()                  \
-    {                                           \
-        result.x = p0 * p1.x;                   \
-        result.y = p0 * p1.y;                   \
-        result.z = p0 * p1.z;                   \
-        result.w = p0 * p1.w;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar multiplication, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, float, Vec4f, MATH_VEC4_S_PRE_MULT())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Arithmetic
+//--------------------------------------------------------------------------------------------------
 
-// Vec4f = Vec4f * float;
-/** \cond */
-#define MATH_VEC4_S_POST_MULT()                 \
-    {                                           \
-        result.x = p0.x * p1;                   \
-        result.y = p0.y * p1;                   \
-        result.z = p0.z * p1;                   \
-        result.w = p0.w * p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar post-multiplication, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Vec4f, float, MATH_VEC4_S_POST_MULT())
-/// @}
+//  Vec4f = Vec4f + Vec4f
+inline uniform Vec4f operator+(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(v0.x+v1.x, v0.y+v1.y, v0.z+v1.z, v0.w+v1.w);
+}
 
-// Vec4f = Vec4f * Vec4f;
-/** \cond */
-#define MATH_VEC4_MULT()                        \
-    {                                           \
-        result.x = p0.x * p1.x;                 \
-        result.y = p0.y * p1.y;                 \
-        result.z = p0.z * p1.z;                 \
-        result.w = p0.w * p1.w;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise multiplication of 2 Vec4, p0 * p1
-MATH_DEFINE_BINARY_VARIFORM(operator*, Vec4f, Vec4f, Vec4f, MATH_VEC4_MULT())
-/// @}
+//  Vec4f = Vec4f + Vec4f
+inline varying Vec4f operator+(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(v0.x+v1.x, v0.y+v1.y, v0.z+v1.z, v0.w+v1.w);
+}
 
-// Vec4f = float / Vec4f;
-/** \cond */
-#define MATH_VEC4_S_PRE_DIV()                   \
-    {                                           \
-        result.x = p0 / p1.x;                   \
-        result.y = p0 / p1.y;                   \
-        result.z = p0 / p1.z;                   \
-        result.w = p0 / p1.w;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar pre-division, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec4f, float, Vec4f, MATH_VEC4_S_PRE_DIV())
-/// @}
+//  Vec4f = Vec4f - Vec4f
+inline uniform Vec4f operator-(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(v0.x-v1.x, v0.y-v1.y, v0.z-v1.z, v0.w-v1.w);
+}
 
-// Vec4f = Vec4f / float;
-/** \cond */
-#define MATH_VEC4_S_POST_DIV()                  \
-    {                                           \
-        result.x = p0.x / p1;                   \
-        result.y = p0.y / p1;                   \
-        result.z = p0.z / p1;                   \
-        result.w = p0.w / p1;                   \
-    }
-/** \endcond */
-/// @{
-/// scalar division p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec4f, Vec4f, float, MATH_VEC4_S_POST_DIV())
-/// @}
+//  Vec4f = Vec4f - Vec4f
+inline varying Vec4f operator-(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(v0.x-v1.x, v0.y-v1.y, v0.z-v1.z, v0.w-v1.w);
+}
 
-// Vec4f = Vec4f / Vec4f;
-/** \cond */
-#define MATH_VEC4_DIV()                         \
-    {                                           \
-        result.x = p0.x / p1.x;                 \
-        result.y = p0.y / p1.y;                 \
-        result.z = p0.z / p1.z;                 \
-        result.w = p0.w / p1.w;                 \
-    }
-/** \endcond */
-/// @{
-/// component-wise division of 2 Vec4, p0 / p1
-MATH_DEFINE_BINARY_VARIFORM(operator/, Vec4f, Vec4f, Vec4f, MATH_VEC4_DIV())
-/// @}
+// Vec4f = -Vec4f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline uniform Vec4f neg(const uniform Vec4f v)
+{
+    return Vec4f_ctor(-v.x, -v.y, -v.z, -v.w);
+}
 
-//  bool = isEqual(Vec4f, Vec4f, float)
-/** \cond */
-#define MATH_VEC4_IS_EQUAL()                    \
-    {                                           \
-        result = isEqual(p0.x, p1.x, p2) &&     \
-            isEqual(p0.y, p1.y, p2) &&          \
-            isEqual(p0.z, p1.z, p2) &&          \
-            isEqual(p0.w, p1.w, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Vec4s (p0, p1) equal to within tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqual, bool, Vec4f, Vec4f, float, MATH_VEC4_IS_EQUAL())
-/// @}
+// Vec4f = -Vec4f
+// (IPSC doesn't currently support overloading of unary operators, so we define a function to negate a vector)
+inline varying Vec4f neg(const varying Vec4f v)
+{
+    return Vec4f_ctor(-v.x, -v.y, -v.z, -v.w);
+}
+
+//  Vec4f = float * Vec4f
+inline uniform Vec4f operator*(const uniform float f, const uniform Vec4f v)
+{
+    return Vec4f_ctor(f*v.x, f*v.y, f*v.z, f*v.w);
+}
+
+//  Vec4f = float * Vec4f
+inline varying Vec4f operator*(const varying float f, const varying Vec4f v)
+{
+    return Vec4f_ctor(f*v.x, f*v.y, f*v.z, f*v.w);
+}
+
+//  Vec4f = Vec4f * float
+inline uniform Vec4f operator*(const uniform Vec4f v, const uniform float f)
+{
+    return f * v;
+}
+
+//  Vec4f = Vec4f * float
+inline varying Vec4f operator*(const varying Vec4f v, const varying float f)
+{
+    return f * v;
+}
+
+//  Vec4f = Vec4f * Vec4f
+inline uniform Vec4f operator*(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(v0.x*v1.x, v0.y*v1.y, v0.z*v1.z, v0.w*v1.w);
+}
+
+//  Vec4f = Vec4f * Vec4f
+inline varying Vec4f operator*(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(v0.x*v1.x, v0.y*v1.y, v0.z*v1.z, v0.w*v1.w);
+}
+
+//  Vec4f = float / Vec4f
+inline uniform Vec4f operator/(const uniform float f, const uniform Vec4f v)
+{
+    return Vec4f_ctor(f/v.x, f/v.y, f/v.z, f/v.w);
+}
+
+//  Vec4f = float / Vec4f
+inline varying Vec4f operator/(const varying float f, const varying Vec4f v)
+{
+    return Vec4f_ctor(f/v.x, f/v.y, f/v.z, f/v.w);
+}
+
+//  Vec4f = Vec4f / float
+inline uniform Vec4f operator/(const uniform Vec4f v, const uniform float f)
+{
+    return Vec4f_ctor(v.x/f, v.y/f, v.z/f, v.w/f);
+}
+
+//  Vec4f = Vec4f / float
+inline varying Vec4f operator/(const varying Vec4f v, const varying float f)
+{
+    return Vec4f_ctor(v.x/f, v.y/f, v.z/f, v.w/f);
+}
+
+//  Vec4f = Vec4f / Vec4f
+inline uniform Vec4f operator/(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(v0.x/v1.x, v0.y/v1.y, v0.z/v1.z, v0.w/v1.w);
+}
+
+//  Vec4f = Vec4f / Vec4f
+inline varying Vec4f operator/(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(v0.x/v1.x, v0.y/v1.y, v0.z/v1.z, v0.w/v1.w);
+}
+
+// Vec4f rcp(Vec4f)
+inline uniform Vec4f rcp(const uniform Vec4f v)
+{
+    return Vec4f_ctor(rcp(v.x), rcp(v.y), rcp(v.z), rcp(v.w));
+}
+
+// Vec4f rcp(Vec4f)
+inline varying Vec4f rcp(const varying Vec4f v)
+{
+    return Vec4f_ctor(rcp(v.x), rcp(v.y), rcp(v.z), rcp(v.w));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Equality
+//--------------------------------------------------------------------------------------------------
+
+// bool isEqual(Vec4f, Vec4f, tol)
+inline uniform bool isEqual(const uniform Vec4f v0, const uniform Vec4f v1, const uniform float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol) &&
+                  (v0.z, v1.z, tol) && isEqual(v0.w, v1.w, tol);
+}
+
+// bool isEqual(Vec4f, Vec4f, tol)
+inline varying bool isEqual(const varying Vec4f v0, const varying Vec4f v1, const varying float tol)
+{
+    return isEqual(v0.x, v1.x, tol) && isEqual(v0.y, v1.y, tol) &&
+                  (v0.z, v1.z, tol) && isEqual(v0.w, v1.w, tol);
+}
 
 // bool isEqual(Vec4f, Vec4f)
-/// @{
-/// are two Vec4s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqual, bool, Vec4f, Vec4f,
-                            { result = isEqual(p0, p1, sEpsilon); })
-/// @}
+inline uniform bool isEqual(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
 
-//  bool = isEqualFixedEps(Vec4f, Vec4f, float)
-/** \cond */
-#define MATH_VEC4_IS_EQUAL_FIXED_EPS()                  \
-    {                                                   \
-        result = isEqualFixedEps(p0.x, p1.x, p2) &&     \
-            isEqualFixedEps(p0.y, p1.y, p2) &&          \
-            isEqualFixedEps(p0.z, p1.z, p2) &&          \
-            isEqualFixedEps(p0.w, p1.w, p2);            \
-    }
-/** \endcond */
-/// @{
-/// are two Vec4s (p0, p1) equal to within tolerance (p2)
-MATH_DEFINE_TERNARY_VARIFORM(isEqualFixedEps, bool, Vec4f, Vec4f, float, MATH_VEC4_IS_EQUAL_FIXED_EPS())
-/// @}
+// bool isEqual(Vec4f, Vec4f)
+inline varying bool isEqual(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return isEqual(v0, v1, sEpsilon);
+}
+
+// bool isEqualFixedEps(Vec4f, Vec4f, tol)
+inline uniform bool isEqualFixedEps(const uniform Vec4f v0, const uniform Vec4f v1, const uniform float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol) &&
+           isEqualFixedEps(v0.z, v1.z, tol) && isEqualFixedEps(v0.w, v1.w, tol);
+}
+
+// bool isEqualFixedEps(Vec4f, Vec4f, tol)
+inline varying bool isEqualFixedEps(const varying Vec4f v0, const varying Vec4f v1, const varying float tol)
+{
+    return isEqualFixedEps(v0.x, v1.x, tol) && isEqualFixedEps(v0.y, v1.y, tol) &&
+           isEqualFixedEps(v0.z, v1.z, tol) && isEqualFixedEps(v0.w, v1.w, tol);
+}
 
 // bool isEqualFixedEps(Vec4f, Vec4f)
-/// @{
-/// are two Vec4s equal to within the default tolerance (sEpsilon)?
-MATH_DEFINE_BINARY_VARIFORM(isEqualFixedEps, bool, Vec4f, Vec4f,
-                            { result = isEqualFixedEps(p0, p1, sEpsilon); })
-/// @}
+inline uniform bool isEqualFixedEps(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
 
-// bool = isZero(Vec4f, tol)
-/** \cond */
-#define MATH_VEC4_IS_ZERO()                                     \
-    {                                                           \
-        result = isZero(p0.x, p1) && isZero(p0.y, p1) &&        \
-            isZero(p0.z, p1) && isZero(p0.w, p1);               \
-    }
-/** \endcond */
-/// @{
-/// is a Vec4 equal to zero within a tolerance (p2) ?
-MATH_DEFINE_BINARY_VARIFORM(isZero, bool, Vec4f, float, MATH_VEC4_IS_ZERO())
-/// @}
+// bool isEqualFixedEps(Vec4f, Vec4f)
+inline varying bool isEqualFixedEps(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return isEqualFixedEps(v0, v1, sEpsilon);
+}
 
-// bool = isZero(Vec4f);
-/// @{
-/// is a Vec4 equal to zero within the default tolerance (sEpsilon)?
-MATH_DEFINE_UNARY_VARIFORM(isZero, bool, Vec4f,
-                           { result = isZero(p0, sEpsilon); })
-/// @}
+// bool isZero(Vec4f, tol)
+inline uniform bool isZero(const uniform Vec4f v, const uniform float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol) && isZero(v.z, tol) && isZero(v.w, tol);
+}
 
-// float = dot(Vec4f, Vec4f)
-/** \cond */
-#define MATH_VEC4_DOT()                                                 \
-    {                                                                   \
-        result = p0.x * p1.x + p0.y * p1.y + p0.z * p1.z + p0.w * p1.w; \
-    }
-/** \endcond */
-/// @{
-/// compute the dot product of 2 Vec4
-MATH_DEFINE_BINARY_VARIFORM(dot, float, Vec4f, Vec4f, MATH_VEC4_DOT())
-/// @}
+// bool isZero(Vec4f, tol)
+inline varying bool isZero(const varying Vec4f v, const varying float tol)
+{
+    return isZero(v.x, tol) && isZero(v.y, tol) && isZero(v.z, tol) && isZero(v.w, tol);
+}
 
-//----------------------------------------------------------------------
-// unary operations
-//----------------------------------------------------------------------
+// bool isZero(Vec4f)
+inline uniform bool isZero(const uniform Vec4f v)
+{
+    return isZero(v, sEpsilon);
+}
 
-// float = length(Vec4f);
-/** \cond */
-#define MATH_VEC4_LENGTH()                                      \
-    {                                                           \
-        result = sqrt(p0.x * p0.x + p0.y * p0.y + p0.z * p0.z + \
-                      p0.w * p0.w);                             \
-    }
-/** \endcond */
-/// @{
-/// compute the length of a Vec4
-MATH_DEFINE_UNARY_VARIFORM(length, float, Vec4f, MATH_VEC4_LENGTH())
-/// @}
+// bool isZero(Vec4f)
+inline varying bool isZero(const varying Vec4f v)
+{
+    return isZero(v, sEpsilon);
+}
 
-//  float = lengthSqr(Vec4f);
-/** \cond */
-#define MATH_VEC4_LENGTH_SQR()                                          \
-    {                                                                   \
-        result = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z + p0.w * p0.w; \
-    }
-/** \endcond */
-/// @{
-/// compute the length^2 of a Vec4
-MATH_DEFINE_UNARY_VARIFORM(lengthSqr, float, Vec4f, MATH_VEC4_LENGTH_SQR())
-/// @}
+//--------------------------------------------------------------------------------------------------
+// Common vector ops
+//--------------------------------------------------------------------------------------------------
 
-// Vec4f = normalize(Vec4f)
-/** \cond */
-#define MATH_VEC4_NORMALIZE()                   \
-    {                                           \
-        result = p0 * rcp(length(p0));          \
-    }
-/** \endcond */
-/// @{
-/// compute a normalized Vec4
-MATH_DEFINE_UNARY_VARIFORM(normalize, Vec4f, Vec4f, MATH_VEC4_NORMALIZE())
-/// @}
+// Vec4f min(Vec4f, Vec4f)
+inline uniform Vec4f min(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z), min(v0.w, v1.w));
+}
 
-// Vec4f = abs(Vec4f)
-/** \cond */
-#define MATH_VEC4_ABS()                         \
-    {                                           \
-        result.x = abs(p0.x);                   \
-        result.y = abs(p0.y);                   \
-        result.z = abs(p0.z);                   \
-        result.w = abs(p0.w);                   \
-    }
-/** \endcond */
-/// @{
-/// compute absolute value of a Vec4
-MATH_DEFINE_UNARY_VARIFORM(abs, Vec4f, Vec4f, MATH_VEC4_ABS())
-/// @}
+// Vec4f min(Vec4f, Vec4f)
+inline varying Vec4f min(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z), min(v0.w, v1.w));
+}
 
-// Vec4f = neg(Vec4f)
-/** \cond */
-#define MATH_VEC4_NEG()                         \
-    {                                           \
-        result = -1.0 * p0;                     \
-    }
-/** \endcond */
-/// @{
-/// compute negative value of a Vec2
-MATH_DEFINE_UNARY_VARIFORM(neg, Vec4f, Vec4f, MATH_VEC4_NEG())
-/// @}
+// Vec4f max(Vec4f, Vec4f)
+inline uniform Vec4f max(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return Vec4f_ctor(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z), max(v0.w, v1.w));
+}
 
-// Vec4f = rcp([MATH_]Vec4f)
-/** \cond */
-#define MATH_VEC4_RCP()                         \
-    {                                           \
-        result.x = rcp(p0.x);                   \
-        result.y = rcp(p0.y);                   \
-        result.z = rcp(p0.z);                   \
-        result.w = rcp(p0.w);                   \
-    }
-/** \endcond */
-/// @{
-/// compute the reciprocal of a Vec4
-MATH_DEFINE_UNARY_VARIFORM(rcp, Vec4f, Vec4f, MATH_VEC4_RCP())
-/// @}
+// Vec4f max(Vec4f, Vec4f)
+inline varying Vec4f max(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return Vec4f_ctor(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z), max(v0.w, v1.w));
+}
 
-// bool = isNormalized(Vec4f)
-/** \cond */
-#define MATH_VEC4_IS_NORMALIZED()                       \
-    {                                                   \
-        result = isNormalizedLengthSqr(lengthSqr(p0));  \
-    }
-/** \endcond */
-/// @{
-/// is a Vec4 normalized?
-MATH_DEFINE_UNARY_VARIFORM(isNormalized, bool, Vec4f, MATH_VEC4_IS_NORMALIZED())
-/// @}
+// Vec4f clamp(Vec4f, Vec4f lo, Vec4f hi)
+inline uniform Vec4f clamp(const uniform Vec4f v, const uniform Vec4f lo, const uniform Vec4f hi)
+{
+    return min(max(v, lo), hi);
+}
 
-// ---------------------------------------------------------------------------
-// Ternary Operations
-// ---------------------------------------------------------------------------
+// Vec4f clamp(Vec4f, Vec4f lo, Vec4f hi)
+inline varying Vec4f clamp(const varying Vec4f v, const varying Vec4f lo, const varying Vec4f hi)
+{
+    return min(max(v, lo), hi);
+}
 
-// Vec4f = lerp(Vec4f, Vec4f, float)
-/// @{
-/// lerp two Vec4f (p0, p1) by a value (p2)
-MATH_DEFINE_TERNARY_VARIFORM(lerp, Vec4f, Vec4f, Vec4f, float, MATH_LERP())
-/// @}
+// Vec4f abs(Vec4f, Vec4f)
+inline uniform Vec4f abs(const uniform Vec4f v)
+{
+    return Vec4f_ctor(abs(v.x), abs(v.y), abs(v.z), abs(v.w));
+}
+
+// Vec4f abs(Vec4f, Vec4f)
+inline varying Vec4f abs(const varying Vec4f v)
+{
+    return Vec4f_ctor(abs(v.x), abs(v.y), abs(v.z), abs(v.w));
+}
+
+// Vec4f lerp(Vec4f, Vec4f, float)
+inline uniform Vec4f lerp(const uniform Vec4f v0, const uniform Vec4f v1, const uniform float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+// Vec4f lerp(Vec4f, Vec4f, float)
+inline varying Vec4f lerp(const varying Vec4f v0, const varying Vec4f v1, const varying float t)
+{
+    return (1.0f - t) * v0 + t * v1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Length et al
+//--------------------------------------------------------------------------------------------------
+
+// float dot(Vec4f, Vec4f)
+inline uniform float dot(const uniform Vec4f v0, const uniform Vec4f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y + v0.z*v1.z + v0.w*v1.w;
+}
+
+// float dot(Vec4f, Vec4f)
+inline varying float dot(const varying Vec4f v0, const varying Vec4f v1)
+{
+    return v0.x*v1.x + v0.y*v1.y + v0.z*v1.z + v0.w*v1.w;
+}
+
+// float lengthSqr(Vec4f)
+inline uniform float lengthSqr(const uniform Vec4f v)
+{
+    return dot(v, v);
+}
+
+// float lengthSqr(Vec4f)
+inline varying float lengthSqr(const varying Vec4f v)
+{
+    return dot(v, v);
+}
+
+// float length(Vec4f)
+inline uniform float length(const uniform Vec4f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// float length(Vec4f)
+inline varying float length(const varying Vec4f v)
+{
+    return sqrt(lengthSqr(v));
+}
+
+// Vec4f normalize(Vec4f)
+inline uniform Vec4f normalize(const uniform Vec4f v)
+{
+    return v * rcp(length(v));
+}
+
+// Vec4f normalize(Vec4f)
+inline varying Vec4f normalize(const varying Vec4f v)
+{
+    return v * rcp(length(v));
+}
+
+// bool isNormalized(Vec4f)
+inline uniform bool isNormalized(const uniform Vec4f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
+
+// bool isNormalized(Vec4f)
+inline varying bool isNormalized(const varying Vec4f v)
+{
+    return isNormalizedLengthSqr(lengthSqr(v));
+}
 
