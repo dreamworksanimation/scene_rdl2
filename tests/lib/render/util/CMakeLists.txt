@@ -11,6 +11,7 @@ target_sources(${target}
         test_util.cc
         TestArray2D.cc
         TestAtomicFloat.cc
+        TestCpuSocketUtil.cc
         TestMemPool.cc
 	TestProcCpuAffinity.cc
 	TestThreadPoolExecutor.cc

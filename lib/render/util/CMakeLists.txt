@@ -14,6 +14,7 @@ target_sources(${component}
         Arena.cc
         Args.cc
 	CpuAffinityMask.cc
+	CpuSocketUtil.cc
         GetEnv.cc
         Files.cc
         GetEnv.cc
@@ -35,7 +36,8 @@ set_property(TARGET ${component}
         BitUtils.h
         BitUtils.isph
         BlockAllocatorCheck.h
-	CpuAffinityMask.h
+        CpuAffinityMask.h
+        CpuSocketUtil.h
         Files.h
         GetEnv.h
         GUID.h
@@ -61,6 +63,7 @@ set_property(TARGET ${component}
         syncstream.h
 	ThreadPoolExecutor.h
         TimeUtil.h
+        ThreadPoolExecutor.h
         type_traits.h
         TypedStaticallySizedMemoryPool.h
 )
