@@ -689,7 +689,7 @@ public:
 
             while (addrs != end) {
 
-                unsigned blockIdx = getOwningBlockIndex((void *)(*addrs));
+                uint64_t blockIdx = getOwningBlockIndex((void *)(*addrs));
                 intptr_t *currAddr = addrs + 1;
                 while (currAddr != end && blockIdx == getOwningBlockIndex((void *)(*currAddr))) {
                     ++currAddr;
@@ -717,10 +717,10 @@ public:
     }
 
     // Thread safe.
-    unsigned getOwningBlockIndex(const void *entry) const
+    uint64_t getOwningBlockIndex(const void *entry) const
     {
         // Map the entry to its owning block.
-        unsigned blockIdx = unsigned(intptr_t(entry) - intptr_t(mEntryMemory)) / mEntryToBlockDivider;
+        uint64_t blockIdx = uint64_t(intptr_t(entry) - intptr_t(mEntryMemory)) / mEntryToBlockDivider;
         MNRY_ASSERT(blockIdx < mNumBlocks);
         return blockIdx;
     }
@@ -749,7 +749,7 @@ protected:
 #endif
 
         // Map the entry to its owning block.
-        unsigned blockIdx = getOwningBlockIndex(entry);
+        uint64_t blockIdx = getOwningBlockIndex(entry);
 
         BlockType *block = mBlockMemory + blockIdx;
         MNRY_ASSERT(isValidBlockAddress(block));
