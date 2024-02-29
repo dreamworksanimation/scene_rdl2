@@ -36,7 +36,6 @@ getRandomUint32(util::Random *rng, std::uint32_t min, std::uint32_t max)
     return rng->getNextUInt(limit) + min;
 }
 
-template<typename InternalType, typename LeafType>
 void
 testMemBlockAllocator(const char *name, unsigned numIterations)
 {
@@ -49,13 +48,12 @@ testMemBlockAllocator(const char *name, unsigned numIterations)
 
     util::Random rng(seed);
 
-    typedef MemBlock<InternalType, LeafType> BlockType;
-    const unsigned totalEntries = BlockType::getNumEntries();
+    const unsigned totalEntries = MemBlock::getNumEntries();
 
     std::vector<uint64_t> rawEntryMemory;
     rawEntryMemory.resize(totalEntries);
 
-    BlockType block;
+    MemBlock block;
     block.init(rawEntryMemory.data(), sizeof(uint64_t));
 
     // Track allocations with both a set and a vector to determine if any particular
@@ -201,11 +199,8 @@ testMemBlockAllocator(const char *name, unsigned numIterations)
 
 //----------------------------------------------------------------------------
 
-typedef MemBlock<uint64_t, uint64_t> MemBlockType;
-typedef MemBlockManager<MemBlockType> BlockManager;
-
 typedef uint64_t EntryType;
-typedef MemPool<MemBlockType, EntryType> LocalMemPool;
+typedef MemPool<EntryType> LocalMemPool;
 
 // Counter to hand out unique indices to TLSProxy objects.
 tbb::atomic<unsigned> gNextTLSIndex;
@@ -225,7 +220,7 @@ struct TLState
 
     ~TLState() { delete[] mScratch; }
 
-    void init(BlockManager *blockPool, unsigned threadIdx, unsigned randomSeed, unsigned maxFreesPerCall)
+    void init(MemBlockManager *blockPool, unsigned threadIdx, unsigned randomSeed, unsigned maxFreesPerCall)
     {
         mMemPool.init(blockPool);
         mThreadIdx = threadIdx;
@@ -270,11 +265,11 @@ testMemPoolAllocator(const char *name,
     //
     // Allocate block pool.
     //
-    MemBlockType *blockMem = util::alignedMallocArrayCtor<MemBlockType>(totalBlocks, CACHE_LINE_SIZE);
+    MemBlock *blockMem = util::alignedMallocArrayCtor<MemBlock>(totalBlocks, CACHE_LINE_SIZE);
 
-    uint8_t *entryMem = new uint8_t[BlockManager::queryEntryMemoryRequired(totalBlocks, sizeof(EntryType))];
+    uint8_t *entryMem = new uint8_t[MemBlockManager::queryEntryMemoryRequired(totalBlocks, sizeof(EntryType))];
 
-    BlockManager blockPool;
+    MemBlockManager blockPool;
     blockPool.init(totalBlocks, blockMem, entryMem, sizeof(EntryType));
 
     //
@@ -470,25 +465,7 @@ TestMemPool::testMemBlocks()
 
     fprintf(stderr, "\n------------ Testing MemBlocks ------------\n");
 
-    testMemBlockAllocator< uint8_t, uint8_t >("< uint8_t,  uint8_t>", numIterations);
-    testMemBlockAllocator< uint8_t, uint16_t>("< uint8_t, uint16_t>", numIterations);
-    testMemBlockAllocator< uint8_t, uint32_t>("< uint8_t, uint32_t>", numIterations);
-    testMemBlockAllocator< uint8_t, uint64_t>("< uint8_t, uint64_t>", numIterations);
-
-    testMemBlockAllocator<uint16_t, uint8_t >("<uint16_t,  uint8_t>", numIterations);
-    testMemBlockAllocator<uint16_t, uint16_t>("<uint16_t, uint16_t>", numIterations);
-    testMemBlockAllocator<uint16_t, uint32_t>("<uint16_t, uint32_t>", numIterations);
-    testMemBlockAllocator<uint16_t, uint64_t>("<uint16_t, uint64_t>", numIterations);
-
-    testMemBlockAllocator<uint32_t, uint8_t >("<uint32_t,  uint8_t>", numIterations);
-    testMemBlockAllocator<uint32_t, uint16_t>("<uint32_t, uint16_t>", numIterations);
-    testMemBlockAllocator<uint32_t, uint32_t>("<uint32_t, uint32_t>", numIterations);
-    testMemBlockAllocator<uint32_t, uint64_t>("<uint32_t, uint64_t>", numIterations);
-
-    testMemBlockAllocator<uint64_t, uint8_t >("<uint64_t,  uint8_t>", numIterations);
-    testMemBlockAllocator<uint64_t, uint16_t>("<uint64_t, uint16_t>", numIterations);
-    testMemBlockAllocator<uint64_t, uint32_t>("<uint64_t, uint32_t>", numIterations);
-    testMemBlockAllocator<uint64_t, uint64_t>("<uint64_t, uint64_t>", numIterations);
+    testMemBlockAllocator("<uint64_t, uint64_t>", numIterations);
 
     fprintf(stderr, "MemBlock allocator passed all tests!\n");
 }
@@ -496,7 +473,7 @@ TestMemPool::testMemBlocks()
 void
 TestMemPool::testThreadSafety()
 {
-    const unsigned entriesPerBlock = MemBlockType::getNumEntries();
+    const unsigned entriesPerBlock = MemBlock::getNumEntries();
 
     // Test single element allocations and frees.
     testMemPoolAllocator("single element allocations and frees", 4, 1, 1, 1024, 2048);

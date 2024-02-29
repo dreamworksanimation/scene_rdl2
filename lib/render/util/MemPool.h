@@ -110,7 +110,6 @@ struct LinkedListNode
 
 //-----------------------------------------------------------------------------
 
-template <typename INTR_TYPE, typename LEAF_TYPE>
 class CACHE_ALIGN MemBlock : public LinkedListNode
 {
 public:
@@ -130,7 +129,7 @@ public:
         mNumFreeEntries = NUM_ENTRIES;
 
         mInternalFull = 0;
-        mInternalEmpty = INTR_TYPE(-1);
+        mInternalEmpty = uint64_t(-1);
         memset(mUsedEntries, 0, sizeof(mUsedEntries));
 
         mInternalFree = 0;
@@ -147,7 +146,7 @@ public:
         mNext = mPrev = this;
         mNumFreeEntries = NUM_ENTRIES;
         mInternalFull = 0;
-        mInternalEmpty = INTR_TYPE(-1);
+        mInternalEmpty = uint64_t(-1);
         mInternalFree = 0;
 
 #ifdef DEBUG
@@ -184,10 +183,10 @@ public:
             --mNumFreeEntries;
 
             // Find first leaf node with free entries.
-            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(INTR_TYPE(~mInternalFull));
+            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(uint64_t(~mInternalFull));
 
             // Find first free entry within leaf node.
-            const unsigned entryIdx = util::countLeadingZerosUnsafe(LEAF_TYPE(~mUsedEntries[leafNodeIdx]));
+            const unsigned entryIdx = util::countLeadingZerosUnsafe(uint64_t(~mUsedEntries[leafNodeIdx]));
 
             // Compute combined entry index relative to 0'th entry. This is the index
             // of the entry we'll return.
@@ -198,8 +197,8 @@ public:
             mUsedEntries[leafNodeIdx] |= sLeafMSB >> entryIdx;
 
             // Check if this leaf has had all its bits allocated.
-            const INTR_TYPE internalBit = sInternalMSB >> leafNodeIdx;
-            if (mUsedEntries[leafNodeIdx] == LEAF_TYPE(-1)) {
+            const uint64_t internalBit = sInternalMSB >> leafNodeIdx;
+            if (mUsedEntries[leafNodeIdx] == uint64_t(-1)) {
                 mInternalFull |= internalBit;
             }
 
@@ -227,7 +226,7 @@ public:
         // Pass 1 : Search for empty leaves and fill them up completely.
         while (mInternalEmpty && entriesToAllocate >= ENTRIES_PER_LEAF_NODE) {
 
-            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(INTR_TYPE(mInternalEmpty));
+            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(uint64_t(mInternalEmpty));
             MNRY_ASSERT(mUsedEntries[leafNodeIdx] == 0);
 
             const unsigned masterIdx = leafNodeIdx << ENTRIES_PER_LEAF_NODE_SHIFT;
@@ -235,11 +234,11 @@ public:
                 entries[i] = mEntryMemory + (mEntryStride * (masterIdx + i));
             }
 
-            const INTR_TYPE internalBit = sInternalMSB >> leafNodeIdx;
+            const uint64_t internalBit = sInternalMSB >> leafNodeIdx;
             mInternalEmpty &= ~internalBit;
             mInternalFull |= internalBit;
 
-            mUsedEntries[leafNodeIdx] = LEAF_TYPE(-1);
+            mUsedEntries[leafNodeIdx] = uint64_t(-1);
 
             entries = &entries[ENTRIES_PER_LEAF_NODE];  // entries += ENTRIES_PER_LEAF_NODE;
             entriesToAllocate -= ENTRIES_PER_LEAF_NODE;
@@ -249,9 +248,9 @@ public:
         while (entriesToAllocate) {
 
             // Find first leaf node with free entries.
-            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(INTR_TYPE(~mInternalFull));
+            const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(uint64_t(~mInternalFull));
 
-            LEAF_TYPE freeEntries = ~mUsedEntries[leafNodeIdx];
+            uint64_t freeEntries = ~mUsedEntries[leafNodeIdx];
 
             MNRY_ASSERT(freeEntries);
 
@@ -272,7 +271,7 @@ public:
             // Update bitfields to record new allocations.
             mUsedEntries[leafNodeIdx] = ~freeEntries;
 
-            const INTR_TYPE internalBit = sInternalMSB >> leafNodeIdx;
+            const uint64_t internalBit = sInternalMSB >> leafNodeIdx;
             if (freeEntries == 0) {
                 mInternalFull |= internalBit;
             }
@@ -290,7 +289,7 @@ public:
     {
         MNRY_ASSERT(numEntries);
 
-        Mutex::scoped_lock lock(mPendingFreeMutex);
+        tbb::spin_mutex::scoped_lock lock(mPendingFreeMutex);
 
         for (unsigned i = 0; i < numEntries; ++i) {
 
@@ -302,7 +301,7 @@ public:
             MNRY_ASSERT(masterIdx < NUM_ENTRIES);
 
             const unsigned leafNodeIdx = masterIdx >> ENTRIES_PER_LEAF_NODE_SHIFT;
-            const LEAF_TYPE leafNodeBit = sLeafMSB >> (masterIdx & (ENTRIES_PER_LEAF_NODE - 1));
+            const uint64_t leafNodeBit = sLeafMSB >> (masterIdx & (ENTRIES_PER_LEAF_NODE - 1));
 
             mInternalFree |= (sInternalMSB >> leafNodeIdx);
             mFreeEntries[leafNodeIdx] |= leafNodeBit;
@@ -352,12 +351,12 @@ public:
 
             const unsigned leafNodeIdx = util::countLeadingZerosUnsafe(mInternalFree);
 
-            LEAF_TYPE freeNodes = mFreeEntries[leafNodeIdx];
+            uint64_t freeNodes = mFreeEntries[leafNodeIdx];
 
             mFreeEntries[leafNodeIdx] = 0;
             mUsedEntries[leafNodeIdx] &= ~freeNodes;
 
-            const INTR_TYPE internalBit = sInternalMSB >> leafNodeIdx;
+            const uint64_t internalBit = sInternalMSB >> leafNodeIdx;
 
             mInternalFull &= ~internalBit;
             mInternalFree &= ~internalBit;
@@ -408,11 +407,11 @@ public:
 
         for (unsigned i = 0; i < NUM_LEAF_NODES; ++i) {
 
-            const INTR_TYPE internalBit = sInternalMSB >> i;
+            const uint64_t internalBit = sInternalMSB >> i;
             if ((internalBit & mInternalFull) != 0) {
-                MNRY_ASSERT(mUsedEntries[i] == LEAF_TYPE(-1));
+                MNRY_ASSERT(mUsedEntries[i] == uint64_t(-1));
             } else {
-                MNRY_ASSERT(mUsedEntries[i] != LEAF_TYPE(-1));
+                MNRY_ASSERT(mUsedEntries[i] != uint64_t(-1));
             }
 
             if ((internalBit & mInternalEmpty) != 0) {
@@ -425,21 +424,21 @@ public:
         return true;
     }
 
-    // Conservative. This doesn't account for entries which may be lying in the pending
+    // Conservative. This doesn't account for entries which may be in the pending
     // free list.
     bool isFull() const
     {
-        return mInternalFull == INTR_TYPE(-1);
+        return mInternalFull == uint64_t(-1);
     }
 
-    // Conservative. This doesn't account for entries which may be lying in the pending
+    // Conservative. This doesn't account for entries which may be in the pending
     // free list.
     bool isEmpty() const
     {
-        return mInternalEmpty == INTR_TYPE(-1);
+        return mInternalEmpty == uint64_t(-1);
     }
 
-    // Conservative. This doesn't account for entries which may be lying in the pending
+    // Conservative. This doesn't account for entries which may be in the pending
     // free list.
     unsigned getNumFreeEntries() const
     {
@@ -447,7 +446,7 @@ public:
     }
 
     // This may over estimate since it doesn't account for entries which may be
-    // lying in the pending free list.
+    // in the pending free list.
     unsigned getNumUsedEntries() const
     {
         return NUM_ENTRIES - mNumFreeEntries;
@@ -480,10 +479,10 @@ private:
 
     enum
     {
-        NUM_LEAF_NODES              = sizeof(INTR_TYPE) * 8,
-        ENTRIES_PER_LEAF_NODE       = sizeof(LEAF_TYPE) * 8,
-        ENTRIES_PER_LEAF_NODE_SHIFT = math::compile_time::log2i(ENTRIES_PER_LEAF_NODE),
-        NUM_ENTRIES                 = NUM_LEAF_NODES * ENTRIES_PER_LEAF_NODE,
+        NUM_LEAF_NODES              = sizeof(uint64_t) * 8,  // 64 leaf nodes
+        ENTRIES_PER_LEAF_NODE       = sizeof(uint64_t) * 8,  // 64 entries per leaf node
+        ENTRIES_PER_LEAF_NODE_SHIFT = math::compile_time::log2i(ENTRIES_PER_LEAF_NODE), // 6
+        NUM_ENTRIES                 = NUM_LEAF_NODES * ENTRIES_PER_LEAF_NODE, // 4096 total entries
     };
 
     // All data offsets are relative to this address.
@@ -513,11 +512,11 @@ private:
     //     1       1        Invalid state.
     //
     // Each bit in each entry in the mUsedEntries array corresponds to a single
-    // entry in our memory pool. An on bit means the entry is currently allocated.
+    // entry in our memory pool (block). An on bit means the entry is currently allocated.
     //
-    INTR_TYPE       mInternalFull;
-    INTR_TYPE       mInternalEmpty;
-    LEAF_TYPE       mUsedEntries[NUM_LEAF_NODES];
+    uint64_t       mInternalFull;
+    uint64_t       mInternalEmpty;
+    uint64_t       mUsedEntries[NUM_LEAF_NODES];
 
     //
     // Pending free-list. This is a record of elements belonging to this block
@@ -525,16 +524,15 @@ private:
     // the main allocation hierarchy, and thus can't be handed out just yet.
     // Any access to these members should be protected with mPendingFreeMutex.
     //
-    typedef tbb::spin_mutex Mutex;
 
-    Mutex           mPendingFreeMutex;
-    INTR_TYPE       mInternalFree;
-    LEAF_TYPE       mFreeEntries[NUM_LEAF_NODES];
+    tbb::spin_mutex mPendingFreeMutex;
+    uint64_t        mInternalFree;
+    uint64_t        mFreeEntries[NUM_LEAF_NODES];
 
     // Explicitly store these constants separately since they man be bigger than
     // what can be held in an enum.
-    static const INTR_TYPE  sInternalMSB = INTR_TYPE(1ULL << (NUM_LEAF_NODES - 1));
-    static const LEAF_TYPE  sLeafMSB = LEAF_TYPE(1ULL << (ENTRIES_PER_LEAF_NODE - 1));
+    static const uint64_t  sInternalMSB = uint64_t(1ULL << (NUM_LEAF_NODES - 1));
+    static const uint64_t  sLeafMSB = uint64_t(1ULL << (ENTRIES_PER_LEAF_NODE - 1));
 };
 
 //-----------------------------------------------------------------------------
@@ -548,12 +546,9 @@ private:
 // map it back to it's owning block.
 //
 
-template<typename BLOCK_TYPE>
 class CACHE_ALIGN MemBlockManager
 {
 public:
-    typedef BLOCK_TYPE BlockType;
-
     MemBlockManager() :
         mNumBlocks(0),
         mBlockMemory(nullptr),
@@ -566,12 +561,12 @@ public:
     // Use queryEntryMemoryRequired to compute size needed for entryMemory.
     // Not thread safe.
     void init(unsigned numBlocks,
-              BlockType *blockMemory,
+              MemBlock *blockMemory,
               void *entryMemory,
               unsigned entryStride)
     {
         // We use the first 8 bytes to store the next pointer for entries in ConcurrentSList.
-        MNRY_STATIC_ASSERT(sizeof(BlockType) >= 8);
+        MNRY_STATIC_ASSERT(sizeof(MemBlock) >= 8);
 
         mNumBlocks = MNRY_VERIFY(numBlocks);
         mBlockMemory = MNRY_VERIFY(blockMemory);
@@ -592,7 +587,7 @@ public:
         // out contiguously.
         for (unsigned i = 1; i <= mNumBlocks; ++i) {
             size_t blockIdx = size_t(mNumBlocks - i);
-            BlockType *block = mBlockMemory + blockIdx;
+            MemBlock *block = mBlockMemory + blockIdx;
             size_t entryOffset = blockIdx * NUM_ENTRIES_PER_BLOCK * mEntryStride;
             uint8_t *entryMemory = mEntryMemory + entryOffset;
             block->init(entryMemory, mEntryStride);
@@ -613,9 +608,9 @@ public:
         // out contiguously.
         for (unsigned i = 1; i <= mNumBlocks; ++i) {
             unsigned blockIdx = mNumBlocks - i;
-            BlockType *block = mBlockMemory + blockIdx;
+            MemBlock *block = mBlockMemory + blockIdx;
             block->fastReset();
-            mFreeBlocks.push(block);
+            mFreeBlocks.push((util::SList::Entry *)block);
         }
 
         MNRY_ASSERT(mFreeBlocks.size() == mNumBlocks);
@@ -623,15 +618,15 @@ public:
 
     unsigned getMemoryUsage() const
     {
-        return (mNumBlocks * sizeof(BLOCK_TYPE)) +
+        return (mNumBlocks * sizeof(MemBlock)) +
                queryEntryMemoryRequired(mNumBlocks, mEntryStride) +
                sizeof(*this);
     }
 
     // Thread safe.
-    BlockType *allocateBlock()
+    MemBlock *allocateBlock()
     {
-        BlockType *block = (BlockType *)mFreeBlocks.pop();
+        MemBlock *block = (MemBlock *)mFreeBlocks.pop();
         if (block) {
             // Reset pointers so it can be inserted into a the doubly linked
             // list again. (Inserting it into the mFreeBlocks list would have
@@ -646,7 +641,7 @@ public:
     }
 
     // Thread safe.
-    void freeBlock(BlockType *block)
+    void freeBlock(MemBlock *block)
     {
         MNRY_ASSERT(isValidBlockAddress(block));
         MNRY_ASSERT(block->isValid());
@@ -704,7 +699,7 @@ public:
                 }
 #endif
 
-                BlockType *block = mBlockMemory + blockIdx;
+                MemBlock *block = mBlockMemory + blockIdx;
                 MNRY_ASSERT(isValidBlockAddress(block));
 
                 block->addToPendingFreeList(entriesInBlock, (void **)addrs);
@@ -726,11 +721,11 @@ public:
     }
 
     // Thread safe.
-    bool isValidBlockAddress(const BlockType *block) const
+    bool isValidBlockAddress(const MemBlock *block) const
     {
         MNRY_ASSERT(block);
-        MNRY_ASSERT(block >= (BlockType *)mBlockMemory && block < (mBlockMemory + mNumBlocks));
-        MNRY_ASSERT(((intptr_t)block - (intptr_t)mBlockMemory) % sizeof(BlockType) == 0);
+        MNRY_ASSERT(block >= (MemBlock *)mBlockMemory && block < (mBlockMemory + mNumBlocks));
+        MNRY_ASSERT(((intptr_t)block - (intptr_t)mBlockMemory) % sizeof(MemBlock) == 0);
         return true;
     }
 
@@ -751,7 +746,7 @@ protected:
         // Map the entry to its owning block.
         uint64_t blockIdx = getOwningBlockIndex(entry);
 
-        BlockType *block = mBlockMemory + blockIdx;
+        MemBlock *block = mBlockMemory + blockIdx;
         MNRY_ASSERT(isValidBlockAddress(block));
 
         block->addToPendingFreeList(1, &entry);
@@ -759,11 +754,11 @@ protected:
 
     enum
     {
-        NUM_ENTRIES_PER_BLOCK = BlockType::getNumEntries(),
+        NUM_ENTRIES_PER_BLOCK = MemBlock::getNumEntries(),
     };
 
     unsigned    mNumBlocks;
-    BlockType * mBlockMemory;
+    MemBlock *  mBlockMemory;
     uint8_t *   mEntryMemory;
     unsigned    mEntryStride;
     unsigned    mEntryToBlockDivider;
@@ -779,13 +774,11 @@ protected:
 // allocated on this thread may be passed around to other threads, it supports
 // deallocating memory allocations made from other threads also.
 //
-template<typename BLOCK_TYPE>
-class LocalUntypedMemPool
+
+class ThreadLocalUntypedMemPool
 {
 public:
-    typedef BLOCK_TYPE BlockType;
-
-    LocalUntypedMemPool() :
+    ThreadLocalUntypedMemPool() :
         mBlockManager(nullptr),
         mActiveBlock(nullptr),
         mNumReserved(0),
@@ -793,12 +786,12 @@ public:
     {
     }
 
-    ~LocalUntypedMemPool()
+    ~ThreadLocalUntypedMemPool()
     {
         cleanUp();
     }
 
-    void init(MemBlockManager<BlockType> *blockManager)
+    void init(MemBlockManager *blockManager)
     {
         cleanUp();
         mBlockManager = MNRY_VERIFY(blockManager);
@@ -808,9 +801,9 @@ public:
     void cleanUp()
     {
         if (mBlockManager && mActiveBlock) {
-            BlockType *block = mActiveBlock;
+            MemBlock *block = mActiveBlock;
             do {
-                BlockType *next = (BlockType *)block->mNext;
+                MemBlock *next = (MemBlock *)block->mNext;
                 mBlockManager->freeBlock(block);
                 block = next;
             } while (block != mActiveBlock);
@@ -827,9 +820,9 @@ public:
     {
         // Give back all blocks we have taken so far.
         if (mBlockManager && mActiveBlock) {
-            BlockType *block = mActiveBlock;
+            MemBlock *block = mActiveBlock;
             do {
-                BlockType *next = (BlockType *)block->mNext;
+                MemBlock *next = (MemBlock *)block->mNext;
                 mBlockManager->freeBlock(block);
                 block = next;
             } while (block != mActiveBlock);
@@ -853,7 +846,7 @@ public:
             // If this fails, we need to allocate more blocks at startup.
             MNRY_ASSERT(mActiveBlock && mActiveBlock->isEmpty());
 
-            mNumReserved = BlockType::getNumEntries();
+            mNumReserved = MemBlock::getNumEntries();
             mNumAllocated = 0;
 
             MNRY_ASSERT(isBlockListValid());
@@ -892,7 +885,7 @@ public:
 
         // Don't cycle beyond (num blocks - 1) for any given allocation. This ensures that all
         // blocks will get their pending free lists flushed equally.
-        BlockType *endBlock = (BlockType *)mActiveBlock->mPrev;
+        MemBlock *endBlock = (MemBlock *)mActiveBlock->mPrev;
 
         cycleToNextBlock();
 
@@ -935,7 +928,7 @@ public:
 
         while (remainingAllocs) {
 
-            BlockType *freshBlock = mBlockManager->allocateBlock();
+            MemBlock *freshBlock = mBlockManager->allocateBlock();
 
             if (__builtin_expect((freshBlock != nullptr), 1)) {
 
@@ -949,7 +942,7 @@ public:
                 ADD_TO_COUNTER(CASE_C_ALLOCS, numAllocated);
 
                 remainingAllocs -= numAllocated;
-                mNumReserved += BlockType::getNumEntries();
+                mNumReserved += MemBlock::getNumEntries();
                 mNumAllocated += numAllocated;
                 entries = &entries[numAllocated]; // entries += numAllocated;
 
@@ -972,7 +965,7 @@ public:
         return true;
     }
 
-    // All allocations are made through the LocalUntypedMemPool interface for the current thread.
+    // All allocations are made through the ThreadLocalUntypedMemPool interface for the current thread.
     // Deallocations can be made from any thread at any time through this call.
     void untypedFreeList(unsigned numEntries, void **entries)
     {
@@ -1081,7 +1074,7 @@ public:
         return mStats;
     }
 
-    const MemBlockManager<BlockType> *getMemBlockManager() const
+    const MemBlockManager *getMemBlockManager() const
     {
         return mBlockManager;
     }
@@ -1104,11 +1097,10 @@ public:
         // many entries the block list thinks it's allocated.
         unsigned numEntries = 0;
 
-        BlockType *block = mActiveBlock;
+        MemBlock *block = mActiveBlock;
         do {
             numEntries += block->getNumUsedEntries();
-            block = (BlockType *)block->mNext;
-
+            block = (MemBlock *)block->mNext;
         } while (block != mActiveBlock);
 
         MNRY_ASSERT(numEntries == mNumAllocated);
@@ -1122,11 +1114,11 @@ public:
     {
         MNRY_ASSERT(mActiveBlock);
 
-        BlockType *activeBlock = mActiveBlock;
+        MemBlock *activeBlock = mActiveBlock;
         do {
             activeBlock->processPendingFreeList();
             MNRY_ASSERT(activeBlock->isEmpty());
-            activeBlock = (BlockType *)activeBlock->mNext;
+            activeBlock = (MemBlock *)activeBlock->mNext;
         } while (activeBlock != mActiveBlock);
 
         mNumAllocated = 0;
@@ -1145,10 +1137,10 @@ public:
 protected:
     void cycleToNextBlock()
     {
-        mActiveBlock = (BlockType *)mActiveBlock->mNext;
+        mActiveBlock = (MemBlock *)mActiveBlock->mNext;
     }
 
-    // Gives mActiveBlock back to the block mananger and updates mActiveBlock to cycle to the
+    // Gives mActiveBlock back to the block manager and updates mActiveBlock to cycle to the
     // following node in the linked list.
     void returnEmptyBlock()
     {
@@ -1159,13 +1151,13 @@ protected:
         // Assert that we're not the only block left.
         MNRY_ASSERT(!mActiveBlock->isAlone());
 
-        BlockType *freeBlock = mActiveBlock;
-        mActiveBlock = (BlockType *)mActiveBlock->mNext;
+        MemBlock *freeBlock = mActiveBlock;
+        mActiveBlock = (MemBlock *)mActiveBlock->mNext;
 
         mBlockManager->freeBlock(freeBlock);
 
-        MNRY_ASSERT(mNumReserved >= BlockType::getNumEntries());
-        mNumReserved -= BlockType::getNumEntries();
+        MNRY_ASSERT(mNumReserved >= MemBlock::getNumEntries());
+        mNumReserved -= MemBlock::getNumEntries();
         MNRY_ASSERT(mNumReserved >= mNumAllocated);
 
         MNRY_ASSERT(isBlockListValid());
@@ -1193,17 +1185,17 @@ protected:
         } while (node != mActiveBlock);
 
         MNRY_ASSERT(numForward == numBackward);
-        MNRY_ASSERT(numForward * BlockType::getNumEntries() == mNumReserved);
+        MNRY_ASSERT(numForward * MemBlock::getNumEntries() == mNumReserved);
 
         return true;
     }
 
     // This is where we can allocate new blocks from or return unused blocks.
-    MemBlockManager<BlockType> *mBlockManager;
+    MemBlockManager         *mBlockManager;
 
     // The block which we should allocate from next.
     // One of a cyclic doubly linked list of nodes.
-    BlockType *             mActiveBlock;
+    MemBlock *              mActiveBlock;
 
     // The total number of entries this memory pool has asked for from the block
     // manager. It's the sum of the available entries and the allocated entries.
@@ -1217,20 +1209,20 @@ protected:
 };
 
 //
-// Type safe wrapper around underlying LocalUntypedMemPool.
+// Type safe wrapper around underlying ThreadLocalUntypedMemPool.
 //
-template<typename BLOCK_TYPE, typename T>
-class MemPool : public LocalUntypedMemPool<BLOCK_TYPE>
+template<typename T>
+class MemPool : public ThreadLocalUntypedMemPool
 {
 public:
     bool allocList(unsigned numEntries, T **entries)
     {
-        return LocalUntypedMemPool<BLOCK_TYPE>::untypedAllocList(numEntries, (void **)entries);
+        return ThreadLocalUntypedMemPool::untypedAllocList(numEntries, (void **)entries);
     }
 
     void freeList(unsigned numEntries, T **entries)
     {
-        LocalUntypedMemPool<BLOCK_TYPE>::untypedFreeList(numEntries, (void **)entries);
+        ThreadLocalUntypedMemPool::untypedFreeList(numEntries, (void **)entries);
     }
 };
 
