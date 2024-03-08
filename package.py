@@ -31,13 +31,6 @@ authors = [
 help = ('For assistance, '
         "please contact the folio's owner at: moonbase-dev@dreamworks.com")
 
-if 'scons' in sys.argv:
-    build_system = 'scons'
-    build_system_pbr = 'bart_scons-10'
-else:
-    build_system = 'cmake'
-    build_system_pbr = 'cmake_modules'
-
 variants = [
     ['os-CentOS-7', 'opt_level-optdebug', 'refplat-vfx2021.0', 'gcc-9.3.x.1', 'python-3.7'],
     ['os-CentOS-7', 'opt_level-debug', 'refplat-vfx2021.0', 'gcc-9.3.x.1', 'python-3.7'],
@@ -78,15 +71,6 @@ variants = [
 conf_rats_variants = variants[0:2]
 conf_CI_variants = list(filter(lambda v: 'os-CentOS-7' in v, variants))
 
-scons_targets = ['@install'] + unittestflags
-sconsTargets = {
-    'refplat-vfx2019.3': scons_targets,
-    'refplat-vfx2020.3': scons_targets,
-    'refplat-vfx2021.0': scons_targets,
-    'refplat-vfx2022.0': scons_targets,
-    'refplat-vfx2023.0': scons_targets,
-}
-
 requires = [
     'boost',
     'jsoncpp-1.9.5.x',
@@ -97,7 +81,7 @@ requires = [
 ]
 
 private_build_requires = [
-    build_system_pbr,
+    'cmake_modules',
     'ispc-1.20.0.x',
 ]
 
@@ -108,18 +92,12 @@ testentry = lambda i: ("variant%d" % i,
 testlist = [testentry(i) for i in range(len(variants))]
 tests = dict(testlist)
 
-if build_system is 'cmake':
-    def commands():
-        prependenv('CMAKE_MODULE_PATH', '{root}/lib64/cmake')
-        prependenv('CMAKE_PREFIX_PATH', '{root}')
-        prependenv('LD_LIBRARY_PATH', '{root}/lib64')
-        prependenv('PATH', '{root}/bin')
-        prependenv('PYTHONPATH', '{root}/python/lib/$PYTHON_NAME')
-else:
-    def commands():
-        prependenv('LD_LIBRARY_PATH', '{root}/lib')
-        prependenv('PATH', '{root}/bin')
-        prependenv('PYTHONPATH', '{root}/python/lib/$PYTHON_NAME')
+def commands():
+    prependenv('CMAKE_MODULE_PATH', '{root}/lib64/cmake')
+    prependenv('CMAKE_PREFIX_PATH', '{root}')
+    prependenv('LD_LIBRARY_PATH', '{root}/lib64')
+    prependenv('PATH', '{root}/bin')
+    prependenv('PYTHONPATH', '{root}/python/lib/$PYTHON_NAME')
 
 uuid = 'b5f6c7f8-19d3-11e5-9ac2-2c27d7efd8c7'
 

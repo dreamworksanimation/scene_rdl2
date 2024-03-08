@@ -38,7 +38,7 @@ def DefaultToAVX(env):
 def TreatAllWarningsAsErrors(env):
     # Set warnings to errors unless --no_Werrors was passed.
     if GetOption('allow_warnings'):
-        print colorize('* NOTE: Warnings will NOT be treated as errors.\n', 'red')
+        print(colorize('* NOTE: Warnings will NOT be treated as errors.\n', 'red'))
     elif 'icc' in env['CC']:
         env.AppendUnique(CXXFLAGS = '-Werror-all')
 
@@ -49,10 +49,10 @@ def CompilerCheckAndExit(self, expected_compiler=None):
         self['COMPILER_LABEL']==expected_compiler):
         pass
     else:
-        print colorize(
-        '* ERROR\n'
-        '* The current compiler (%s) differs from the default compiler for ARRAS %s \n' %
-                (self['COMPILER_LABEL'], expected_compiler), 'red')
+        print(colorize(
+            '* ERROR\n'
+            '* The current compiler (%s) differs from the default compiler for ARRAS %s \n' %
+            (self['COMPILER_LABEL'], expected_compiler), 'red'))
         check_call("scons -h --skip_default_compiler_check",shell=True)
         sys.exit(1)
 
@@ -69,10 +69,10 @@ def PreloadTBBMalloc(env):
     # Preloads TBB MALLOC libraries for faster memory allocation in some cases.
     if GetOption('disable_tbb_malloc_preload'):
         if env['TYPE_LABEL'] != 'debug':
-            print colorize('******** WARNING****************\n'
+            print(colorize('******** WARNING****************\n'
                            '* TBB malloc disabled*\n'
                            '**********************************************',
-                           'yellow')
+                           'yellow'))
     else:
         libs = ['tbbmalloc_proxy', 'tbbmalloc']
         try:
@@ -99,10 +99,10 @@ def AddExtraCPPDEFINES(env):
 def InstallAnimation(env):
     if not GetOption('install_animation'):
         if GetOption('verbose') or GetOption('verbose-human'):
-            print colorize('* NOTICE \n'
+            print(colorize('* NOTICE \n'
                            '* Ignoring animation related tools in build/install. \n'
                            '* Use --install_animation to build these tools. \n',
-                           'blue')
+                           'blue'))
 
 def runCmd(cmd, blocking=True, quiet=False, quiet_errors=False):
     """
@@ -223,7 +223,7 @@ def GatherProxies(env):
 
     proxies = {}
     for var, pats in proxyLocations.items():
-        proxies[var] = sum(map(lambda(pat): env.Glob(pat), pats), [])
+        proxies[var] = sum([env.Glob(pat) for pat in pats], [])
     env.AppendUnique(**proxies)
 
 def CopyProxies(env):
@@ -282,10 +282,10 @@ def generate(env):
               default=False)
 
     # Don't load this tool more than once
-    if env.has_key('SCENE_RDL2_UTILS_TOOL_LOADED'):
+    if 'SCENE_RDL2_UTILS_TOOL_LOADED' in env:
         return
     if GetOption('localized'):
-        print colorize('* NOTE: Third Party Libraries and other dependencies will be copied locally in <install_dir>/ext \n', 'purple')
+        print(colorize('* NOTE: Third Party Libraries and other dependencies will be copied locally in <install_dir>/ext \n', 'purple'))
         CopyExternDeps(env)
 
     env.SetDefault(SCENE_RDL2_UTILS_TOOL_LOADED = True)
