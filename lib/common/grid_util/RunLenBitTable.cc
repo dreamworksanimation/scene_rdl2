@@ -27,7 +27,7 @@ RunLenBitTable::finalize()
     unsigned totalAllMask = 0;  // data size if all data use MASK mode
     unsigned totalAllId = 0; // data size if all data use ID mode
     for (unsigned itemId = 0; itemId < mMask.size(); ++itemId) {
-        unsigned currActivePixTotal = countBit64(itemId);
+        uint64_t currActivePixTotal = countBit64(itemId);
         mActiveBitCount[itemId] = currActivePixTotal;
 
         totalAllMask += 8;
@@ -190,8 +190,8 @@ void
 RunLenBitTable::setTestData(const std::vector<uint64_t> &testDataTbl)
 // for debug function
 {
-    unsigned total = std::min(testDataTbl.size(), mMask.size());
-    for (unsigned id = 0; id < total; ++id) {
+    size_t total = std::min(testDataTbl.size(), mMask.size());
+    for (size_t id = 0; id < total; ++id) {
         mMask[id] = testDataTbl[id];
     }
 }
@@ -199,12 +199,12 @@ RunLenBitTable::setTestData(const std::vector<uint64_t> &testDataTbl)
 std::string
 RunLenBitTable::showMaskTable() const
 {
-    unsigned total = mMask.size();
+    size_t total = mMask.size();
 
     std::ostringstream ostr;
     ostr << "{\n";
     ostr << "    testData.resize(" << total << ");" << std::endl;
-    for (unsigned id = 0; id < total; ++id) {
+    for (size_t id = 0; id < total; ++id) {
         ostr << "    testData[" << std::setw(2) << std::setfill(' ') << id << "] ="
              << " 0x" << std::hex << std::setw(16) << std::setfill('0') << mMask[id] << std::dec
              << ";\n";

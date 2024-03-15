@@ -813,7 +813,7 @@ std::ostream& operator<<(std::ostream& outs, const MyContainer& c)
     if (under.empty()) {
         return outs;
     }
-    int base = outs.iword(MyContainer::sOutputBase);
+    long base = outs.iword(MyContainer::sOutputBase);
     if (base == 0) {
         // iword returns 0 by default, which is not a valid base. By default,
         // we want base 10.

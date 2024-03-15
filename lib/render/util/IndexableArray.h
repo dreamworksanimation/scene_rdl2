@@ -265,7 +265,7 @@ public:
     const_iterator erase(const_iterator pos)
     {
         invariant_check();
-        const int32_t idx = pos - mValues.cbegin();
+        const auto idx = pos - mValues.cbegin();
 
         auto pair = mIndexMap.equal_range(hasher()(*pos));
         for (auto it = pair.first; it != pair.second; ++it) {

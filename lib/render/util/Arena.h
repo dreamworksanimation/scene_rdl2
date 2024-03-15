@@ -142,7 +142,7 @@ public:
 
     finline void    clear();
 
-    finline uint8_t *alloc(unsigned size, unsigned alignment = ARENA_DEFAULT_ALIGNMENT);
+    finline uint8_t *alloc(size_t size, unsigned alignment = ARENA_DEFAULT_ALIGNMENT);
 
     // Templated raw alloc functions.
     // No ctors called.
@@ -232,13 +232,13 @@ Arena::clear()
 }
 
 finline uint8_t *
-Arena::alloc(unsigned size, unsigned alignment)
+Arena::alloc(size_t size, unsigned alignment)
 {
     MNRY_ASSERT(isValid());
     MNRY_ASSERT(mPtr);
 
     // Alloc sizes and return addresses are on 4-byte boundaries.
-    size = std::max<unsigned>(size, 4);
+    size = std::max<size_t>(size, 4);
     alignment = std::max<unsigned>(alignment, 4);
 
     align(alignment);

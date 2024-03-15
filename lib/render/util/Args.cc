@@ -51,7 +51,7 @@ Args::getFlagValues(const std::string& flag, int numValues, StringArray &values,
         return -1; // Not found.
     }
 
-    int foundAtIndex = iter - mArgs.begin();
+    auto foundAtIndex = iter - mArgs.begin();
 
     // Slurp up arguments until we hit the end of the command line or we hit
     // the next flag.
@@ -133,7 +133,7 @@ stringToIntArray(const std::string &str, std::vector<int> &intArray)
 
     while (true) {
         delimiter = strchr(c, ',');
-        int size;
+        size_t size;
         if (delimiter == NULL) {
             size = strlen(c);
         } else {

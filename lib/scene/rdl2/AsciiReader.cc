@@ -3222,7 +3222,7 @@ RDL2_LUA_DEFINE(rgbIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2:
             lua_pushnumber(mLua, (*rgb)[index]);
@@ -3255,7 +3255,7 @@ RDL2_LUA_DEFINE(rgbNewIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2:
             (*rgb)[index] = value;
@@ -3306,7 +3306,7 @@ RDL2_LUA_DEFINE(rgbaIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2: case 3:
             lua_pushnumber(mLua, (*rgba)[index]);
@@ -3341,7 +3341,7 @@ RDL2_LUA_DEFINE(rgbaNewIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2: case 3:
             (*rgba)[index] = value;
@@ -3386,7 +3386,7 @@ RDL2_LUA_DEFINE(vec2Index)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1:
             lua_pushnumber(mLua, (*vec)[index]);
@@ -3417,7 +3417,7 @@ RDL2_LUA_DEFINE(vec2NewIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1:
             (*vec)[index] = value;
@@ -3465,7 +3465,7 @@ RDL2_LUA_DEFINE(vec3Index)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2:
             lua_pushnumber(mLua, (*vec)[index]);
@@ -3498,7 +3498,7 @@ RDL2_LUA_DEFINE(vec3NewIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2:
             (*vec)[index] = value;
@@ -3549,7 +3549,7 @@ RDL2_LUA_DEFINE(vec4Index)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2: case 3:
             lua_pushnumber(mLua, (*vec)[index]);
@@ -3584,7 +3584,7 @@ RDL2_LUA_DEFINE(vec4NewIndex)
 
     if (lua_type(mLua, 2) == LUA_TNUMBER) {
         // Handle indexing by number.
-        int index = luaL_checkinteger(mLua, 2);
+        auto index = luaL_checkinteger(mLua, 2);
         switch (index) {
         case 0: case 1: case 2: case 3:
             (*vec)[index] = value;
@@ -3647,7 +3647,7 @@ RDL2_LUA_DEFINE(mat4Create)
 RDL2_LUA_DEFINE(mat4Index)
 {
     Mat4d* mat = unbox<Mat4d>(lua_touserdata(mLua, 1));
-    int index = luaL_checkinteger(mLua, 2);
+    auto index = luaL_checkinteger(mLua, 2);
 
     // Matrices only support indexing by number.
     switch (index) {
@@ -3677,7 +3677,7 @@ RDL2_LUA_DEFINE(mat4Index)
 RDL2_LUA_DEFINE(mat4NewIndex)
 {
     Mat4d* mat = unbox<Mat4d>(lua_touserdata(mLua, 1));
-    int index = luaL_checkinteger(mLua, 2);
+    auto index = luaL_checkinteger(mLua, 2);
     float value = luaL_checknumber(mLua, 3);
 
     // Matrices only support indexing by number.
