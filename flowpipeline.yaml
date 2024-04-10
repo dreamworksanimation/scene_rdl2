@@ -24,29 +24,9 @@ pipeline-configurations:
       - rez-test _packagename_ variant6
       - rez-test _packagename_ variant7
       - rez-test _packagename_ variant8
-      - rez-test _packagename_ variant9
-      - rez-test _packagename_ variant10
-      - rez-test _packagename_ variant11
-      - rez-test _packagename_ variant12
-      - rez-test _packagename_ variant13
-      - rez-test _packagename_ variant14
-      - rez-test _packagename_ variant15
-      - rez-test _packagename_ variant16
-      - rez-test _packagename_ variant17
-      - rez-test _packagename_ variant18
       ignore_failures: false
       ignore_failures_email: true
       resource:
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
-      - EL7_RaTS_build_fast
       - EL7_RaTS_build_fast
       - EL7_RaTS_build_fast
       - EL7_RaTS_build_fast
