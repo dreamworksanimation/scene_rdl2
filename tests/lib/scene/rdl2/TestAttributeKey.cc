@@ -79,11 +79,11 @@ TestAttributeKey::testEquality()
     }
     {
         Attribute attr("long", TYPE_LONG, FLAGS_NONE, 0, 42);
-        AttributeKey<Long> key(attr);
+        AttributeKey<int64_t> key(attr);
         Attribute sameAttr("same long", TYPE_LONG, FLAGS_NONE, 0, 42);
-        AttributeKey<Long> sameKey(attr);
+        AttributeKey<int64_t> sameKey(attr);
         Attribute otherAttr("other long", TYPE_LONG, FLAGS_NONE, 1, 42);
-        AttributeKey<Long> otherKey(otherAttr);
+        AttributeKey<int64_t> otherKey(otherAttr);
         CPPUNIT_ASSERT(key == sameKey);
         CPPUNIT_ASSERT(!(key == otherKey));
         CPPUNIT_ASSERT(!(key != sameKey));
@@ -490,10 +490,10 @@ TestAttributeKey::testTypes()
     {
         Attribute attr("long", TYPE_LONG, FLAGS_NONE, 0, 42);
         CPPUNIT_ASSERT_NO_THROW(
-            AttributeKey<Long> key(attr);
+            AttributeKey<int64_t> key(attr);
         );
         CPPUNIT_ASSERT_THROW(
-            AttributeKey<Long> key(unknownAttr);
+            AttributeKey<int64_t> key(unknownAttr);
         , except::TypeError);
     }
     {

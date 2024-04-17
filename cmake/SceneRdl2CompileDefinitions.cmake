@@ -21,8 +21,12 @@ function(SceneRdl2_cxx_compile_definitions target)
             >
 
         PUBLIC
-            __AVX__
+            ${GLOBAL_CPP_FLAGS}
+            ${GLOBAL_COMPILE_DEFINITIONS}
             GL_GLEXT_PROTOTYPES=1                   # This define makes function symbols to be available as extern declarations.
             TBB_SUPPRESS_DEPRECATED_MESSAGES        # Suppress 'deprecated' messages from TBB
+            _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR=1 # Clang - enable auto_ptr when targeting c++17
+            _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE=1 # Clang - ensure std::random_shuffle is available
+            _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
     )
 endfunction()

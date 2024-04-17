@@ -30,8 +30,14 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#include <endian.h>
 #include <stdint.h>
+
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#else
+#include <endian.h>
+#endif
 
 namespace scene_rdl2 {
 using logging::Logger;
@@ -425,7 +431,7 @@ BinaryReader::unpackValue(ValueContainerDeq &vContainerDeq,
     } break;
     case ValueContainerUtil::ValueType::LONG : {
         long val; vContainerDeq.deqLong(val);
-        sceneObject.set(keyGen<Long>(transientEncoding, attributeId, attributeName, sceneClass), val, timestep);
+        sceneObject.set(keyGen<Long>(transientEncoding, attributeId, attributeName, sceneClass), Long(val), timestep);
     } break;
     case ValueContainerUtil::ValueType::FLOAT : {
         Float val; vContainerDeq.deqFloat(val);

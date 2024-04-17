@@ -121,7 +121,7 @@ TestAscii::testRoundtrip()
     // Grab AttributeKeys for all the attributes.
     AttributeKey<Bool> boolKey = sc->getAttributeKey<Bool>("bool");
     AttributeKey<Int> intKey = sc->getAttributeKey<Int>("int");
-    AttributeKey<Long> longKey = sc->getAttributeKey<Long>("long");
+    AttributeKey<int64_t> longKey = sc->getAttributeKey<int64_t>("long");
     AttributeKey<Float> floatKey = sc->getAttributeKey<Float>("float");
     AttributeKey<Double> doubleKey = sc->getAttributeKey<Double>("double");
     AttributeKey<String> stringKey = sc->getAttributeKey<String>("string");

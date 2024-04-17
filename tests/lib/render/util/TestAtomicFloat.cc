@@ -91,7 +91,11 @@ public:
     {
         for (auto& a: mTestArray) {
             // Anything prior to C++20 will not do zero initialization.
+#if __clang__
+            new (&a) std::atomic<float>(8.0f);
+#else
             std::atomic_init(std::addressof(a), 8.0f);
+#endif
         }
     }
 

@@ -14,6 +14,10 @@
 #include <sstream>
 #include <string>
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
+
 // Intel: begin *****
 /*
 #include <string.h>
@@ -159,6 +163,27 @@
 //#define __FUNCTION__           __FUNCTION__
 #define debugbreak()           __debugbreak()
 
+#elif defined(__APPLE__)
+#undef ALIGN
+#define __noinline             __attribute__((noinline))
+#define __forceinline          inline __attribute__((always_inline))
+#define finline                inline __attribute__((always_inline))
+//#define __restrict             __restrict
+//#define __thread               __declspec(thread)
+#define __align(x)             alignas(x)
+#define __aligned(...)
+#define ALIGN(x)               alignas(x)
+#define __FUNCTION__           __PRETTY_FUNCTION__
+
+#if __ARM_NEON__
+#define CACHE_LINE_SIZE        128u
+#else
+#define CACHE_LINE_SIZE        64u
+#endif
+#define CACHE_ALIGN            __align(CACHE_LINE_SIZE)
+
+#define debugbreak()         __asm__(".inst 0xd4200000")
+
 #else
 #undef __noinline
 #undef __forceinline
@@ -298,6 +323,12 @@ void debugPrint(const char* name, const Car& car, const Cdr&... cdr)
 #define FORCE_LINK_THAT(unit) \
   extern bool unit##_force_link_me; bool unit##_force_link = unit##_force_link_me;
 
+#ifdef __APPLE__
+  void fedisableexcept(unsigned int excepts);
+  int feenableexcept(unsigned int excepts);
+  int fegetexcept();
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Basic Types
 ////////////////////////////////////////////////////////////////////////////////
@@ -360,6 +391,18 @@ typedef int32 ssize_t;
 #pragma warning(disable:391 ) // '<=' : signed / unsigned mismatch
 #pragma warning(disable:4018) // '<' : signed / unsigned mismatch
 
+#endif
+
+#if defined(__APPLE__)
+#pragma clang diagnostic ignored "-Wreturn-stack-address" // address of stack memory associated with local variable 'bla' returned
+#pragma clang diagnostic ignored "-Wshorten-64-to-32" // implicit conversion loses integer precision: 'unsigned long long' to 'int'
+#pragma clang diagnostic ignored "-Wdeprecated-declarations" // 'bla' is deprecated
+#pragma clang diagnostic ignored "-Wc++17-extensions" // 'static_assert' with no message is a C++17 extension
+#pragma clang diagnostic ignored "-Wswitch" // not all cases are present in a switch statement
+#pragma clang diagnostic ignored "-Wdeprecated-declarations" // 'MD5' is deprecated and such messages
+#pragma clang diagnostic ignored "-Winconsistent-missing-override" // overrides a member function but is not marked 'override' 
+#pragma clang diagnostic ignored "-Wformat-security" // format string is not a string literal (potentially insecure)
+#pragma clang diagnostic ignored "-Wuninitialized" // uninitialized when used here
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

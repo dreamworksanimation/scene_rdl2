@@ -6,6 +6,17 @@
 #include <string>
 
 namespace scene_rdl2 {
+#ifdef __APPLE__
+#define CPU_ZERO(a)
+#define CPU_SET(a, b)
+#define CPU_EQUAL(a,b) false
+#define CPU_ISSET(a, b) false
+#define CPU_AND(a, b, c)
+#define CPU_OR(a, b, c)
+#define CPU_COUNT(a) 0
+#define CPU_SETSIZE 1024
+typedef uint64_t cpu_set_t;
+#endif
 
 class CpuAffinityMask
 //

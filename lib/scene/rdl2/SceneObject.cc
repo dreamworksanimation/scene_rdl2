@@ -447,7 +447,7 @@ SceneObject::resetToDefault(const Attribute* attr)
     switch (attr->getType()) {
     case TYPE_BOOL:                   resetToDefault(AttributeKey<bool>(*attr)); break;
     case TYPE_INT:                    resetToDefault(AttributeKey<int>(*attr)); break;
-    case TYPE_LONG:                   resetToDefault(AttributeKey<long>(*attr)); break;
+    case TYPE_LONG:                   resetToDefault(AttributeKey<int64_t>(*attr)); break;
     case TYPE_FLOAT:                  resetToDefault(AttributeKey<float>(*attr)); break;
     case TYPE_DOUBLE:                 resetToDefault(AttributeKey<double>(*attr)); break;
     case TYPE_STRING:                 resetToDefault(AttributeKey<std::string>(*attr)); break;
@@ -502,7 +502,7 @@ SceneObject::isDefault(const Attribute& attr) const
     switch (attr.getType()) {
     case TYPE_BOOL:                   return isDefault(AttributeKey<bool>(attr));
     case TYPE_INT:                    return isDefault(AttributeKey<int>(attr));
-    case TYPE_LONG:                   return isDefault(AttributeKey<long>(attr));
+    case TYPE_LONG:                   return isDefault(AttributeKey<int64_t>(attr));
     case TYPE_FLOAT:                  return isDefault(AttributeKey<float>(attr));
     case TYPE_DOUBLE:                 return isDefault(AttributeKey<double>(attr));
     case TYPE_STRING:                 return isDefault(AttributeKey<std::string>(attr));
@@ -610,7 +610,7 @@ SceneObject::setBinding(const std::string& name, SceneObject* sceneObject)
 // Explicit instantiations of interpolated get() for attribute types that
 // support interpolation.
 template Int SceneObject::get(AttributeKey<Int>, float) const;
-template Long SceneObject::get(AttributeKey<Long>, float) const;
+template Long SceneObject::get(AttributeKey<int64_t>, float) const;
 template Float SceneObject::get(AttributeKey<Float>, float) const;
 template Double SceneObject::get(AttributeKey<Double>, float) const;
 template Rgb SceneObject::get(AttributeKey<Rgb>, float) const;
@@ -627,7 +627,7 @@ template Mat4d SceneObject::get(AttributeKey<Mat4d>, float) const;
 // Explicit instantiations of set() and setBinding() for all attribute types.
 template void SceneObject::set(AttributeKey<Bool>, const Bool&);
 template void SceneObject::set(AttributeKey<Int>, const Int&);
-template void SceneObject::set(AttributeKey<Long>, const Long&);
+template void SceneObject::set(AttributeKey<int64_t>, const Long&);
 template void SceneObject::set(AttributeKey<Float>, const Float&);
 template void SceneObject::set(AttributeKey<Double>, const Double&);
 template void SceneObject::set(AttributeKey<String>, const String&);
@@ -661,7 +661,7 @@ template void SceneObject::set(AttributeKey<Mat4dVector>, const Mat4dVector&);
 
 template void SceneObject::set(AttributeKey<Bool>, const Bool&, AttributeTimestep);
 template void SceneObject::set(AttributeKey<Int>, const Int&, AttributeTimestep);
-template void SceneObject::set(AttributeKey<Long>, const Long&, AttributeTimestep);
+template void SceneObject::set(AttributeKey<int64_t>, const Long&, AttributeTimestep);
 template void SceneObject::set(AttributeKey<Float>, const Float&, AttributeTimestep);
 template void SceneObject::set(AttributeKey<Double>, const Double&, AttributeTimestep);
 template void SceneObject::set(AttributeKey<String>, const String&, AttributeTimestep);
@@ -767,7 +767,7 @@ template void SceneObject::set(const std::string&, const SceneObjectIndexable&, 
 
 template void SceneObject::setBinding(AttributeKey<Bool>, SceneObject* sceneObject);
 template void SceneObject::setBinding(AttributeKey<Int>, SceneObject* sceneObject);
-template void SceneObject::setBinding(AttributeKey<Long>, SceneObject* sceneObject);
+template void SceneObject::setBinding(AttributeKey<int64_t>, SceneObject* sceneObject);
 template void SceneObject::setBinding(AttributeKey<Float>, SceneObject* sceneObject);
 template void SceneObject::setBinding(AttributeKey<Double>, SceneObject* sceneObject);
 template void SceneObject::setBinding(AttributeKey<String>, SceneObject* sceneObject);
@@ -803,7 +803,7 @@ template void SceneObject::setBinding(AttributeKey<SceneObjectIndexable>, SceneO
 
 template void SceneObject::resetToDefault(AttributeKey<Bool>);
 template void SceneObject::resetToDefault(AttributeKey<Int>);
-template void SceneObject::resetToDefault(AttributeKey<Long>);
+template void SceneObject::resetToDefault(AttributeKey<int64_t>);
 template void SceneObject::resetToDefault(AttributeKey<Float>);
 template void SceneObject::resetToDefault(AttributeKey<Double>);
 template void SceneObject::resetToDefault(AttributeKey<String>);
@@ -839,7 +839,7 @@ template void SceneObject::resetToDefault(AttributeKey<SceneObjectIndexable>);
 
 template bool SceneObject::isDefault(AttributeKey<Bool>) const;
 template bool SceneObject::isDefault(AttributeKey<Int>) const;
-template bool SceneObject::isDefault(AttributeKey<Long>) const;
+template bool SceneObject::isDefault(AttributeKey<int64_t>) const;
 template bool SceneObject::isDefault(AttributeKey<Float>) const;
 template bool SceneObject::isDefault(AttributeKey<Double>) const;
 template bool SceneObject::isDefault(AttributeKey<String>) const;

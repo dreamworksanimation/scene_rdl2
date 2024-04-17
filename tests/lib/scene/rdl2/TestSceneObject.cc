@@ -160,7 +160,7 @@ TestSceneObject::setUp()
 
     mBoolKey = mDsoClass->declareAttribute<Bool>("bool", true);
     mIntKey = mDsoClass->declareAttribute<Int>("int", Int(100), FLAGS_BLURRABLE);
-    mLongKey = mDsoClass->declareAttribute<Long>("long", Long(101), FLAGS_BLURRABLE);
+    mLongKey = mDsoClass->declareAttribute<Long>("Long", Long(101), FLAGS_BLURRABLE);
     mFloatKey = mDsoClass->declareAttribute<Float>("float", 1.0f, FLAGS_BLURRABLE);
     mDoubleKey = mDsoClass->declareAttribute<Double>("double", 2.0, FLAGS_BLURRABLE);
     mStringKey = mDsoClass->declareAttribute<String>("string", String("wat"));
@@ -177,7 +177,7 @@ TestSceneObject::setUp()
     mSceneObjectKey = mDsoClass->declareAttribute<SceneObject*>("scene_object", nullptr, { "scene object" });
     mBoolVectorKey = mDsoClass->declareAttribute<BoolVector>("bool_vector", mBoolVec, { "bool vector" });
     mIntVectorKey = mDsoClass->declareAttribute<IntVector>("int_vector", mIntVec, { "int vector" });
-    mLongVectorKey = mDsoClass->declareAttribute<LongVector>("long_vector", mLongVec, { "long vector" });
+    mLongVectorKey = mDsoClass->declareAttribute<LongVector>("long_vector", mLongVec, { "Long vector" });
     mFloatVectorKey = mDsoClass->declareAttribute<FloatVector>("float_vector", mFloatVec, { "float vector" });
     mDoubleVectorKey = mDsoClass->declareAttribute<DoubleVector>("double_vector", mDoubleVec, { "double vector" });
     mStringVectorKey = mDsoClass->declareAttribute<StringVector>("string_vector", mStringVec, { "string vector" });

@@ -49,7 +49,11 @@
 #include <cstdint>
 #include <vector>
 
+#if __ARM_NEON__
+#include <scene_rdl2/common/arm/emulation.h>
+#else
 #include <nmmintrin.h>          // _mm_popcnt_u64()
+#endif
 
 namespace scene_rdl2 {
 

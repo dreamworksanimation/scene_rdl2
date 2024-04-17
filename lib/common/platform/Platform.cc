@@ -208,6 +208,64 @@ namespace util {
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Apple Platform
+////////////////////////////////////////////////////////////////////////////////
+
+#ifdef __APPLE__
+
+#include <fenv.h>
+
+int
+feenableexcept(unsigned int excepts)
+{
+    fenv_t fenv;
+    fegetenv(&fenv);
+
+    excepts &= FE_ALL_EXCEPT;
+#ifdef __aarch64__
+    fenv.__fpcr &= ~(excepts << 8);
+#else
+    fenv.__control &= ~excepts;
+    fenv.__mxcsr &= ~(excepts << 7);
+#endif
+    fesetenv(&fenv);
+
+    return int(excepts); // TODO: doesn't look like there is failure handling return -1
+}
+
+void
+fedisableexcept(unsigned int excepts)
+{
+    fenv_t fenv;
+    fegetenv(&fenv);
+
+#ifdef __aarch64__
+    fenv.__fpcr |= ~(excepts << 8);
+#else
+    fenv.__control |= new_excepts;
+    fenv.__mxcsr |= new_excepts << 7;
+#endif
+
+    fesetenv(&fenv);
+}
+
+int
+fegetexcept()
+{
+    fenv_t fenv;
+    fegetenv(&fenv);
+    int excepts;
+#ifdef __arm64__
+    excepts = (fenv.__fpcr >> 8) & FE_ALL_EXCEPT;
+#else
+    excepts = fenv.__control & FE_ALL_EXCEPT;
+#endif
+    return int(excepts);
+}
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
 /// All Platforms
 ////////////////////////////////////////////////////////////////////////////////
 

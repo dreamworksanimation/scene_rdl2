@@ -19,7 +19,11 @@
 #include <vector>
 #include <cstring>
 
+#if !defined(__aarch64__)
 #include <nmmintrin.h>          // _mm_popcnt_u64()
+#else
+#include <scene_rdl2/common/arm/emulation.h>
+#endif
 
 namespace scene_rdl2 {
 namespace fb_util {
@@ -229,7 +233,11 @@ ActivePixels::countBit64(const uint64_t mask64) const
     //
     // population count
     //
+#if !defined(__aarch64__)
     return _mm_popcnt_u64(mask64);
+#else
+    return __builtin_popcountll(mask64);
+#endif
 }
 
 } // namespace fb_util

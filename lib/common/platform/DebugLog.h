@@ -62,7 +62,11 @@
   #include <sys/time.h>
   #include <unistd.h>
   #include <sys/syscall.h>
+#if !defined(__APPLE__)
   #include <bits/syscall.h>
+#else
+  #define __NR_gettid SYS_thread_selfid
+#endif // __APPLE__
   #define TSLOG_TID syscall(__NR_gettid)
   #define TSLOG_PID getpid()
   #define TSLOG_SYSTEM_PATH_SEPARATOR "/"

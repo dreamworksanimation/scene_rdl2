@@ -407,7 +407,7 @@ __forceinline const ssef select(const int mask, const ssef& t, const ssef& f) {
   {
     return _mm_atan2_ps(a.m128, b.m128);
   }
-#elif defined(__GNUG__) && !defined(__INTEL_COMPILER)
+#elif defined(__GNUG__) && !defined(__INTEL_COMPILER) && !defined(__aarch64__)
 
   // Atan() + Atan2() SSE Intrinsic Emulator
   // Intel provides an atan and atan2 intrinsic in their short vector math library.

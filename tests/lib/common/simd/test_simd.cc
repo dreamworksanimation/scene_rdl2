@@ -1,6 +1,7 @@
 // Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
+#ifndef __APPLE__
 #include "test_simd.h"
 #include <scene_rdl2/common/math/simd.h>
 #include <iomanip>
@@ -12,6 +13,7 @@
 CPPUNIT_TEST_SUITE_REGISTRATION(TestCommonSIMD);
 
 using namespace simd;
+
 
 float
 avxAtanError()
@@ -346,3 +348,4 @@ TestCommonSIMD::testAVXAtan2()
     assertResults(x_tests, y_tests, results, fn, tolerance);
 }
 
+#endif // Not Apple

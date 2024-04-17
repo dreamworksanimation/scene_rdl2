@@ -7,9 +7,13 @@
 #include "Transcendental.h"
 #include <algorithm>
 #include <cmath>
-#include <emmintrin.h>
+#if defined(__aarch64__)
+   #include <scene_rdl2/common/arm/emulation.h>
+#else
+   #include <emmintrin.h>
+   #include <immintrin.h>
+#endif
 #include <float.h>
-#include <immintrin.h>
 
 // Intel: begin *****
 /*
@@ -37,6 +41,9 @@ namespace math {
 // Intel: namespace embree {
 #if defined(__WIN32__)
   __forceinline bool finite ( const float x ) { return _finite(x) != 0; }
+#endif
+#if defined(__APPLE__)
+  __forceinline bool finite ( const float x ) { return std::isfinite(x); }
 #endif
 
 // MoonRay: begin *****
@@ -122,7 +129,11 @@ namespace math {
   __forceinline float log10( const float x ) { return ::log10f(x); }
   __forceinline float pow  ( const float x, const float y ) { return ::powf  (x, y); }
   __forceinline float sin  ( const float x ) { return ::sinf  (x); }
+#if defined(__APPLE__)
+  __forceinline void  sincos( const float a, float *y, float *x ) { __sincosf(a, y, x); }
+#else
   __forceinline void  sincos( const float a, float *y, float *x ) { return ::sincosf(a, y, x); }
+#endif
   __forceinline float sinh ( const float x ) { return ::sinhf (x); }
   __forceinline float sqrt ( const float x ) { return ::sqrtf (x); }
   __forceinline float tan  ( const float x ) { return ::tanf  (x); }
@@ -150,7 +161,11 @@ namespace math {
   __forceinline double rcp  ( const double x ) { return 1.0/x; }
   __forceinline double rsqrt( const double x ) { return 1.0/::sqrt(x); }
   __forceinline double sin  ( const double x ) { return ::sin  (x); }
-  __forceinline void   sincos( const double a, double *y, double *x ) { return ::sincos(a, y, x); }
+#if defined(__APPLE__)
+  __forceinline void  sincos( const double a, double *y, double *x ) { __sincos(a, y, x); }
+#else
+  __forceinline void   sincos( const double a, double *y, double *x ) { ::sincos(a, y, x); }
+#endif
   __forceinline double sinh ( const double x ) { return ::sinh (x); }
   __forceinline double sqr  ( const double x ) { return x*x; }
   __forceinline double sqrt ( const double x ) { return ::sqrt (x); }
@@ -195,6 +210,9 @@ namespace math {
 #endif
 */
 // Intel end *****
+#if defined(__APPLE__)
+  __forceinline                 size_t min(size_t  a, size_t  b)                                       { return a<b? a:b; }
+#endif
   __forceinline                  float min(float   a, float   b)                                       { return a<b? a:b; }
   __forceinline                 double min(double  a, double  b)                                       { return a<b? a:b; }
   template<typename T> __forceinline T min(const T& a, const T& b, const T& c)                         { return min(min(a,b),c); }
@@ -215,6 +233,9 @@ namespace math {
 #endif
 */
 // Intel end *****
+#if defined(__APPLE__)
+  __forceinline                 size_t max(size_t  a, size_t  b)                                       { return a<b? b:a; }
+#endif
   __forceinline                  float max(float   a, float   b)                                       { return a<b? b:a; }
   __forceinline                 double max(double  a, double  b)                                       { return a<b? b:a; }
   template<typename T> __forceinline T max(const T& a, const T& b, const T& c)                         { return max(max(a,b),c); }

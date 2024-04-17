@@ -11,10 +11,17 @@
 namespace scene_rdl2 {
 namespace math {
 
+#ifndef __APPLE__
 // basic types
 typedef int8_t SCENE_RDL2_SIMD_ALIGN Int8v[VLEN];
 typedef int32_t SCENE_RDL2_SIMD_ALIGN Intv[VLEN];
 typedef float SCENE_RDL2_SIMD_ALIGN Floatv[VLEN];
+#else
+//TODO: Need to figure this one out
+typedef int8_t Int8v[VLEN];
+typedef int32_t Intv[VLEN];
+typedef float Floatv[VLEN];
+#endif
 
 typedef Intv Mask;
 

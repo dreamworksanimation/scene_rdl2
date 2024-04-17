@@ -60,7 +60,11 @@ namespace simd
 
     // MoonRay: added scene_rdl2::util namespace
     __forceinline avxb( scene_rdl2::util::FalseTy ) : m256(_mm256_setzero_ps()) {}
+#if !defined(__aarch64__)
     __forceinline avxb( scene_rdl2::util::TrueTy  ) : m256(_mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ)) {}
+#else
+    __forceinline avxb( scene_rdl2::util::TrueTy  ) : m256(_mm256_cmpeq_ps(_mm256_setzero_ps(), _mm256_setzero_ps())) {}
+#endif
 
     ////////////////////////////////////////////////////////////////////////////////
     /// Array Access

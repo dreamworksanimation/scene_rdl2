@@ -1,5 +1,6 @@
 // Copyright 2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
 #include "CpuAffinityMask.h"
 #include "ThreadPoolExecutor.h"
 
@@ -15,6 +16,16 @@
 //#define DEBUG_MSG_THREAD_POOL
 
 namespace scene_rdl2 {
+
+#ifdef __APPLE__
+int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
+                                  const cpu_set_t *cpuset)
+                                    { return 0; }
+int pthread_getaffinity_np(pthread_t thread, size_t cpusetsize,
+                                  cpu_set_t *cpuset)
+                                    { return 0; }
+#endif 
+
 
 ThreadExecutor::~ThreadExecutor()
 {
@@ -131,6 +142,7 @@ ThreadExecutor::pinThreadToCpu()
 // might throw except::RuntimeError when it fails
 //
 {
+#ifndef PLATFORM_APPLE
     if (mPinCpuId == ~static_cast<int>(0)) return; // no cpu affinity
 
     auto showError = [&](const std::string& funcName, const bool flag) {
@@ -178,6 +190,7 @@ ThreadExecutor::pinThreadToCpu()
         std::cerr << ostr.str();
     }
 #   endif // end DEBUG_MSG_THREAD_CPUAFFINITY
+#endif // end ifndef PLATFORM_APPLE
 }
 
 //------------------------------------------------------------------------------------------

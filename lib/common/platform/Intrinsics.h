@@ -5,7 +5,12 @@
 
 // MoonRay begin *****
 #include "Platform.h"
+#if defined(__aarch64__)
+   #include <scene_rdl2/common/arm/emulation.h>
+#else
 #include <x86intrin.h>
+#endif
+
 // MoonRay end *****
 
 // Intel begin *****
@@ -268,7 +273,7 @@ __forceinline void __cpuid_count(int out[4], int op1, int op2)
                 : "0" (op1), "2" (op2)); 
 }
 
-#else
+#elif !defined(__aarch64__)
 
 __forceinline void __cpuid(int out[4], int op) {
   asm volatile ("cpuid" : "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3]) : "a"(op)); 
@@ -278,6 +283,12 @@ __forceinline void __cpuid_count(int out[4], int op1, int op2) {
   asm volatile ("cpuid" : "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3]) : "a"(op1), "c"(op2)); 
 }
 
+#endif
+
+#if defined(__ARM_NEON__)
+__forceinline uint64 __rdtsc()  {
+  return _rdtsc();
+}
 #endif
 
 #if defined(__INTEL_COMPILER) // MoonRay added
@@ -294,7 +305,7 @@ __forceinline uint64 __rdpmc(int i) {
 }
 #endif // MoonRay added
 
-#if !defined(__MIC__)
+#if !defined(__MIC__) && !defined(__aarch64__)
 
 #if defined(__SSE4_2__)
 __forceinline unsigned int __popcnt(unsigned int in) {
@@ -413,7 +424,7 @@ __forceinline size_t __bscf(size_t& v)
   return i;
 }
 
-#else
+#elif !defined(__aarch64__)
 
 __forceinline unsigned int clz(const unsigned int x) {
   return _lzcnt_u32(x); 
@@ -546,12 +557,37 @@ __forceinline int8 atomic_cmpxchg( int8 volatile* value, int8 comparand, const i
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
+/// __aarch64__
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(__aarch64__)
+
+typedef int64 atomic64_t;
+typedef atomic64_t atomic_t;
+
+__forceinline int __bsf(int v) {
+  return __builtin_ctz(v);
+}
+
+__forceinline int __popcnt(int in) {
+  return _mm_popcnt_u32(in);
+}
+__forceinline long long __popcnt(long long in) {
+  return _mm_popcnt_u64(in);
+}
+__forceinline size_t __popcnt(size_t in) {
+  return _mm_popcnt_u64(in);
+}
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
 /// All Platforms
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(__X86_64__)
   typedef atomic64_t atomic_t;
-#else
+#elif !defined(__aarch64__)
   typedef atomic32_t atomic_t;
 #endif
 
@@ -665,7 +701,9 @@ static const size_t       BITSCAN_NO_BIT_SET_64 = 64;
 
 __forceinline uint64 rdtsc()
 {
-#if !defined(__MIC__)
+#if defined(__aarch64__)
+  return _rdtsc();
+#elif !defined(__MIC__)
   int dummy[4]; 
   __cpuid(dummy,0); 
   uint64 clock = __rdtsc(); 

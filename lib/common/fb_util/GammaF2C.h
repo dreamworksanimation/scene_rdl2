@@ -7,8 +7,13 @@
 
 #include <cstdint>
 
+#if !defined(__aarch64__)
 #include <emmintrin.h>          // SSE2
 #include <immintrin.h>          // AVX
+#else
+#include <scene_rdl2/common/platform/Platform.h>
+#include <scene_rdl2/common/arm/emulation.h>
+#endif
 
 namespace scene_rdl2 {
 namespace fb_util {

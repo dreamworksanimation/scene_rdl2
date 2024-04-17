@@ -87,11 +87,17 @@ namespace py_scene_rdl2
     template <typename ConstIterator>
     using ConstIterToDeque_t = typename std::deque<typename ConstIterator::value_type>::const_iterator;
 
+#ifdef __APPLE__
+    template <typename ConstIterator>
+    using ConstIterToMap_t =
+            typename std::map<std::remove_const_t<typename ConstIterator::value_type::first_type>,
+                              std::remove_const_t<typename ConstIterator::value_type::second_type>>::const_iterator;
+#else
     template <typename ConstIterator>
     using ConstIterToMap_t =
             typename std::map<typename ConstIterator::value_type::first_type,
                               typename ConstIterator::value_type::second_type>::const_iterator;
-
+#endif
     //-----------------------------------------
     // Utility functions to generate __repr__ and __str__ strings
 

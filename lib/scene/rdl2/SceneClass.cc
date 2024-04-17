@@ -1,6 +1,7 @@
 // Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
+#include <boost/regex.hpp>
 
 #include "SceneClass.h"
 
@@ -10,8 +11,6 @@
 
 #include <scene_rdl2/common/except/exceptions.h>
 #include <scene_rdl2/render/util/StrUtil.h>
-
-#include <boost/regex.hpp>
 
 #include <cstdlib>
 #include <memory>

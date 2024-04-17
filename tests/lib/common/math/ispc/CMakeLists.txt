@@ -32,7 +32,8 @@ file(RELATIVE_PATH relBinDir ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 set_target_properties(${objLib} PROPERTIES
     ISPC_HEADER_SUFFIX _ispc_stubs.h
     ISPC_HEADER_DIRECTORY /${relBinDir}
-    ISPC_INSTRUCTION_SETS avx2-i32x8
+    ISPC_INSTRUCTION_SETS ${GLOBAL_ISPC_INSTRUCTION_SETS}
+    LINKER_LANGUAGE CXX
 )
 
 target_link_libraries(${objLib}
@@ -42,10 +43,19 @@ target_link_libraries(${objLib}
 # Set standard compile/link options
 SceneRdl2_ispc_compile_options(${objLib})
 SceneRdl2_link_options(${objLib})
+
+get_target_property(objLibDeps ${objLib} DEPENDENCY)
+if(NOT objLibDeps STREQUAL "")
+    add_dependencies(${objLibDeps} 
+        SceneRdl2::common_math_ispc
+    )
+endif()
+
 # ----------------------------------------
 
 add_executable(${target})
 
+get_target_property(ISPC_TARGET_OBJECTS ${objLib} TARGET_OBJECTS)
 target_sources(${target}
     PRIVATE
         main.cc
@@ -68,7 +78,7 @@ target_sources(${target}
         TestXform.cc
         TestXformv.cc
         # pull in our ispc object files
-        $<TARGET_OBJECTS:${objLib}>
+        ${ISPC_TARGET_OBJECTS}
 )
 
 target_link_libraries(${target}
@@ -78,6 +88,8 @@ target_link_libraries(${target}
         SceneRdl2::pdevunit
         SceneRdl2::render_util
 )
+
+add_dependencies(${target} ${objLib})
 
 target_include_directories(${target}
     PRIVATE
@@ -91,4 +103,7 @@ SceneRdl2_cxx_compile_options(${target})
 SceneRdl2_link_options(${target})
 
 add_test(NAME ${target} COMMAND ${target})
-set_tests_properties(${target} PROPERTIES LABELS "unit")
+set_tests_properties(${target} PROPERTIES
+    LABELS "unit"
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:${target}>
+)

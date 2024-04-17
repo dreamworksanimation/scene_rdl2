@@ -31,8 +31,13 @@ protected:
 inline void
 RecTick::start()
 {
-    uint32_t high, low;
+#if defined(__aarch64__)  // TODO: actually check this
+    asm volatile("mrs %0, cntvct_el0" : "=r"(mStartTick));
 
+#else
+
+    uint32_t high, low;
+    
     asm volatile("CPUID\n\t"
                  "RDTSC\n\t"
                  "mov %%edx, %0\n\t"
@@ -40,12 +45,20 @@ RecTick::start()
                  "%rax", "%rbx", "%rcx", "%rdx");
 
     mStartTick = ((uint64_t(high)) << 32) | low;
+#endif
+    
 }
 
 inline uint64_t
 RecTick::end()
 {
+#if defined(__aarch64__)  // TODO: actually check this
+    asm volatile("mrs %0, cntvct_el0" : "=r"(mEndTick));
+
+#else
+
     uint32_t high, low;
+
 
     asm volatile("RDTSCP\n\t"
                  "mov %%edx, %0\n\t"
@@ -54,6 +67,7 @@ RecTick::end()
                  "%rax", "%rbx", "%rcx", "%rdx");
 
     mEndTick = ((uint64_t(high)) << 32) | low;
+#endif
 
     return mEndTick - mStartTick;
 }

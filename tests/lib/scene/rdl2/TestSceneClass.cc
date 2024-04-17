@@ -203,7 +203,7 @@ TestSceneClass::testDeclareSimple()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long");
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long");
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(!attr->isBindable());
@@ -493,7 +493,7 @@ TestSceneClass::testDeclareSimpleWithDefault()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long", Long(101));
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long", Long(101));
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(!attr->isBindable());
@@ -817,7 +817,7 @@ TestSceneClass::testDeclareBindable()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long", FLAGS_BINDABLE);
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long", FLAGS_BINDABLE);
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(attr->isBindable());
@@ -1109,7 +1109,7 @@ TestSceneClass::testDeclareBindableWithDefault()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long", Long(101), FLAGS_BINDABLE);
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long", Long(101), FLAGS_BINDABLE);
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(attr->isBindable());
@@ -1425,7 +1425,7 @@ TestSceneClass::testDeclareBlurrable()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long", FLAGS_BLURRABLE);
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long", FLAGS_BLURRABLE);
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(!attr->isBindable());
@@ -1619,7 +1619,7 @@ TestSceneClass::testDeclareBlurrableWithDefault()
         );
     );
     CPPUNIT_ASSERT_NO_THROW(
-        AttributeKey<Long> key = sc.declareAttribute<Long>("long", Long(101), FLAGS_BLURRABLE);
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("long", Long(101), FLAGS_BLURRABLE);
         CPPUNIT_ASSERT_NO_THROW(
             Attribute* attr = sc.getAttribute(key);
             CPPUNIT_ASSERT(!attr->isBindable());
@@ -2100,7 +2100,7 @@ TestSceneClass::testAttributeStorage()
     {
         SceneClass sc(&mContext, "ExampleObject", ObjectFactory::createDsoFactory("ExampleObject", "."));
 
-        AttributeKey<Long> key = sc.declareAttribute<Long>("attr", Long(100), FLAGS_BLURRABLE);
+        AttributeKey<int64_t> key = sc.declareAttribute<Long>("attr", Long(100), FLAGS_BLURRABLE);
         sc.setComplete();
         void* storage = sc.createStorage();
 

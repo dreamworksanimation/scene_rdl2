@@ -60,6 +60,7 @@ public:
         return sLogEventRegistry;
     }
 
+#ifndef __APPLE__
     template <typename F>
     void forEachThreadLocalObjectState(F f, int n) const
     {
@@ -69,6 +70,7 @@ public:
             }
         }
     }
+#endif 
 
     void setThreadLocalObjectState(moonray::shading::ThreadLocalObjectState* threadLocalObjectState)
     {

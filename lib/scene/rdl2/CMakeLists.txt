@@ -201,6 +201,9 @@ target_compile_definitions(scene_rdl2_tmp
 add_executable(rdl2_ispc_util)
 target_sources(rdl2_ispc_util PRIVATE rdl2_ispc_util/rdl2_ispc_util.cc)
 target_link_libraries(rdl2_ispc_util PRIVATE scene_rdl2_tmp)
+if (IsDarwinPlatform)
+    add_custom_command(TARGET rdl2_ispc_util POST_BUILD COMMAND /usr/bin/codesign -s - -f -o linker-signed */rdl2_ispc_util)
+endif()
 
 # Set standard compile/link options
 SceneRdl2_cxx_compile_definitions(rdl2_ispc_util)
@@ -217,12 +220,12 @@ SceneRdl2_link_options(rdl2_ispc_util)
 # =============================================================
 # Defines a custom command that when run generates the rdl2.isph
 # header containing the preprocessor definitions
-add_custom_command(TARGET rdl2_ispc_util
-    POST_BUILD
-    COMMAND rdl2_ispc_util > rdl2.isph
-    BYPRODUCTS rdl2.isph
+add_custom_command(
+    OUTPUT rdl2.isph
+    COMMAND $<TARGET_FILE:rdl2_ispc_util> > rdl2.isph
     VERBATIM
     USES_TERMINAL
+    DEPENDS rdl2_ispc_util
 )
 
 # Add a target that executes the above custom command when built
@@ -272,6 +275,12 @@ add_custom_target(scene_rdl2_symlink ALL
 
 add_library(scene_rdl2 INTERFACE)
 add_library(${PROJECT_NAME}::scene_rdl2 ALIAS scene_rdl2)
+
+# Problem here: Dependencies added to an interface library are followed
+# transitively in its place since the target itself does not build.
+# Since scene_rdl2 is not actually built, but this doesn't prevent
+# XCODE from trying to build other targets (eg moonray unit tests) before
+# rdl2_isph has been created.
 add_dependencies(scene_rdl2 rdl2_isph scene_rdl2_symlink)
 target_link_libraries(scene_rdl2 INTERFACE scene_rdl2_tmp
 )
@@ -293,13 +302,6 @@ install(TARGETS scene_rdl2_tmp scene_rdl2
     PUBLIC_HEADER
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${installIncludeDir}
 )
-
-# # install the export set
-# install(
-#     EXPORT ${exportGroup}
-#     NAMESPACE ${PROJECT_NAME}::
-#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION}
-# )
 
 # install the coredata files
 install(

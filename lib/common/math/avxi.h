@@ -209,9 +209,11 @@ namespace simd
   template<size_t i> __forceinline const avxi insert (const avxi& a, const ssei& b) { return _mm256_insertf128_si256 (a,b,i); }
   template<size_t i> __forceinline const ssei extract(const avxi& a               ) { return _mm256_extractf128_si256(a  ,i); }
 
+#ifndef __APPLE__
   __forceinline avxi permute(const avxi& a, const __m256i& index) {
     return _mm256_permutevar8x32_epi32(a,index);
   }
+#endif 
 
   ////////////////////////////////////////////////////////////////////////////////
   /// Reductions

@@ -19,8 +19,14 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <endian.h>
 #include <stdint.h>
+
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#else
+#include <endian.h>
+#endif
 
 namespace scene_rdl2 {
 namespace rdl2 {
@@ -280,7 +286,7 @@ BinaryWriter::packValue(const SceneObject& sObj, const Attribute* attr, int time
                                       static_cast<AttributeTimestep>(timeStep)));
         break;
     case TYPE_LONG:
-        vContainerEnq.enqLong(sObj.get(AttributeKey<Long>(*attr),
+        vContainerEnq.enqLong(sObj.get(AttributeKey<int64_t>(*attr),
                                        static_cast<AttributeTimestep>(timeStep)));
         break;
     case TYPE_FLOAT:
@@ -481,7 +487,7 @@ BinaryWriter::showValue(const SceneObject &sObj, const Attribute *attr, int time
         ostr << "int:" << sObj.get(AttributeKey<Int>(*attr), static_cast<AttributeTimestep>(timeStep));
         break;
     case TYPE_LONG:
-        ostr << "long:" << sObj.get(AttributeKey<Long>(*attr), static_cast<AttributeTimestep>(timeStep));
+        ostr << "long:" << sObj.get(AttributeKey<int64_t>(*attr), static_cast<AttributeTimestep>(timeStep));
         break;
     case TYPE_FLOAT:
         ostr << "float:" << sObj.get(AttributeKey<Float>(*attr), static_cast<AttributeTimestep>(timeStep));

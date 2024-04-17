@@ -76,6 +76,20 @@
 #define DEBUG
 #endif
 
+#if defined(__aarch64__)
+  #if !defined(MOONRAY_ISA_NEON2X)
+    #define __SSE3__
+    #define __SSSE3__
+    #define __SSE4_1__
+    #define __SSE4_2__
+  #else
+    #define __AVX2__
+    #define __AVX__
+    #define __SSE4_2__
+    #define __SSE4_1__
+  #endif
+#endif
+
 // MoonRay: adds the VLEN to each of these cases
 #if defined(__AVX512F__)
     #define isa knl
@@ -153,5 +167,9 @@
     #error Unknown vector width
 #endif
 
-#define CACHE_LINE_SIZE 64u
+#if __ARM_NEON__
+#define CACHE_LINE_SIZE        128u
+#else
+#define CACHE_LINE_SIZE        64u
+#endif
 

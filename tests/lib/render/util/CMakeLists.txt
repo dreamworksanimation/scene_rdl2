@@ -5,16 +5,21 @@ set(target scenerdl2_render_util_tests)
 
 add_executable(${target})
 
+if(NOT IsDarwinPlatform)
+set(PlatformSpecificSources
+    TestCpuSocketUtil.cc
+    TestProcCpuAffinity.cc
+    TestThreadPoolExecutor.cc)
+endif()
+
 target_sources(${target}
     PRIVATE
         main.cc
         test_util.cc
         TestArray2D.cc
         TestAtomicFloat.cc
-        TestCpuSocketUtil.cc
         TestMemPool.cc
-	TestProcCpuAffinity.cc
-	TestThreadPoolExecutor.cc
+        ${PlatformSpecificSources}
 )
 
 target_link_libraries(${target}
@@ -33,4 +38,7 @@ SceneRdl2_cxx_compile_options(${target})
 SceneRdl2_link_options(${target})
 
 add_test(NAME ${target} COMMAND ${target})
-set_tests_properties(${target} PROPERTIES LABELS "unit")
+set_tests_properties(${target} PROPERTIES
+    LABELS "unit"
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:${target}>
+)

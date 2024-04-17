@@ -16,6 +16,10 @@
 // These are here to aid debugging.
 #define DETERMINISTIC           false
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+
 namespace scene_rdl2 {
 namespace alloc {
 
@@ -25,7 +29,11 @@ namespace
 inline uint64_t
 getTicks()
 {
+#if __ARM_NEON__
+    return _rdtsc();
+#else
     return __rdtsc();
+#endif
 }
 
 // Returns a value between 0->max inclusive of max.
@@ -495,4 +503,4 @@ TestMemPool::testThreadSafety()
 
 CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::alloc::TestMemPool);
 
-
+#pragma clang diagnostic pop

@@ -162,7 +162,7 @@ fetchBinding(const SceneObject* so, const Attribute* attr)
             return so->getBinding(AttributeKey<Int>(*attr));
 
         case TYPE_LONG:
-            return so->getBinding(AttributeKey<Long>(*attr));
+            return so->getBinding(AttributeKey<int64_t>(*attr));
 
         case TYPE_FLOAT:
             return so->getBinding(AttributeKey<Float>(*attr));
@@ -487,7 +487,7 @@ AsciiWriter::valueToString(const SceneObject* so, const Attribute* attr,
         }
 
     case TYPE_LONG:
-        return longToString(so->get(AttributeKey<Long>(*attr), timestep));
+        return longToString(so->get(AttributeKey<int64_t>(*attr), timestep));
 
     case TYPE_FLOAT:
         return floatToString(so->get(AttributeKey<Float>(*attr), timestep));

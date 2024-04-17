@@ -24,7 +24,13 @@
 #include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#if defined(__APPLE__)
+     #include <sys/types.h>
+     #include <sys/socket.h>
+     #include <sys/uio.h>
+#else
 #include <sys/sendfile.h>
+#endif
 #include <unistd.h>
 
 namespace scene_rdl2 {
@@ -186,7 +192,12 @@ copyFile(const std::string& src, const std::string& dst)
     off_t offset = 0;
 
     while (bytesCopied < numBytes) {
+        #if defined(__APPLE__)
+        ssize_t result = sendfile(in.fd, out.fd, offset, (long long*) &bytesToCopy, NULL, 0);
+        #else
         ssize_t result = sendfile(out.fd, in.fd, &offset, bytesToCopy);
+        #endif
+
         if (result == -1) {
             throw except::IoError(util::buildString("sendfile() failed: ",
                     std::strerror(errno)));
@@ -221,7 +232,11 @@ absolutePath(const std::string& filePath, std::string relativeToPath)
 std::string
 currentWorkingDirectory()
 {
+    #if defined(__APPLE__)
+    char* cwd = getcwd (NULL, 0);
+    #else
     char* cwd = get_current_dir_name();
+    #endif
     std::string path(cwd);
     free(cwd);
     return path;

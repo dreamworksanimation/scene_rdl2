@@ -727,7 +727,7 @@ AsciiReader::pushValue(const SceneObject* so, const Attribute* attr,
         break;
 
     case TYPE_LONG:
-        lua_pushnumber(mLua, so->get(AttributeKey<Long>(*attr), timestep));
+        lua_pushnumber(mLua, so->get(AttributeKey<int64_t>(*attr), timestep));
         break;
 
     case TYPE_FLOAT:

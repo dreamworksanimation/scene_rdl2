@@ -744,7 +744,7 @@ TestValueContainer::testLongVector() // int64_t
                  return total;
              },
              [&](ValueContainerDeq *vcDeq) { // deqFunc
-                 std::vector<long> pVec = vcDeq->deqLongVector();
+                 std::vector<Long> pVec = vcDeq->deqLongVector();
                  CPPUNIT_ASSERT(compareVector(vec, pVec));
              });
 }
@@ -1209,12 +1209,12 @@ TestValueContainer::testVLLongVector() // int64_t
 
                  size_t total = ValueContainerUtil::variableLengthEncodingSize(vec.size());
                  for (const auto &itr: vec) {
-                     total += ValueContainerUtil::variableLengthEncodingSize(itr);
+                     total += ValueContainerUtil::variableLengthEncodingSize(long(itr));
                  }
                  return total;
              },
              [&](ValueContainerDeq *vcDeq) { // deqFunc
-                 std::vector<long> pVec = vcDeq->deqVLLongVector();
+                 std::vector<Long> pVec = vcDeq->deqVLLongVector();
                  CPPUNIT_ASSERT(compareVector(vec, pVec));
              });
 }

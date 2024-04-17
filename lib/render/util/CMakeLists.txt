@@ -9,19 +9,28 @@ set(exportGroup ${PROJECT_NAME}Targets)
 add_library(${component} SHARED "")
 add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 
+if(NOT IsDarwinPlatform)
+    set(PlatformSpecificHeaders
+        CpuAffinityMask.h
+        CpuSocketUtil.h
+        ProcCpuAffinity.h)
+    set(PlatformSpecificSources
+        CpuAffinityMask.cc
+        CpuSocketUtil.cc
+        ProcCpuAffinity.cc)
+endif()
+
 target_sources(${component}
     PRIVATE
         Arena.cc
         Args.cc
-	CpuAffinityMask.cc
-	CpuSocketUtil.cc
         GetEnv.cc
         Files.cc
         GetEnv.cc
         GUID.cc
         LuaScriptRunner.cc
-	ProcCpuAffinity.cc
-	ThreadPoolExecutor.cc
+        ThreadPoolExecutor.cc
+        ${PlatformSpecificSources}
 )
 
 set_property(TARGET ${component}
@@ -36,8 +45,6 @@ set_property(TARGET ${component}
         BitUtils.h
         BitUtils.isph
         BlockAllocatorCheck.h
-        CpuAffinityMask.h
-        CpuSocketUtil.h
         Files.h
         GetEnv.h
         GUID.h
@@ -47,7 +54,6 @@ set_property(TARGET ${component}
         Memory.h
         MemPool.h
         MiscUtils.h
-	ProcCpuAffinity.h
         Random.h
         Random.isph
         ReaderWriterMutex.h
@@ -61,11 +67,12 @@ set_property(TARGET ${component}
         Strings.h
         StrUtil.h
         syncstream.h
-	ThreadPoolExecutor.h
+        ThreadPoolExecutor.h
         TimeUtil.h
         ThreadPoolExecutor.h
         type_traits.h
         TypedStaticallySizedMemoryPool.h
+        ${PlatformSpecificHeaders}
 )
 
 target_include_directories(${component}
@@ -113,9 +120,3 @@ install(TARGETS ${component}
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${installIncludeDir}
 )
 
-# # install the export set
-# install(
-#     EXPORT ${exportGroup}
-#     NAMESPACE ${PROJECT_NAME}::
-#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION}
-# )

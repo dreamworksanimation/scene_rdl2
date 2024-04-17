@@ -87,7 +87,11 @@ namespace simd
     return _mm256_and_ps(a.m256, mask); 
   }
   // MoonRay: added scene_rdl2 namespace
+#if !defined(__aarch64__)
   __forceinline const avxf sign    ( const avxf& a ) { return _mm256_blendv_ps(avxf(scene_rdl2::math::one), -avxf(scene_rdl2::math::one), _mm256_cmp_ps(a, avxf(scene_rdl2::math::zero), _CMP_NGE_UQ )); }
+#else
+  __forceinline const avxf sign    ( const avxf& a ) { return _mm256_blendv_ps(avxf(scene_rdl2::math::one), -avxf(scene_rdl2::math::one), _mm256_cmplt_ps(a, avxf(scene_rdl2::math::zero) )); }
+#endif
   __forceinline const avxf signmsk ( const avxf& a ) { return _mm256_and_ps(a.m256,_mm256_castsi256_ps(_mm256_set1_epi32(0x80000000))); }
 
   __forceinline const avxf rcp  ( const avxf& a ) { 
@@ -185,6 +189,31 @@ namespace simd
   /// Comparison Operators + Select
   ////////////////////////////////////////////////////////////////////////////////
 
+#if defined(__aarch64__)
+  __forceinline const avxb operator ==( const avxf& a, const avxf& b ) { return _mm256_cmpeq_ps(a.m256, b.m256 ); }
+  __forceinline const avxb operator ==( const avxf& a, const float b ) { return _mm256_cmpeq_ps(a.m256, avxf(b) ); }
+  __forceinline const avxb operator ==( const float a, const avxf& b ) { return _mm256_cmpeq_ps(avxf(a), b.m256 ); }
+
+  __forceinline const avxb operator !=( const avxf& a, const avxf& b ) { return _mm256_cmpneq_ps(a.m256, b.m256); }
+  __forceinline const avxb operator !=( const avxf& a, const float b ) { return _mm256_cmpneq_ps(a.m256, avxf(b)); }
+  __forceinline const avxb operator !=( const float a, const avxf& b ) { return _mm256_cmpneq_ps(avxf(a), b.m256); }
+
+  __forceinline const avxb operator < ( const avxf& a, const avxf& b ) { return _mm256_cmplt_ps(a.m256, b.m256 ); }
+  __forceinline const avxb operator < ( const avxf& a, const float b ) { return _mm256_cmplt_ps(a.m256, avxf(b) ); }
+  __forceinline const avxb operator < ( const float a, const avxf& b ) { return _mm256_cmplt_ps(avxf(a), b.m256 ); }
+
+  __forceinline const avxb operator >=( const avxf& a, const avxf& b ) { return _mm256_cmpge_ps(a.m256, b.m256); }
+  __forceinline const avxb operator >=( const avxf& a, const float b ) { return _mm256_cmpge_ps(a.m256, avxf(b)); }
+  __forceinline const avxb operator >=( const float a, const avxf& b ) { return _mm256_cmpge_ps(avxf(a), b.m256); }
+
+  __forceinline const avxb operator > ( const avxf& a, const avxf& b ) { return _mm256_cmpgt_ps(a.m256, b.m256); }
+  __forceinline const avxb operator > ( const avxf& a, const float b ) { return _mm256_cmpgt_ps(a.m256, avxf(b)); }
+  __forceinline const avxb operator > ( const float a, const avxf& b ) { return _mm256_cmpgt_ps(avxf(a), b.m256); }
+
+  __forceinline const avxb operator <=( const avxf& a, const avxf& b ) { return _mm256_cmple_ps(a.m256, b.m256 ); }
+  __forceinline const avxb operator <=( const avxf& a, const float b ) { return _mm256_cmple_ps(a.m256, avxf(b) ); }
+  __forceinline const avxb operator <=( const float a, const avxf& b ) { return _mm256_cmple_ps(avxf(a), b.m256 ); }
+#else // !defined(__aarch64__)
   __forceinline const avxb operator ==( const avxf& a, const avxf& b ) { return _mm256_cmp_ps(a.m256, b.m256, _CMP_EQ_OQ ); }
   __forceinline const avxb operator ==( const avxf& a, const float b ) { return _mm256_cmp_ps(a.m256, avxf(b), _CMP_EQ_OQ ); }
   __forceinline const avxb operator ==( const float a, const avxf& b ) { return _mm256_cmp_ps(avxf(a), b.m256, _CMP_EQ_OQ ); }
@@ -208,7 +237,8 @@ namespace simd
   __forceinline const avxb operator <=( const avxf& a, const avxf& b ) { return _mm256_cmp_ps(a.m256, b.m256, _CMP_LE_OQ ); }
   __forceinline const avxb operator <=( const avxf& a, const float b ) { return _mm256_cmp_ps(a.m256, avxf(b), _CMP_LE_OQ ); }
   __forceinline const avxb operator <=( const float a, const avxf& b ) { return _mm256_cmp_ps(avxf(a), b.m256, _CMP_LE_OQ ); }
-  
+#endif // !defined(__aarch64__)
+
   __forceinline const avxf select( const avxb& m, const avxf& t, const avxf& f ) { 
     return _mm256_blendv_ps(f, t, m); 
   }
@@ -227,12 +257,17 @@ namespace simd
   /// Rounding Functions
   ////////////////////////////////////////////////////////////////////////////////
 
+#if !defined(__aarch64__)
   __forceinline const avxf round_even( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_NEAREST_INT); }
   __forceinline const avxf round_down( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_NEG_INF    ); }
   __forceinline const avxf round_up  ( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_POS_INF    ); }
   __forceinline const avxf round_zero( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_ZERO       ); }
   __forceinline const avxf floor     ( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_NEG_INF    ); }
   __forceinline const avxf ceil      ( const avxf& a ) { return _mm256_round_ps(a, _MM_FROUND_TO_POS_INF    ); }
+#else
+  __forceinline const avxf floor(const avxf& a) { return _mm256_floor_ps(a); }
+  __forceinline const avxf ceil (const avxf& a) { return _mm256_ceil_ps(a); }
+#endif
 
   ////////////////////////////////////////////////////////////////////////////////
   /// Movement/Shifting/Shuffling Functions
@@ -272,7 +307,7 @@ namespace simd
 
   template<size_t i> __forceinline float fextract   (const avxf& a            ) { return _mm_cvtss_f32(_mm256_extractf128_ps(a  ,i)); }
 
-#if defined (__AVX2__)
+#if defined (__AVX2__) && !defined(__aarch64__)
   __forceinline avxf permute(const avxf &a, const __m256i &index) {
     return _mm256_permutevar8x32_ps(a,index);
   }
@@ -478,7 +513,11 @@ namespace simd
     //     x = x2;
     //     y = pi/2;
     // }
+#if !defined(__aarch64__)
     __m256 mask = _mm256_cmp_ps(x, _mm256_cst_tan3pio8, _CMP_GT_OQ); // mask[n] = (x[n] > 2.4142)
+#else
+    __m256 mask = _mm256_cmpgt_ps(x, _mm256_cst_tan3pio8); // mask[n] = (x[n] > 2.4142)
+#endif
     x = _mm256_blendv_ps(x, x2, mask);
     y = _mm256_blendv_ps(y, _mm256_cst_pio2, mask);
 
@@ -486,7 +525,11 @@ namespace simd
     //   x = x3;
     //   y = pi/4;
     // }
+#if !defined(__aarch64__)
     mask = _mm256_cmp_ps(x, _mm256_cst_tanpio8, _CMP_GT_OQ); // mask[n] = (x[n] > 0.4142)
+#else
+    mask = _mm256_cmpgt_ps(x, _mm256_cst_tanpio8); // mask[n] = (x[n] > 0.4142)
+#endif
     x = _mm256_blendv_ps(x, x3, mask);
     y = _mm256_blendv_ps(y, _mm256_cst_pio4, mask);
 
@@ -521,7 +564,11 @@ namespace simd
   __forceinline
   avxf atan2(const avxf& y, const avxf& x)
   {
+#if !defined(__aarch64__)
     __m256 mask = _mm256_cmp_ps(x, _mm256_cst_zero, _CMP_LT_OQ);  // mask[n] = (x[n] < 0) - x-dependent mask
+#else
+    __m256 mask = _mm256_cmplt_ps(x, _mm256_cst_zero); // mask[n] = (x[n] < 0) - x-dependent mask
+#endif
     __m256 w = _mm256_blendv_ps(_mm256_cst_pi, _mm256_cst_mpi, y);
     w = _mm256_blendv_ps(_mm256_cst_zero, w, x);
 
@@ -531,21 +578,39 @@ namespace simd
     __m256 mask2; // y-dependent mask
 
     // atan2(-y, 0) -> -pi/2
+#if !defined(__aarch64__)
     mask  = _mm256_cmp_ps(x, _mm256_cst_zero, _CMP_EQ_OQ);                       // mask[n] = (x[n] == 0)
     mask2 = _mm256_and_ps(mask, _mm256_cmp_ps(y, _mm256_cst_zero, _CMP_LT_OQ));  // mask2[n] = (mask & (y[n] < 0))
+#else
+    mask  = _mm256_cmpeq_ps(x, _mm256_cst_zero);                       // mask[n] = (x[n] == 0)
+    mask2 = _mm256_and_ps(mask, _mm256_cmplt_ps(y, _mm256_cst_zero));  // mask2[n] = (mask & (y[n] < 0))
+#endif
     q     = _mm256_blendv_ps(q, _mm256_cst_mpio2, mask2);
 
     // atan2(+y, 0) -> pi/2
+#if !defined(__aarch64__)
     mask2 = _mm256_and_ps(mask, _mm256_cmp_ps(y, _mm256_cst_zero, _CMP_GT_OQ));  // mask2[n] = (mask & (y[n] > 0))
+#else
+    mask2 = _mm256_and_ps(mask, _mm256_cmpgt_ps(y, _mm256_cst_zero));  // mask2[n] = (mask & (y[n] > 0))
+#endif
     q     = _mm256_blendv_ps(q, _mm256_cst_pio2, mask2);
 
     // atan2(0, 0) -> 0
+#if !defined(__aarch64__)
     mask2 = _mm256_and_ps(mask, _mm256_cmp_ps(y, _mm256_cst_zero, _CMP_EQ_OQ));  // mask2[n] = (mask & (y[n] == 0)
+#else
+    mask2 = _mm256_and_ps(mask, _mm256_cmpeq_ps(y, _mm256_cst_zero));  // mask2[n] = (mask & (y[n] == 0)
+#endif
     q     = _mm256_blendv_ps(q, _mm256_cst_zero, mask2);
 
     // atan2(0, -x) -> pi
+#if !defined(__aarch64__)
     mask = _mm256_cmp_ps(x, _mm256_cst_zero, _CMP_LT_OQ);                        // mask[n] = (x[n] < 0)
     mask2 = _mm256_and_ps(mask, _mm256_cmp_ps(y, _mm256_cst_zero, _CMP_EQ_OQ));  // mask2[n] = (mask[n] & (y[n] == 0))
+#else
+    mask = _mm256_cmplt_ps(x, _mm256_cst_zero);                        // mask[n] = (x[n] < 0)
+    mask2 = _mm256_and_ps(mask, _mm256_cmpeq_ps(y, _mm256_cst_zero));  // mask2[n] = (mask[n] & (y[n] == 0))
+#endif
     q     = _mm256_blendv_ps(q, _mm256_cst_pi, mask2);
 
     return q;

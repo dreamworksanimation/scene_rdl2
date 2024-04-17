@@ -599,7 +599,7 @@ ValueContainerDeq::deqVLLongVector(LongVector &vec)
     vec.resize(static_cast<size_t>(size));
     for (size_t i = 0; i < size; ++i) {
         updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr,
-                                                                 static_cast<long &>(vec[i])));
+                                                                 reinterpret_cast<long &>(vec[i])));
         VALUE_CONTAINER_DEQ_DEBUG_MSG("  deqVLLongVector() vec[" << i << "]:>" << vec[i] << "<\n");
     }
 }

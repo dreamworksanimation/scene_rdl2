@@ -52,11 +52,14 @@
 #include <scene_rdl2/common/grid_util/ShmFootmark.h>
 #endif // end DEBUG_MODE
 
-#ifdef __INTEL_COMPILER
+
+#ifndef __APPLE__
+#ifdef __INTEL_COMPILER 
 // We don't need any include for half float instructions
 #else // else __INTEL_COMPILER
 #include <x86intrin.h>          // _mm_cvtps_ph, _cvtph_ps : for GCC build
 #endif // end !__INTEL_COMPILER
+#endif 
 
 //#define DEBUG_MSG_SIZEDUMP
 
@@ -605,13 +608,25 @@ private:
 
     inline static unsigned short ftoh(const float f)
     {
+#if defined(__ARM_NEON__)   // TODO: Verify this
+	__fp16 output;
+	vst1_f16(&output, vcvt_f16_f32(vld1q_f32(&f)));
+	return output;
+#else
         return _cvtss_sh(f, 0); // Convert full 32bit float to half 16bit float
-                                // An immediate value controlling rounding using bits : 0=Nearest 
+                                // An immediate value controlling rounding using bits : 0=Nearest
+#endif
     }
 
     inline static float htof(const unsigned short h)
     {
+#if defined(__ARM_NEON__)   // TODO: Verify this
+	float output;
+	vst1q_f32(&output, vcvt_f32_f16(vld1_u16(&h)));
+	return output;
+#else
         return _cvtsh_ss(h); // Convert half 16bit float to full 32bit float
+#endif
     }
 
     // Convert full 32bit float vector 2 to half 16bit float vector 2

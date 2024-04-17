@@ -563,7 +563,10 @@ transposeSOAToAOS_16x16(const uint32_t * __restrict src, uint32_t * __restrict d
 __forceinline void
 transposeAOSToSOA_8x8(const uint32_t *__restrict srcRows[8], uint32_t *__restrict dst)
 {
-#if 0
+#if defined(__aarch64__) 
+
+
+    // TODO: Look for an SSE / Neon solution
 
     const unsigned inputW = 8;
     const unsigned inputH = 8;
@@ -574,7 +577,7 @@ transposeAOSToSOA_8x8(const uint32_t *__restrict srcRows[8], uint32_t *__restric
         }
     }
 
-#else
+#else 
 
     // http://stackoverflow.com/questions/25622745/transpose-an-8x8-float-using-avx-avx2
 
@@ -638,7 +641,7 @@ transposeAOSToSOA_8x8(const uint32_t *__restrict srcRows[8], uint32_t *__restric
 __forceinline void
 transposeSOAToAOS_8x8(const uint32_t *__restrict src, uint32_t *__restrict dstRows[8])
 {
-#if 0
+#if defined(__aarch64__)
 
     const unsigned inputW = 8;
     const unsigned inputH = 8;
