@@ -93,8 +93,6 @@ AttributeKey<Float>        SceneVariables::sDeepCurvatureTolerance;
 AttributeKey<Float>        SceneVariables::sDeepZTolerance;
 AttributeKey<Int>          SceneVariables::sDeepVolCompressionRes;
 AttributeKey<StringVector> SceneVariables::sDeepIDAttributeNames;
-AttributeKey<Int>          SceneVariables::sDeepMaxLayers;
-AttributeKey<Float>        SceneVariables::sDeepLayerBias;
 
 AttributeKey<String> SceneVariables::sCryptoUVAttributeName;
 
@@ -626,14 +624,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         SceneClass::sComment,
         "Names of primitive attributes containing deep IDs");
 
-    sDeepMaxLayers = sceneClass.declareAttribute<Int>("deep_max_layers", Int(1), {"deep max layers"});
-    sceneClass.setMetadata(sDeepMaxLayers, "label", "deep max layers");
-    sceneClass.setMetadata(sDeepMaxLayers, SceneClass::sComment, "Maximum number of depth layers to output");
-
-    sDeepLayerBias = sceneClass.declareAttribute<Float>("deep_layer_bias", Float(0.1f), {"deep layer bias"});
-    sceneClass.setMetadata(sDeepLayerBias, "label", "deep layer bias");
-    sceneClass.setMetadata(sDeepLayerBias, SceneClass::sComment, "Minimum distance between deep layers");
-
     sTextureCacheSizeMb = sceneClass.declareAttribute<Int>("texture_cache_size", Int(4000), {"texture cache size"});
     sceneClass.setMetadata(sTextureCacheSizeMb, "label", "texture cache size");
     sceneClass.setMetadata(sTextureCacheSizeMb,
@@ -1162,8 +1152,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Deep Images", sDeepZTolerance);
     sceneClass.setGroup("Deep Images", sDeepVolCompressionRes);
     sceneClass.setGroup("Deep Images", sDeepIDAttributeNames);
-    sceneClass.setGroup("Deep Images", sDeepMaxLayers);
-    sceneClass.setGroup("Deep Images", sDeepLayerBias);
 
     sceneClass.setGroup("Caching", sTextureCacheSizeMb);
     sceneClass.setGroup("Caching", sTextureFileHandleCount);

@@ -268,8 +268,6 @@ public:
     static AttributeKey<Float> sDeepZTolerance;
     static AttributeKey<Int> sDeepVolCompressionRes;
     static AttributeKey<StringVector> sDeepIDAttributeNames;
-    static AttributeKey<Int> sDeepMaxLayers;
-    static AttributeKey<Float> sDeepLayerBias;
 
     static AttributeKey<String> sCryptoUVAttributeName;
 
