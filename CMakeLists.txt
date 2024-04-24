@@ -70,9 +70,7 @@ find_program(LUA_BIN_LUA
     NAMES lua
     HINTS $ENV{LUA_DIR}/bin)
 
-# ================================================
 # Set the RPATH for binaries in the install tree
-# ================================================
 set(CMAKE_BUILD_RPATH ${COMPILER_LIBRARY_DIR})
 set(CMAKE_INSTALL_RPATH ${GLOBAL_INSTALL_RPATH})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
