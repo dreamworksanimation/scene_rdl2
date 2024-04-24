@@ -73,10 +73,6 @@ find_program(LUA_BIN_LUA
 # ================================================
 # Set the RPATH for binaries in the install tree
 # ================================================
-if (NOT "" STREQUAL "$ENV{REZ_ICC_ROOT}")
-    set(COMPILER_LIBRARY_DIR "$ENV{REZ_ICC_ROOT}/lib")
-endif()
-
 set(CMAKE_BUILD_RPATH ${COMPILER_LIBRARY_DIR})
 set(CMAKE_INSTALL_RPATH ${GLOBAL_INSTALL_RPATH})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
