@@ -153,6 +153,9 @@ public:
      */
     finline void setWarningsAsErrors(bool warningsAsErrors);
 
+    // for debug 
+    static std::string showManifest(const std::string& manifest);
+
 private:
     // Internal structure for tracking message types, sizes, and offsets when
     // decoding the manifest.

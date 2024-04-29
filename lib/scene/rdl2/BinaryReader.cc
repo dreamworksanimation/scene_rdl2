@@ -130,6 +130,35 @@ BinaryReader::fromBytes(const std::string& manifest, const std::string& payload)
     }
 }
 
+// static function    
+std::string
+BinaryReader::showManifest(const std::string& manifest)
+{
+    Slice bytes(manifest);
+
+    const char *ptr = static_cast<const char *>(bytes.getData());
+    ValueContainerDeq vContainerDeq(ptr, bytes.getLength());
+
+    std::ostringstream ostr;
+
+    size_t size;
+    vContainerDeq.deqVLSizeT(size);
+    if (size == 0) return "manifest is empty";
+
+    ostr << "manifest (size:" << size << ") {\n";
+    ptrdiff_t offset = 0;
+    for (size_t i = 0; i < size; ++i) {
+        unsigned int typeUInt;
+        size_t sizeObj;
+        vContainerDeq.deqVLUInt(typeUInt);
+        vContainerDeq.deqVLSizeT(sizeObj);
+        ostr << "  type:" << typeUInt << "  offset:" << offset << "  sizeObj:" << sizeObj << '\n';
+        offset += sizeObj;
+    }
+    ostr << "}";
+    return ostr.str();
+}
+
 void
 BinaryReader::readManifest(Slice bytes, RecordInfoVector& info)
 {

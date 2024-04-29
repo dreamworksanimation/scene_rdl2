@@ -74,9 +74,7 @@ TestParser::runParser(const Parser &parser, const std::string &cmdLine, bool sho
 
     bool flag = parser.main(arg); // parser command line
     
-    // add main() return condition to the out
-    if (out.back() == '\n') out.pop_back();
-    if (!out.empty()) out += '\n';
+    if (!out.empty() && out.back() != '\n') out += '\n';
     if (flag) {
         out += "main():true";
     } else {
