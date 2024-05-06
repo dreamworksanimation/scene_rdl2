@@ -35,7 +35,7 @@ namespace alloc {
 
 struct ArenaBlock : public util::SList::Entry
 {
-    finline ArenaBlock(unsigned size, unsigned alignment) :
+    finline ArenaBlock(size_t size, unsigned alignment) :
         mMemory(util::alignedMallocArray<uint8_t>(size, alignment)),
         mSize(size)
     {
@@ -48,7 +48,7 @@ struct ArenaBlock : public util::SList::Entry
     }
 
     uint8_t *   mMemory;
-    unsigned    mSize;
+    size_t      mSize;
 };
 
 //-----------------------------------------------------------------------------
@@ -87,12 +87,12 @@ public:
         mTotalBlocks = 0;
     }
 
-    finline unsigned getMemoryUsage() const
+    finline size_t getMemoryUsage() const
     {
         return mTotalBlocks * mBlockSize;
     }
 
-    finline unsigned getBlockSize() const
+    finline size_t getBlockSize() const
     {
         return mBlockSize;
     }
@@ -114,7 +114,7 @@ public:
     }
 
 protected:
-    unsigned            mBlockSize;
+    size_t                mBlockSize;
     tbb::atomic<unsigned> mTotalBlocks;
 
     CACHE_ALIGN util::ConcurrentSList mFreeBlocks;

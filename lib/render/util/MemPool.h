@@ -616,7 +616,7 @@ public:
         MNRY_ASSERT(mFreeBlocks.size() == mNumBlocks);
     }
 
-    unsigned getMemoryUsage() const
+    size_t getMemoryUsage() const
     {
         return (mNumBlocks * sizeof(MemBlock)) +
                queryEntryMemoryRequired(mNumBlocks, mEntryStride) +
