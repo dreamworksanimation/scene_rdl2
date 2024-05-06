@@ -59,6 +59,11 @@ void
 writeSceneToFile(const SceneContext& context, const std::string& filePath,
                  bool deltaEncoding, bool skipDefaults, size_t elemsPerLine)
 {
+    // Create sub directories if they don't exist
+    if (!util::createDirectories(filePath)) {
+        return;
+    }
+
     // Grab the file extension and convert it to lower case.
     auto ext = util::lowerCaseExtension(filePath);
 

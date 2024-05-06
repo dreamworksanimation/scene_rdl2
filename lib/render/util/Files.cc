@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <iostream>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -279,6 +280,31 @@ simplifyPath(const std::string& path)
     }
 
     return joinedPath;
+}
+
+bool
+createDirectories(const std::string& path)
+{
+    size_t pos = 0;
+    while ((pos = path.find_first_of("/\\", pos + 1)) != std::string::npos) {
+        std::string dir = path.substr(0, pos);
+        #if defined(_WIN32)
+            if (_mkdir(dir.c_str()) != 0 && errno != EEXIST) {
+        #else
+            if (mkdir(dir.c_str(), 0777) != 0 && errno != EEXIST) {
+        #endif
+                std::cerr << "Failed to create directory: " << dir << std::endl;
+                return false;
+            }
+    }
+    // Set permissions for the last directory in the path
+    #if defined(__APPLE__)
+        if (chmod(path.c_str(), 0777) != 0) {
+            std::cerr << "Failed to set permissions for directory: " << path << std::endl;
+            return false;
+        }
+    #endif
+    return true;   
 }
 
 } // namespace util

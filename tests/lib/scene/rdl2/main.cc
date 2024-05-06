@@ -6,6 +6,7 @@
 #include "TestAttribute.h"
 #include "TestAttributeKey.h"
 #include "TestBinary.h"
+#include "TestCreateDirectories.h"
 #include "TestDso.h"
 #include "TestDsoFinder.h"
 #include "TestJoint.h"
@@ -50,6 +51,7 @@ main(int argc, char* argv[])
     CPPUNIT_TEST_SUITE_REGISTRATION(TestRenderOutput);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestUserData);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestValueContainer);
+    CPPUNIT_TEST_SUITE_REGISTRATION(TestCreateDirectories);
 
     return pdevunit::run(argc, argv);
 }

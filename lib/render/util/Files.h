@@ -143,6 +143,14 @@ std::string currentWorkingDirectory();
  */
 std::string simplifyPath(const std::string& path);
 
+
+/**
+ * Recursively creates subdirectories from file path if they don't exist.
+ * Assumes the last part of the path is a filename and does not create
+ * a directory for it
+ */
+bool createDirectories(const std::string& path);
+
 } // namespace util
 } // namespace scene_rdl2
 

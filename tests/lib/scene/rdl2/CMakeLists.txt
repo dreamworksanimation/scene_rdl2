@@ -12,6 +12,7 @@ target_sources(${target}
         TestAttribute.cc
         TestAttributeKey.cc
         TestBinary.cc
+        TestCreateDirectories.cc
         TestDso.cc
         TestDsoFinder.cc
         TestJoint.cc
