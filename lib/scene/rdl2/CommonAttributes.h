@@ -57,10 +57,13 @@
     sceneClass.setMetadata(attrAdaptiveError, "comment",                       \
         "The maximum allowable difference in pixels for subdivison mesh "      \
         "adaptive tessellation (each final tessellated edge "                  \
-        "won't be longer than n pixels if adaptive error is set to n)."        \
+        "won't be longer than n pixels if adaptive error is set to n). "       \
         "A value of 0 disables adaptive tessellation, reverting to "           \
-        "uniform tessellation, which sometimes is more stable in animation."   \
-        "Adaptive tessellation is not supported for instances.");              \
+        "uniform tessellation, which sometimes is more stable in animation. "  \
+        "Adaptive tessellation is not supported for instances. "               \
+        "The maximum tessellation won't exceed the value specified in "        \
+        "mesh_resolution.  This prevents excessive tessellation when the "     \
+        "mesh is extremely close to the camera.");                             \
     sceneClass.setGroup("Mesh", attrAdaptiveError);                            \
     attrSmoothNormal =                                                         \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Bool>("smooth_normal", true);        \
