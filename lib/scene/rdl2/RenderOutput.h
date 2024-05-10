@@ -265,6 +265,7 @@ public:
 
     // Cryptomatte output settings
     inline bool getCryptomatteOutputPositions() const;
+    inline bool getCryptomatteOutputP0() const;
     inline bool getCryptomatteOutputNormals() const;
     inline bool getCryptomatteOutputBeauty() const;
     inline bool getCryptomatteOutputRefP() const;
@@ -304,6 +305,7 @@ private:
     static AttributeKey<String> sAttrResumeFileName;
     static AttributeKey<Int> sAttrCryptomatteDepth;
     static AttributeKey<Bool> sAttrCryptomatteOutputPositions;
+    static AttributeKey<Bool> sAttrCryptomatteOutputP0;
     static AttributeKey<Bool> sAttrCryptomatteOutputNormals;
     static AttributeKey<Bool> sAttrCryptomatteOutputBeauty;
     static AttributeKey<Bool> sAttrCryptomatteOutputRefP;
@@ -451,31 +453,35 @@ RenderOutput::getResumeFileName() const
 }
 
 bool RenderOutput::getCryptomatteOutputPositions() const
-{ 
+{
     return get(sAttrCryptomatteOutputPositions);
 }
+bool RenderOutput::getCryptomatteOutputP0() const
+{
+    return get(sAttrCryptomatteOutputP0);
+}
 bool RenderOutput::getCryptomatteOutputNormals() const
-{ 
+{
     return get(sAttrCryptomatteOutputNormals);
 }
 bool RenderOutput::getCryptomatteOutputBeauty() const
-{ 
+{
     return get(sAttrCryptomatteOutputBeauty);
 }
 bool RenderOutput::getCryptomatteOutputRefP() const
-{ 
+{
     return get(sAttrCryptomatteOutputRefP);
 }
 bool RenderOutput::getCryptomatteOutputRefN() const
-{ 
+{
     return get(sAttrCryptomatteOutputRefN);
 }
 bool RenderOutput::getCryptomatteOutputUV() const
-{ 
+{
     return get(sAttrCryptomatteOutputUV);
 }
 bool RenderOutput::getCryptomatteSupportResumeRender() const
-{ 
+{
     return get(sAttrCryptomatteSupportResumeRender);
 }
 bool RenderOutput::getCryptomatteEnableRefract() const
@@ -483,9 +489,10 @@ bool RenderOutput::getCryptomatteEnableRefract() const
     return get(sAttrCryptomatteEnableRefract);
 }
 int RenderOutput::getCryptomatteNumExtraChannels() const
-{ 
+{
     int total = 0;
     if (getCryptomatteOutputPositions())       total += 4;
+    if (getCryptomatteOutputP0())              total += 4;
     if (getCryptomatteOutputNormals())         total += 4;
     if (getCryptomatteOutputBeauty())          total += 4;
     if (getCryptomatteOutputRefP())            total += 4;
