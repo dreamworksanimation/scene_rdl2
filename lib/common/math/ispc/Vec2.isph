@@ -182,13 +182,13 @@ inline varying Vec2f operator/(const varying Vec2f v0, const varying Vec2f v1)
 // Vec2f rcp(Vec2f)
 inline uniform Vec2f rcp(const uniform Vec2f v)
 {
-    return Vec2f_ctor(rcp(v.x), rcp(v.y));
+    return Vec2f_ctor(1.0f/v.x, 1.0f/v.y);
 }
 
 // Vec2f rcp(Vec2f)
 inline varying Vec2f rcp(const varying Vec2f v)
 {
-    return Vec2f_ctor(rcp(v.x), rcp(v.y));
+    return Vec2f_ctor(1.0f/v.x, 1.0f/v.y);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -374,13 +374,13 @@ inline varying float length(const varying Vec2f v)
 // Vec2f normalize(Vec2f)
 inline uniform Vec2f normalize(const uniform Vec2f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // Vec2f normalize(Vec2f)
 inline varying Vec2f normalize(const varying Vec2f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // bool isNormalized(Vec2f)

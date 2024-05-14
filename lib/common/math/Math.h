@@ -61,28 +61,6 @@ namespace math {
   __forceinline float sqr  ( const float x ) { return x*x; }
 // MoonRay: end *****
 
-  __forceinline float rcp  ( const float x )
-  {
-    const __m128 a = _mm_set1_ps(x);
-    const __m128 r = _mm_rcp_ps(a);
-#if defined(__AVX2__)
-    return _mm_cvtss_f32(_mm_mul_ps(r,_mm_fnmadd_ps(r, a, _mm_set_ss(2.0f))));
-#else
-    return _mm_cvtss_f32(_mm_mul_ps(r,_mm_sub_ps(_mm_set_ss(2.0f), _mm_mul_ps(r, a))));
-#endif
-  }
-// Intel: begin *****
-/*
-#ifndef __MIC__
-  __forceinline float rcp  ( const float x ) 
-  { 
-    const __m128 vx = _mm_set_ss(x);
-    const __m128 r = _mm_rcp_ps(vx);
-    return _mm_cvtss_f32(_mm_sub_ps(_mm_add_ps(r, r), _mm_mul_ps(_mm_mul_ps(r, r), vx)));
-  }
-*/
-// Intel: end *****
-
   __forceinline float signmsk ( const float x ) { 
     return _mm_cvtss_f32(_mm_and_ps(_mm_set_ss(x),_mm_castsi128_ps(_mm_set1_epi32(0x80000000))));
   }
@@ -103,7 +81,6 @@ namespace math {
 // Intel: begin *****
 /*
 #else
-  __forceinline float rcp  ( const float x ) { return 1.0f/x; }
   __forceinline float signmsk ( const float x ) { return cast_i2f(cast_f2i(x)&0x80000000); }
   __forceinline float xorf( const float x, const float y ) { return cast_i2f(cast_f2i(x) ^ cast_f2i(y)); }
   __forceinline float andf( const float x, const float y ) { return cast_i2f(cast_f2i(x) & cast_f2i(y)); }
@@ -158,7 +135,6 @@ namespace math {
   __forceinline double log2 ( const double x ) { return ::log2 (x); }
   __forceinline double log10( const double x ) { return ::log10(x); }
   __forceinline double pow  ( const double x, const double y ) { return ::pow  (x, y); }
-  __forceinline double rcp  ( const double x ) { return 1.0/x; }
   __forceinline double rsqrt( const double x ) { return 1.0/::sqrt(x); }
   __forceinline double sin  ( const double x ) { return ::sin  (x); }
 #if defined(__APPLE__)

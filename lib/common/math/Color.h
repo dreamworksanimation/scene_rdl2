@@ -166,7 +166,7 @@ namespace math {
   __forceinline const Color operator+ (const Color& v) { return Color(+v.r,+v.g,+v.b); }
   __forceinline const Color operator- (const Color& v) { return Color(-v.r,-v.g,-v.b); }
   __forceinline const Color abs       (const Color& a) { return Color(abs(a.r),abs(a.g),abs(a.b)); }
-  __forceinline const Color rcp       (const Color& a) { return Color(rcp(a.r),rcp(a.g),rcp(a.b)); }
+  __forceinline const Color rcp       (const Color& a) { return Color(1.0f/a.r,1.0f/a.g,1.0f/a.b); }
   __forceinline const Color rsqrt     (const Color& a) { return Color(rsqrt(a.r),rsqrt(a.g),rsqrt(a.b)); }
   __forceinline const Color sqrt      (const Color& a) { return Color(sqrt(a.r),sqrt(a.g),sqrt(a.b)); }
   __forceinline       bool  isFinite  (const Color& a) { return math::isfinite(a.r) && math::isfinite(a.g) && math::isfinite(a.b); }

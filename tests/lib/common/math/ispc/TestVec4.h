@@ -56,6 +56,7 @@ public:
     CPPUNIT_TEST(testLengthSqr);
     CPPUNIT_TEST(testNormalize);
     CPPUNIT_TEST(testAbs);
+    CPPUNIT_TEST(testNeg);
     CPPUNIT_TEST(testRcp);
     CPPUNIT_TEST(testIsNormalized);
     CPPUNIT_TEST(testLerp);

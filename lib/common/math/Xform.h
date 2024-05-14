@@ -117,7 +117,7 @@ namespace math {
 // MoonRay: added begin *****
 
       /*! returns the inverse of this transform. */
-      __forceinline XformT inverse() const { L il = rcp(l); return XformT<L>(il,-(p*il)); }
+      __forceinline XformT inverse() const { L il = l.inverse(); return XformT<L>(il,-(p*il)); }
 
       /*! set current matrix to represent a translation. */
       __forceinline void setToTranslation(const VectorT& pParam) { *this = translate(pParam); }
@@ -218,7 +218,6 @@ namespace math {
 
   template<typename L> __forceinline XformT<L> operator -( const XformT<L>& a ) { return XformT<L>(-a.l,-a.p); }
   template<typename L> __forceinline XformT<L> operator +( const XformT<L>& a ) { return XformT<L>(+a.l,+a.p); }
-  template<typename L> __forceinline XformT<L>        rcp( const XformT<L>& a ) { return a.inverse(); }
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary Operators
@@ -229,8 +228,8 @@ namespace math {
 
   template<typename L> __forceinline const XformT<L> operator *( const ScalarT  & s, const XformT<L>& x ) { return XformT<L>(s*x.l,s*x.p); }
   template<typename L> __forceinline const XformT<L> operator *( const XformT<L>& a, const XformT<L>& b ) { return XformT<L>(a.l*b.l,a.p*b.l+b.p); }
-  template<typename L> __forceinline const XformT<L> operator /( const XformT<L>& a, const XformT<L>& b ) { return a * rcp(b); }
-  template<typename L> __forceinline const XformT<L> operator /( const XformT<L>& x, const ScalarT  & s ) { return s * rcp(x); }
+  template<typename L> __forceinline const XformT<L> operator /( const XformT<L>& a, const XformT<L>& b ) { return a * b.inverse(); }
+  template<typename L> __forceinline const XformT<L> operator /( const XformT<L>& x, const ScalarT  & s ) { return s * (1.0f/x); }
 
   template<typename L> __forceinline XformT<L>& operator *=( XformT<L>& a, const XformT<L>& b ) { return a = a * b; }
   template<typename L> __forceinline XformT<L>& operator *=( XformT<L>& x, const ScalarT  & b ) { return x = x * b; }

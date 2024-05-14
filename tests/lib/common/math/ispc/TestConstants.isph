@@ -40,16 +40,16 @@ testValues(const uniform Extents cExtents)
     if (!isEqual(sFourPi, 4.0 * sPi)) {
         ++error;
     }
-    if (!isEqual(sOneOverPi, rcp(sPi))) {
+    if (!isEqual(sOneOverPi, 1.0 / sPi)) {
         ++error;
     }
-    if (!isEqual(sOneOverTwoPi, rcp(2.0 * sPi))) {
+    if (!isEqual(sOneOverTwoPi, 0.5 / sPi)) {
         ++error;
     }
     if (!isEqual(sHalfPi, sPi / 2.0)) {
         ++error;
     }
-    if (!isEqual(sOneOverFourPi, rcp(4.0 * sPi))) {
+    if (!isEqual(sOneOverFourPi, 0.25 / sPi)) {
         ++error;
     }
     if (!isEqual(sSqrtTwoPi, sqrt(2.0 * sPi))) {
@@ -58,7 +58,7 @@ testValues(const uniform Extents cExtents)
     if (!isEqual(sMaxValue, cExtents.mFloatMax)) {
         ++error;
     }
-    if (!isEqual(sOneOver255, rcp(255.0))) {
+    if (!isEqual(sOneOver255, 1.0 / 255.0)) {
         ++error;
     }
     if (!isEqual(sNormalizedLengthThreshold, 1e-3)) {

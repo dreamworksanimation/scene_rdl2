@@ -86,7 +86,7 @@ namespace math {
   template<typename T> __forceinline Vec2<T> operator +( const Vec2<T>& a ) { return Vec2<T>(+a.x, +a.y); }
   template<typename T> __forceinline Vec2<T> operator -( const Vec2<T>& a ) { return Vec2<T>(-a.x, -a.y); }
   template<typename T> __forceinline Vec2<T> abs       ( const Vec2<T>& a ) { return Vec2<T>(abs  (a.x), abs  (a.y)); }
-  template<typename T> __forceinline Vec2<T> rcp       ( const Vec2<T>& a ) { return Vec2<T>(rcp  (a.x), rcp  (a.y)); }
+  template<typename T> __forceinline Vec2<T> rcp       ( const Vec2<T>& a ) { return Vec2<T>( 1.0f/a.x,   1.0f/a.y);  }
   template<typename T> __forceinline Vec2<T> rsqrt     ( const Vec2<T>& a ) { return Vec2<T>(rsqrt(a.x), rsqrt(a.y)); }
   template<typename T> __forceinline Vec2<T> sqrt      ( const Vec2<T>& a ) { return Vec2<T>(sqrt (a.x), sqrt (a.y)); }
 

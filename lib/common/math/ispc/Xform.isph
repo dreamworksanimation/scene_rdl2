@@ -209,18 +209,6 @@ inline varying Xform3f inverse(const varying Xform3f xform)
     return Xform3f_ctor(lInv, neg(xform.p) * lInv);
 }
 
-// Xform rcp(Xform3f)
-inline uniform Xform3f rcp(const uniform Xform3f xform)
-{
-    return inverse(xform);
-}
-
-// Xform rcp(Xform3f)
-inline varying Xform3f rcp(const varying Xform3f xform)
-{
-    return inverse(xform);
-}
-
 //--------------------------------------------------------------------------------------------------
 // Equality
 //--------------------------------------------------------------------------------------------------

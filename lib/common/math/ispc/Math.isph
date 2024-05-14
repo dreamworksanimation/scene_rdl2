@@ -29,10 +29,6 @@
  * Most types end with the 'f' symbol to indicate single precision.  Double precision
  * types would have the 'd' suffix.
  *
- * The library favors performance over exact results.  For example, it
- * makes use of the higher performance 'rcp()' functions rather than
- * the slower, but more accurate division instruction.
- *
  * @section organization_sec Organziation
  * The math library is organized around a set of structures.  For the most
  * part, each important structure has its own .isph include file.  Within that

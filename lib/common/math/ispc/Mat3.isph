@@ -298,25 +298,13 @@ inline varying Mat3f adjoint(const varying Mat3f m)
 // Mat3f inverse(Mat3f)
 inline uniform Mat3f inverse(const uniform Mat3f m)
 {
-    return rcp(det(m)) * adjoint(m);
+    return (1.0f / det(m)) * adjoint(m);
 }
 
 // Mat3f inverse(Mat3f)
 inline varying Mat3f inverse(const varying Mat3f m)
 {
-    return rcp(det(m)) * adjoint(m);
-}
-
-// Mat3f rcp(Mat3f)
-inline uniform Mat3f rcp(const uniform Mat3f m)
-{
-    return inverse(m);
-}
-
-// Mat3f rcp(Mat3f)
-inline varying Mat3f rcp(const varying Mat3f m)
-{
-    return inverse(m);
+    return (1.0f / det(m)) * adjoint(m);
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -190,13 +190,13 @@ inline varying Vec4f operator/(const varying Vec4f v0, const varying Vec4f v1)
 // Vec4f rcp(Vec4f)
 inline uniform Vec4f rcp(const uniform Vec4f v)
 {
-    return Vec4f_ctor(rcp(v.x), rcp(v.y), rcp(v.z), rcp(v.w));
+    return Vec4f_ctor(1.0f/v.x, 1.0f/v.y, 1.0f/v.z, 1.0f/v.w);
 }
 
 // Vec4f rcp(Vec4f)
 inline varying Vec4f rcp(const varying Vec4f v)
 {
-    return Vec4f_ctor(rcp(v.x), rcp(v.y), rcp(v.z), rcp(v.w));
+    return Vec4f_ctor(1.0f/v.x, 1.0f/v.y, 1.0f/v.z, 1.0f/v.w);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -386,13 +386,13 @@ inline varying float length(const varying Vec4f v)
 // Vec4f normalize(Vec4f)
 inline uniform Vec4f normalize(const uniform Vec4f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // Vec4f normalize(Vec4f)
 inline varying Vec4f normalize(const varying Vec4f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // bool isNormalized(Vec4f)

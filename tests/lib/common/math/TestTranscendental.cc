@@ -11,6 +11,9 @@ using namespace scene_rdl2;
 using namespace scene_rdl2::math;
 
 
+#if 0
+// rcp() has now been removed, but we can leave this code here by way of illustration
+// until we have more functions to test
 void TestCommonMathTranscendental::testRcp()
 {
     printf("\n");
@@ -38,6 +41,7 @@ void TestCommonMathTranscendental::testRcp()
     rcpPeakErrs.print();
     printf("\n");
 }
+#endif
 
 
 void TestCommonMathTranscendental::testAcos()

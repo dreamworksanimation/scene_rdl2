@@ -151,9 +151,8 @@ testCtor()
 
 //---------------------------------------------------------------------
 // Xform3 = Inverse(Xform3)
-// Xform3 = rcp(Xform3)
 //---------------------------------------------------------------------
-#define XFORM3_INVERSE_TEST(XFTYPE, INVERSE, RCP, IDENTITY, ISEQUAL, TOL) \
+#define XFORM3_INVERSE_TEST(XFTYPE, INVERSE, IDENTITY, ISEQUAL, TOL) \
     {                                                                   \
         VAR XFTYPE vm = XFTYPE##_ctor(1. * pi, 2. * pi, 3. * pi,        \
                                       0., 1. * pi, 4. * pi,             \
@@ -162,11 +161,6 @@ testCtor()
         VAR XFTYPE vmInv = INVERSE(vm);                                 \
         VAR XFTYPE vmMult = vmInv * vm;                                 \
         if (any(!ISEQUAL(vmMult, IDENTITY(), TOL))) {                   \
-            ++error;                                                    \
-        }                                                               \
-                                                                        \
-        VAR XFTYPE vmRcp = RCP(vm);                                     \
-        if (any(!ISEQUAL(vmInv, vmRcp))) {                              \
             ++error;                                                    \
         }                                                               \
                                                                         \
@@ -180,11 +174,6 @@ testCtor()
         if (any(!ISEQUAL(umMult, IDENTITY(), TOL))) {                   \
             ++error;                                                    \
         }                                                               \
-                                                                        \
-        UNI XFTYPE umRcp = RCP(um);                                     \
-        if (any(!ISEQUAL(umInv, umRcp))) {                              \
-            ++error;                                                    \
-        }                                                               \
     }
 
 inline uniform int
@@ -193,7 +182,7 @@ testInverse()
     uniform int error = 0;
     const varying int pi = programIndex + 1;
 
-    XFORM3_INVERSE_TEST(Xform3f, inverse, rcp,
+    XFORM3_INVERSE_TEST(Xform3f, inverse, 
                         Xform3f_identity, isEqual, 1e-4);
     return error;
         

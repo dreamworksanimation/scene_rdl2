@@ -107,7 +107,7 @@ namespace math {
   template<typename T> __forceinline Vec4<T> operator +( const Vec4<T>& a ) { return Vec4<T>(+a.x, +a.y, +a.z, +a.w); }
   template<typename T> __forceinline Vec4<T> operator -( const Vec4<T>& a ) { return Vec4<T>(-a.x, -a.y, -a.z, -a.w); }
   template<typename T> __forceinline Vec4<T> abs       ( const Vec4<T>& a ) { return Vec4<T>(abs  (a.x), abs  (a.y), abs  (a.z), abs  (a.w)); }
-  template<typename T> __forceinline Vec4<T> rcp       ( const Vec4<T>& a ) { return Vec4<T>(rcp  (a.x), rcp  (a.y), rcp  (a.z), rcp  (a.w)); }
+  template<typename T> __forceinline Vec4<T> rcp       ( const Vec4<T>& a ) { return Vec4<T>( 1.0f/a.x,   1.0f/a.y,   1.0f/a.z,   1.0f/a.w);  }
   template<typename T> __forceinline Vec4<T> rsqrt     ( const Vec4<T>& a ) { return Vec4<T>(rsqrt(a.x), rsqrt(a.y), rsqrt(a.z), rsqrt(a.w)); }
   template<typename T> __forceinline Vec4<T> sqrt      ( const Vec4<T>& a ) { return Vec4<T>(sqrt (a.x), sqrt (a.y), sqrt (a.z), sqrt (a.w)); }
 

@@ -96,7 +96,7 @@ namespace math {
     __forceinline const Mat3 adjoint() const { return Mat3(cross(vy,vz),cross(vz,vx),cross(vx,vy)).transposed(); }
 
     /*! compute inverse matrix */
-    __forceinline const Mat3 inverse() const { return rcp(det())*adjoint(); }
+    __forceinline const Mat3 inverse() const { return (1.0f/det())*adjoint(); }
     // Intel: return adjoint()/det();
 
     /*! compute transposed matrix */
@@ -233,7 +233,6 @@ namespace math {
 
   template<typename T> __forceinline Mat3<T> operator-(const Mat3<T>& a) { return Mat3<T>(-a.vx,-a.vy,-a.vz); }
   template<typename T> __forceinline Mat3<T> operator+(const Mat3<T>& a) { return Mat3<T>(+a.vx,+a.vy,+a.vz); }
-  template<typename T> __forceinline Mat3<T> rcp      (const Mat3<T>& a) { return a.inverse(); }
 
   /*! constructs a coordinate frame form a normal */
   template<typename T> __forceinline Mat3<T> frame(const T& N) {
@@ -354,7 +353,7 @@ namespace math {
   template<typename VectorT> __forceinline VectorT       operator*(const VectorT      & v, const Mat3<VectorT>& m) { return v.x*m.vx + v.y*m.vy + v.z*m.vz; }
   template<typename VectorT> __forceinline Mat3<VectorT> operator*(const Mat3<VectorT>& a, const Mat3<VectorT>& b) { return Mat3<VectorT>(a.vx*b, a.vy*b, a.vz*b); }
   /// matrix divide: a * b.inverse()
-  template<typename VectorT> __forceinline Mat3<VectorT> operator/(const Mat3<VectorT>& a, const Mat3<VectorT>& b) { return a * rcp(b); }
+  template<typename VectorT> __forceinline Mat3<VectorT> operator/(const Mat3<VectorT>& a, const Mat3<VectorT>& b) { return a * b.inverse(); }
 
   template<typename VectorT> __forceinline Mat3<VectorT>& operator+=(Mat3<VectorT>& a, const Mat3<VectorT>& b) { return a = a + b; }
   template<typename VectorT> __forceinline Mat3<VectorT>& operator-=(Mat3<VectorT>& a, const Mat3<VectorT>& b) { return a = a - b; }

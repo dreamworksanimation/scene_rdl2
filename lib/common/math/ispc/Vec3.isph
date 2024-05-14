@@ -185,13 +185,13 @@ inline varying Vec3f operator/(const varying Vec3f v0, const varying Vec3f v1)
 // Vec3f rcp(Vec3f)
 inline uniform Vec3f rcp(const uniform Vec3f v)
 {
-    return Vec3f_ctor(rcp(v.x), rcp(v.y), rcp(v.z));
+    return Vec3f_ctor(1.0f/v.x, 1.0f/v.y, 1.0f/v.z);
 }
 
 // Vec3f rcp(Vec3f)
 inline varying Vec3f rcp(const varying Vec3f v)
 {
-    return Vec3f_ctor(rcp(v.x), rcp(v.y), rcp(v.z));
+    return Vec3f_ctor(1.0f/v.x, 1.0f/v.y, 1.0f/v.z);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -404,13 +404,13 @@ inline varying float length(const varying Vec3f v)
 // Vec3f normalize(Vec3f)
 inline uniform Vec3f normalize(const uniform Vec3f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // Vec3f normalize(Vec3f)
 inline varying Vec3f normalize(const varying Vec3f v)
 {
-    return v * rcp(length(v));
+    return v * (1.0f / length(v));
 }
 
 // bool isNormalized(Vec3f)

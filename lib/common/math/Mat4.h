@@ -144,7 +144,7 @@ namespace math {
     }
 
     /*! compute inverse matrix */
-    __forceinline const Mat4 inverse() const { return rcp(det())*adjoint(); }
+    __forceinline const Mat4 inverse() const { return (1.0f/det())*adjoint(); }
 
     /*! compute transposed matrix */
     __forceinline const Mat4 transposed() const { return Mat4(vx.x,vy.x,vz.x,vw.x,
@@ -297,7 +297,6 @@ namespace math {
 
   template<typename T> __forceinline Mat4<T> operator-(const Mat4<T>& a) { return Mat4<T>(-a.vx,-a.vy,-a.vz,-a.vw); }
   template<typename T> __forceinline Mat4<T> operator+(const Mat4<T>& a) { return Mat4<T>(+a.vx,+a.vy,+a.vz,+a.vw); }
-  template<typename T> __forceinline Mat4<T> rcp      (const Mat4<T>& a) { return a.inverse(); }
 
 
   /// Slerp between two 4x4 affine transformation matrices
@@ -341,7 +340,7 @@ namespace math {
   template<typename VectorT> __forceinline VectorT       operator*(const VectorT      & v, const Mat4<VectorT>& m) { return v.x*m.vx + v.y*m.vy + v.z*m.vz + v.w*m.vw; }
   template<typename VectorT> __forceinline Mat4<VectorT> operator*(const Mat4<VectorT>& a, const Mat4<VectorT>& b) { return Mat4<VectorT>(a.vx*b, a.vy*b, a.vz*b, a.vw*b); }
   /// matrix divide: a * b.inverse()
-  template<typename VectorT> __forceinline Mat4<VectorT> operator/(const Mat4<VectorT>& a, const Mat4<VectorT>& b) { return a * rcp(b); }
+  template<typename VectorT> __forceinline Mat4<VectorT> operator/(const Mat4<VectorT>& a, const Mat4<VectorT>& b) { return a * b.inverse(); }
 
   template<typename VectorT> __forceinline Mat4<VectorT>& operator+=(Mat4<VectorT>& a, const Mat4<VectorT>& b) { return a = a + b; }
   template<typename VectorT> __forceinline Mat4<VectorT>& operator-=(Mat4<VectorT>& a, const Mat4<VectorT>& b) { return a = a - b; }

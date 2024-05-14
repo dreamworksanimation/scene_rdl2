@@ -205,22 +205,34 @@ inline uniform Col3f operator/(const uniform Col3f c, const uniform float f)
     return c / Col3f_ctor(f);
 }
 
-// Col3f = Col3f / Col3f
+// Col3f = Col3f / float
 inline varying Col3f operator/(const varying Col3f c, const varying float f)
 {
     return c / Col3f_ctor(f);
 }
 
+// Col3f = float / Col3f
+inline uniform Col3f operator/(const uniform float f, const uniform Col3f c)
+{
+    return Col3f_ctor(f) / c;
+}
+
+// Col3f = float / Col3f
+inline varying Col3f operator/(const varying float f, const varying Col3f c)
+{
+    return Col3f_ctor(f) / c;
+}
+
 // Col3f rcp(Col3f)
 inline uniform Col3f rcp(const uniform Col3f c)
 {
-    return Col3f_ctor(rcp(c.r), rcp(c.g), rcp(c.b));
+    return Col3f_ctor(1.0f/c.r, 1.0f/c.g, 1.0f/c.b);
 }
 
 // Col3f rcp(Col3f)
 inline varying Col3f rcp(const varying Col3f c)
 {
-    return Col3f_ctor(rcp(c.r), rcp(c.g), rcp(c.b));
+    return Col3f_ctor(1.0f/c.r, 1.0f/c.g, 1.0f/c.b);
 }
 
 //--------------------------------------------------------------------------------------------------

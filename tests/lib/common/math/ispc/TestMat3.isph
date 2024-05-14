@@ -559,7 +559,6 @@ testAdjoint()
 
 //----------------------------------------------------------------------
 // Mat3x = Mat3x_inverse(Mat3x)
-// Mat3x = rcp(Mat3x)
 //----------------------------------------------------------------------
 #define TEST_INVERSE(FTYPE, MTYPE, INVERSE, ISEQUAL)                    \
     {                                                                   \
@@ -567,15 +566,15 @@ testAdjoint()
                                    (VAR FTYPE) (0. * pi), (VAR FTYPE) (1. * pi), (VAR FTYPE) (4. * pi), \
                                    (VAR FTYPE) (5. * pi), (VAR FTYPE) (6. * pi), (VAR FTYPE) (0. * pi)); \
         VAR MTYPE inv = INVERSE(m);                                     \
-        if (any(!ISEQUAL(inv.vx.x, -24. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vx.y,  18. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vx.z,   5. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vy.x,  20. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vy.y, -15. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vy.z,  -4. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vz.x,  -5. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vz.y,   4. * rcp((VAR FTYPE) pi))) ||      \
-            any(!ISEQUAL(inv.vz.z,   1. * rcp((VAR FTYPE) pi)))) {      \
+        if (any(!ISEQUAL(inv.vx.x, -24. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vx.y,  18. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vx.z,   5. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vy.x,  20. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vy.y, -15. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vy.z,  -4. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vz.x,  -5. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vz.y,   4. * 1./(VAR FTYPE) pi)) ||      \
+            any(!ISEQUAL(inv.vz.z,   1. * 1./(VAR FTYPE) pi))) {      \
             ++error;                                                    \
         }                                                               \
     }                                                                   \
@@ -604,7 +603,6 @@ testInverse()
     const varying int pi = programIndex + 1;
 
     TEST_INVERSE(float, Mat3f, inverse, isEqual);
-    TEST_INVERSE(float, Mat3f, rcp, isEqual);
 
     return error;
 }
@@ -892,7 +890,7 @@ testMedley()
     uniform int error = 0;
     const varying int pi = programIndex + 1;
     // this test really demonstrates the limitations of single precision
-    // and most of our fast math paths (e.g.. rcp() rather than /).
+    // and most of our fast math paths
     const uniform float tol = 1e-4;
 
     varying Mat3f m0 = Mat3f_ctor

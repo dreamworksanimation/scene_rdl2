@@ -73,7 +73,7 @@ namespace math {
   template<typename T> __forceinline QuaternionT<T> operator -( const QuaternionT<T>& a ) { return QuaternionT<T>(-a.r, -a.i, -a.j, -a.k); }
   template<typename T> __forceinline QuaternionT<T> conj      ( const QuaternionT<T>& a ) { return QuaternionT<T>(a.r, -a.i, -a.j, -a.k); }
   template<typename T> __forceinline T              abs       ( const QuaternionT<T>& a ) { return sqrt(a.r*a.r + a.i*a.i + a.j*a.j + a.k*a.k); }
-  template<typename T> __forceinline QuaternionT<T> rcp       ( const QuaternionT<T>& a ) { return conj(a)*rcp(a.r*a.r + a.i*a.i + a.j*a.j + a.k*a.k); }
+  template<typename T> __forceinline QuaternionT<T> rcp       ( const QuaternionT<T>& a ) { return conj(a) * (1.0f / (a.r*a.r + a.i*a.i + a.j*a.j + a.k*a.k)); }
   template<typename T> __forceinline QuaternionT<T> normalize ( const QuaternionT<T>& a ) { return a*rsqrt(a.r*a.r + a.i*a.i + a.j*a.j + a.k*a.k); }
 
   ////////////////////////////////////////////////////////////////

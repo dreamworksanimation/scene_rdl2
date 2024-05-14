@@ -51,7 +51,7 @@ TestCommonMathColor::testUnary()
     const Color f(1, 2, 4);
     const Color g(1, 0.5f, 0.25f);
     CPPUNIT_ASSERT(isEqual(rcp(f), g));
-    
+
     const Color h(1, 4, 16);
     CPPUNIT_ASSERT(isEqual(rsqrt(h), g));
     CPPUNIT_ASSERT(isEqual(sqrt(h), f));

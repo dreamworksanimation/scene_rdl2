@@ -256,25 +256,25 @@ inline varying float dot(const varying Quaternion3f q0, const varying Quaternion
 // Quaternion3f rcp(Quaternion3f)
 inline uniform Quaternion3f rcp(const uniform Quaternion3f q)
 {
-    return conjugate(q) * rcp(dot(q,q));
+    return conjugate(q) * (1.0f / dot(q,q));
 }
 
 // Quaternion3f rcp(Quaternion3f)
 inline varying Quaternion3f rcp(const varying Quaternion3f q)
 {
-    return conjugate(q) * rcp(dot(q,q));
+    return conjugate(q) * (1.0f / dot(q,q));
 }
 
 // Quaternion3f = Quaternion3f / float
 inline uniform Quaternion3f operator/(const uniform Quaternion3f q, const uniform float f)
 {
-    return q * rcp(f);
+    return q * (1.0f / f);
 }
 
 // Quaternion3f = Quaternion3f / float
 inline varying Quaternion3f operator/(const varying Quaternion3f q, const varying float f)
 {
-    return q * rcp(f);
+    return q * (1.0f / f);
 }
 
 // Quaternion3f = float / Quaternion3f
@@ -424,7 +424,7 @@ inline varying Vec3f transform(const varying Quaternion3f q, const varying Vec3f
     if (abs(sinAngle) < 0.00001f) {                     \
         return (1.0f-t)*q0 + t*q1;                      \
     }                                                   \
-    UV float rcpSin = rcp(sinAngle);                    \
+    UV float rcpSin = 1.0f / sinAngle;                  \
     UV float t0 = sin((1.0f - t) * angle) * rcpSin;     \
     UV float t1 = sin(t * angle) * rcpSin;              \
     return t0*q0 + t1*q1;                               \

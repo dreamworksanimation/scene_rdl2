@@ -10,7 +10,6 @@ class TestCommonMathTranscendental : public CppUnit::TestCase
 {
 public:
     CPPUNIT_TEST_SUITE(TestCommonMathTranscendental);
-    CPPUNIT_TEST(testRcp);
     CPPUNIT_TEST(testAcos);
     CPPUNIT_TEST_SUITE_END();
 

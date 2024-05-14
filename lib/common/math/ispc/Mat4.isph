@@ -342,25 +342,13 @@ inline varying Mat4f adjoint(const varying Mat4f m)
 // Mat4f inverse(Mat4f)
 inline uniform Mat4f inverse(const uniform Mat4f m)
 {
-    return rcp(det(m)) * adjoint(m);
+    return (1.0f / det(m)) * adjoint(m);
 }
 
 // Mat4f inverse(Mat4f)
 inline varying Mat4f inverse(const varying Mat4f m)
 {
-    return rcp(det(m)) * adjoint(m);
-}
-
-// Mat4f rcp(Mat4f)
-inline uniform Mat4f rcp(const uniform Mat4f m)
-{
-    return inverse(m);
-}
-
-// Mat4f rcp(Mat4f)
-inline varying Mat4f rcp(const varying Mat4f m)
-{
-    return inverse(m);
+    return (1.0f / det(m)) * adjoint(m);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -581,7 +569,7 @@ inline varying Vec3f transformNormal(const varying Mat4f m, const varying Vec3f 
 inline uniform Vec3f transformH(const uniform Mat4f m, const uniform Vec4f p)
 {
     const uniform Vec4f v = p * m;
-    return (v.w != 0.0f) ? asAVec3f(v) * rcp(v.w) : Vec3f_ctor(0.0f);
+    return (v.w != 0.0f) ? asAVec3f(v) * (1.0f / v.w) : Vec3f_ctor(0.0f);
 }
 
 // Vec3f transformH(Mat4f, Vec4f)
@@ -589,6 +577,6 @@ inline uniform Vec3f transformH(const uniform Mat4f m, const uniform Vec4f p)
 inline varying Vec3f transformH(const varying Mat4f m, const varying Vec4f p)
 {
     const varying Vec4f v = p * m;
-    return (v.w != 0.0f) ? asAVec3f(v) * rcp(v.w) : Vec3f_ctor(0.0f);
+    return (v.w != 0.0f) ? asAVec3f(v) * (1.0f / v.w) : Vec3f_ctor(0.0f);
 }
 

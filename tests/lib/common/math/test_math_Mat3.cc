@@ -321,9 +321,7 @@ TestCommonMathMat3::testInverse()
 {
     Mat3f m1(3,-2,1, 13,5,7, 21,8,4);
     Mat3f m2 = m1.inverse();
-    Mat3f m3 = rcp(m1);
     TSLOG_INFO(m2);
-    CPPUNIT_ASSERT(m2 == m3);
     CPPUNIT_ASSERT(isEqual(m2.vx.x, 0.120401f, 0.0001f));
     CPPUNIT_ASSERT(isEqual(m2.vy.x, -0.317726f, 0.0001f));
     CPPUNIT_ASSERT(isEqual(m2.vz.x, 0.00334448f, 0.0001f));
