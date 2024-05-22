@@ -875,7 +875,10 @@ namespace py_scene_rdl2
         {
             for (auto iter = data.cbegin(); iter != data.cend(); ++iter) {
                 const scene_rdl2::rdl2::SceneObject* ptr = *iter;
-                mPyList.append(boost::cref( *ptr ));
+                if (ptr)
+                    mPyList.append(boost::cref( *ptr ));
+                else
+                    mPyList.append(bp::object()); // Python None object
             }
         }
 

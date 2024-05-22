@@ -182,6 +182,13 @@ getAttributeValueByName(scene_rdl2::rdl2::SceneObject& sceneObject, const std::s
     }
     else if (checkType(attr, scene_rdl2::rdl2::AttributeType::TYPE_MAT4D)) {
         return extractAttrValueAsPyObj<scene_rdl2::rdl2::Mat4d>(sceneObject, sc, attrName);
+    } 
+    else if (checkType(attr, scene_rdl2::rdl2::AttributeType::TYPE_SCENE_OBJECT)) {
+        scene_rdl2::rdl2::SceneObject* objVal = sceneObject.get<scene_rdl2::rdl2::SceneObject*>(attrName);
+        if (objVal)
+            return bp::object(boost::cref(*objVal));
+        else
+            return bp::object();  // Python None value
     }
 
     // Array types
