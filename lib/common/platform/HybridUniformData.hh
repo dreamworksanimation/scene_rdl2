@@ -25,6 +25,7 @@
 #ifdef ISPC
 #define HUD_UNIFORM uniform
 #else
+#include <cmath>
 #define HUD_UNIFORM
 #endif
 
@@ -177,19 +178,36 @@
     #define HUD_BEGIN_VALIDATION(type_name)             \
         uint32_t crc = 0xffaaf0af;                      \
         uint32_t ofs = 0;                               \
-        if (verbose) printf(#type_name " (C++):\n")
+        if (verbose) printf(#type_name " (C++):\n");    \
+        uint32_t sizeOfItem = 0;                        \
+        uint32_t alignOfItem = 0;                       \
+        uint32_t alignOf = alignof(type_name);          \
+        uint32_t totalSize = sizeof(type_name);         \
+        uint32_t totalOffset = 0;                       \
 
-    #define HUD_VALIDATE(type_name, member_name)                            \
-        ofs = (uint32_t)((intptr_t)(&((((type_name *)(0))->member_name)))); \
-        if (verbose) {                                                      \
-            printf("    " #member_name ": %d / %d\n",                       \
-                    (int)ofs, (int)sizeof(type_name));                      \
-        }                                                                   \
-        ofs += (uint32_t)sizeof(type_name);                                 \
+    #define HUD_VALIDATE(type_name, member_name)                                 \
+        ofs = (uint32_t)((intptr_t)(&((((type_name *)(0))->member_name))));      \
+        sizeOfItem = sizeof(((((type_name *)(0))->member_name)));                \
+        alignOfItem = alignof(((((type_name *)(0))->member_name)));              \
+        if (verbose) {                                                           \
+            if (totalOffset % alignOfItem != 0) {                                \
+                printf("    PADDING NEEDED: %d BYTES (aligned to blocks of size %d)\n",\
+                       (int) ((std::ceil(totalOffset/(float)alignOfItem)) * alignOfItem)\
+                       - totalOffset, alignOfItem);                              \
+            }                                                                    \
+            printf("    " #member_name ": %d / %d\n",                            \
+                    (int)ofs, (int)sizeof(type_name));                           \
+        }                                                                        \
+        totalOffset = ofs + sizeOfItem;                                          \
+        ofs += (uint32_t)sizeof(type_name);                                      \
         HUD_UPDATE_CRC()
 
-    #define HUD_END_VALIDATION                          \
-        if (verbose) printf("    CRC = %u\n", crc);     \
+    #define HUD_END_VALIDATION                                                   \
+        if (verbose) {                                                           \
+            printf("    PADDING NEEDED: %d BYTES (aligned to blocks of size %d)\n",\
+                  (int) (totalSize - totalOffset), alignOf);                     \
+            printf("    CRC = %u\n", crc);                                       \
+        }                                                                        \
         return crc
 
 #endif

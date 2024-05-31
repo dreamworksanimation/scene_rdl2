@@ -70,7 +70,7 @@
     #define HVD_VALIDATE(type_name, member_name)                            \
         ofs = (uniform uint32_t)((uniform intptr_t)(&((((varying type_name *uniform)(0))->member_name))));    \
         if (verbose) {                                                      \
-            print("    " #member_name ": % / %\n", ofs, sizeof(varying type_name)); \
+            print("    " #member_name ": % / %\n", ofs, (sizeof(varying type_name))); \
         }                                                                   \
         ofs += sizeof(varying type_name);                                   \
         HVD_UPDATE_CRC()
@@ -85,20 +85,37 @@
         uint32_t crc = 0xffaaf0af;                      \
         uint32_t ofs = 0;                               \
         uint32_t numLanes = vlen;                       \
-        if (verbose) printf(#type_name " (C++):\n")
+        if (verbose) printf(#type_name " (C++):\n");    \
+        uint32_t sizeOfItem = 0;                        \
+        uint32_t alignOfItem = 0;                       \
+        uint32_t alignOf = alignof(type_name);          \
+        uint32_t totalSize = sizeof(type_name);         \
+        uint32_t totalOffset = 0;                       \
 
-    #define HVD_VALIDATE(type_name, member_name)                            \
-        ofs = (uint32_t)((intptr_t)(&((((type_name *)(0))->member_name)))); \
-        ofs *= numLanes;                                                    \
-        if (verbose) {                                                      \
-            printf("    " #member_name ": %d / %d\n",                       \
-                    (int)ofs, (int)(sizeof(type_name) * numLanes));         \
-        }                                                                   \
-        ofs += sizeof(type_name) * numLanes;                                \
+    #define HVD_VALIDATE(type_name, member_name)                                 \
+        ofs = (uint32_t)((intptr_t)(&((((type_name *)(0))->member_name))));      \
+        ofs *= numLanes;                                                         \
+        sizeOfItem = sizeof(((((type_name *)(0))->member_name)));                \
+        alignOfItem = alignof(((((type_name *)(0))->member_name)));              \
+        if (verbose) {                                                           \
+            if (totalOffset % alignOfItem != 0) {                                \
+                printf("    PADDING NEEDED: %d BYTES (aligned to blocks of size %d)\n",\
+                       (int) (ceil(totalOffset/(float)alignOfItem) * alignOfItem)\
+                       - totalOffset, alignOfItem);                              \
+            }                                                                    \
+            printf("    " #member_name ": %d / %d\n",                            \
+                    (int)ofs, (int)(totalSize * numLanes));                      \
+        }                                                                        \
+        totalOffset = (ofs / numLanes) + sizeOfItem;                             \
+        ofs += sizeof(type_name) * numLanes;                                     \
         HVD_UPDATE_CRC()
 
-    #define HVD_END_VALIDATION                          \
-        if (verbose) printf("    CRC = %u\n", crc);     \
+    #define HVD_END_VALIDATION                                                  \
+        if (verbose) {                                                          \
+            printf("    PADDING NEEDED: %d BYTES (aligned to blocks of size %d)\n",   \
+                  (int) (totalSize - totalOffset), alignOf);                    \
+        }                                                                       \
+        if (verbose) printf("    CRC = %u\n", crc);                             \
         return crc
 
 #endif
