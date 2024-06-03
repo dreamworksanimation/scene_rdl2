@@ -384,13 +384,12 @@ inline varying float bias(const varying float val, const varying float bias_)
 // Fast approximation of bias
 // Christophe Schlick. Fast alternatives to perlin’s bias and gain
 // functions. Graphics Gems, 4, 1994
-inline varying float bias_Schlick(const varying float val, const varying float bias)
+inline varying float bias_Schlick(const varying float val, const varying float b)
 {
-    if (bias <= 0.0f) return 0.0f;
-    if (bias >= 1.0f) return 1.0f;
-    float arg1 = (1.0f / bias) - 2.0f;
-    float arg2 = 1.0f - val;
-    return val / (arg1 * arg2 + 1.0f);
+    if (b <= 0.0f) return 0.0f;
+    if (b >= 1.0f) return 1.0f;
+    float bv = b * val;
+    return bv / ((1.0f - b)*(1.0f - val) + bv);
 }
 
 // float gain(float val, float gain)

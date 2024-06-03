@@ -188,13 +188,13 @@ gain(float value, float gain)
 // Fast approximation of bias
 // Christophe Schlick. Fast alternatives to Perlin’s bias and gain
 // functions. Graphics Gems, 4, 1994
-inline float 
-bias_Schlick(float value, float bias)
+inline float
+bias_Schlick(float value, float b)
 {
-    if (bias <= 0.f) return 0.f;
-    if (bias >= 1.f) return 1.f;
-    float bv = bias * value;
-    return bv / ((1.f - bias)*(1.f - value) + bv);
+    if (b <= 0.f) return 0.f;
+    if (b >= 1.f) return 1.f;
+    float bv = b * value;
+    return bv / ((1.f - b)*(1.f - value) + bv);
 }
 
 inline float
