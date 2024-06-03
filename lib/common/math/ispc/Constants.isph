@@ -32,6 +32,7 @@ static const uniform float sOneOverPi = 1.0 / sPi;
 static const uniform float sOneOverTwoPi = 1.0 / (2.0 * sPi);
 static const uniform float sOneOverPiSqr = 1.0 / (sPi * sPi);
 static const uniform float sHalfPi = sPi / 2.0;
+static const uniform float sTwoOverPi = 2.0 / sPi;
 static const uniform float sOneOverFourPi = 1.0 / (4.0 * sPi);
 static const uniform float sSqrtTwo = 1.4142135;
 static const uniform float sSqrtTwoPi = 2.5066282;

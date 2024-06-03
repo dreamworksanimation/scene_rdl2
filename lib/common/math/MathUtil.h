@@ -158,6 +158,7 @@ IntType log2i(IntType v)
 
 //----------------------------------------------------------------------------
 
+// Kenneth Perlin and Eric M Hoffert. Hypertexture. SIGGRAPH, 1989
 inline float
 bias(float value, float bias)
 {
@@ -182,6 +183,18 @@ gain(float value, float gain)
             bias(2.0f * value, 1.0f - gain) * 0.5f :
             1.0f - bias(2.0f - 2.0f * value, 1.0f - gain) * 0.5f;
     }
+}
+
+// Fast approximation of bias
+// Christophe Schlick. Fast alternatives to Perlin’s bias and gain
+// functions. Graphics Gems, 4, 1994
+inline float 
+bias_Schlick(float value, float bias)
+{
+    if (bias <= 0.f) return 0.f;
+    if (bias >= 1.f) return 1.f;
+    float bv = bias * value;
+    return bv / ((1.f - bias)*(1.f - value) + bv);
 }
 
 inline float

@@ -381,6 +381,18 @@ inline varying float bias(const varying float val, const varying float bias_)
     else return pow(val, log(bias_) * (1.0f / log(0.5f)));
 }
 
+// Fast approximation of bias
+// Christophe Schlick. Fast alternatives to perlin’s bias and gain
+// functions. Graphics Gems, 4, 1994
+inline varying float bias_Schlick(const varying float val, const varying float bias)
+{
+    if (bias <= 0.0f) return 0.0f;
+    if (bias >= 1.0f) return 1.0f;
+    float arg1 = (1.0f / bias) - 2.0f;
+    float arg2 = 1.0f - val;
+    return val / (arg1 * arg2 + 1.0f);
+}
+
 // float gain(float val, float gain)
 // The classic PDI lib/shading definition of "gain"
 inline uniform float gain(const uniform float val, const uniform float gain_)

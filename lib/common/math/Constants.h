@@ -180,6 +180,7 @@ namespace math {
   static constexpr float sFourPi = 4.0f * sPi;
   static constexpr float sOneOverPi = 1.0f / sPi;
   static constexpr float sOneOverTwoPi = 1.0f / (2.0f * sPi);
+  static constexpr float sTwoOverPi = 2.0f / sPi;
   static constexpr float sHalfPi = sPi / 2.0f;
   static constexpr float sOneOverFourPi = 1.0f / (4.0f * sPi);
   static const float sSqrtTwo = sqrtf(2.0f);
