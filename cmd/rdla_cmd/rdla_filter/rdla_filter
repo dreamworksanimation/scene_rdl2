@@ -123,8 +123,7 @@ class RdlaFilter:
 
         # Parse output of rdl2_print
         self.rdl2_print_dict = dict()
-        if self.options.skipdefault or self.options.replaceenums:
-            self.parse_rdl2_print()
+        self.parse_rdl2_print()
 
         # Read all of the objects in the input rdla file
         # into a list of SceneObjects.
@@ -144,10 +143,25 @@ class RdlaFilter:
                 self.write_object(metaData)
 
         camera = self.get_object_from_parameter(scene_variables, "camera")
-        self.write_object(camera)
+        if not camera:
+            for scene_class in self.rdl2_print_dict.keys():
+                camera_class_list = ['Camera']
+                if 'Camera' in scene_class:
+                    camera_class_list.append(scene_class)
+            camera = self.get_first_object_of_type(camera_class_list)
+        if camera:
+            self.write_object(camera)
+        else:
+            print("Warning: No camera specified in SceneVariables and no camera found in scene")
 
         self.layer_assignments = list()
         layer = self.get_object_from_parameter(scene_variables, "layer")
+        if not layer:
+            layer = self.get_first_object_of_type('Layer')
+        if not layer:
+            print("Error: No Layer object found in scene")
+            return
+
         self.get_layer_assignments(layer)
 
         self.light_set_list = set()
@@ -452,6 +466,19 @@ class RdlaFilter:
         else:
             return None
 
+    def get_first_object_of_type(self, type_names):
+        for obj_type in self.scene_objects:
+            if type(type_names) is not list:
+                type_names = [type_names]
+            for tn in type_names:
+                if obj_type == tn:
+                    for obj_name in self.scene_objects[obj_type]:
+                        obj = self.scene_objects[obj_type][obj_name]
+                        if type(obj) == SceneObject:
+                            return obj
+        return None
+
+
     def get_object_from_parameter(self, parent_object, parameter_name):
         """ Gets an object that is assigned to a parameter through
             a binding or other reference """
@@ -611,6 +638,8 @@ class RdlaFilter:
                          "RenderOutput",
                          "Metadata" }
 
+        blur_regex = re.compile(r'Mat4\([^)]*\)')
+
         for i, c in enumerate(obj.contents):
             if self.options.skipuserdata and ("UserData" in c or "part_list" in c):
                 continue
@@ -621,6 +650,14 @@ class RdlaFilter:
 
             if self.options.skipidentity and check_identity(c):
                 continue
+
+            if self.options.removeblur:
+                if 'node_xform' in c and 'blur(' in c:
+                    (name, val) = self.parse_parameter(c)
+                    match = re.search(blur_regex, val)
+                    if match:
+                        val = match.group()
+                        c = '\t["node_xform"]=%s,' % (val)
 
             if self.options.skipdefault:
                 if self.is_value_default(c, obj):
@@ -648,7 +685,8 @@ class RdlaFilter:
 
     def write_object_and_dependents(self, parent_object):
         if not parent_object in self.unique_object_set:
-            self.output_handle.write('-- Network for: %s(%s)\n\n' % (parent_object._type, parent_object.name))
+            if self.options.addreferencecomments:
+                self.output_handle.write('-- Network for: %s(%s)\n\n' % (parent_object._type, parent_object.name))
         dependent_objects = list()
         self.get_dependent_objects(parent_object, dependent_objects)
         for do in dependent_objects:
@@ -721,7 +759,7 @@ class RdlaFilter:
                     elif 'Geometry' in object_type:
                         geo_type = object_type
                         geo_name = object_name
-                    elif 'Material' in object_type or 'Surface' in object_type:
+                    elif 'ND_standard_surface_surfaceshader' in object_type or 'Material' in object_type or 'Surface' in object_type:
                         material_type = object_type
                         material_name = object_name
 
@@ -851,6 +889,11 @@ class RdlaFilter:
                           action="store_true",
                           help="Add comments above objects showing which objects reference them")
 
+        parser.add_option("--remove-xform-blur",
+                          dest="removeblur",
+                          action="store_true",
+                          help="Removes use of the blur() function on the node_xform and keeps only the first motion step")
+
         parser.add_option("--round-values",
                           dest="roundvalues",
                           type="int",
@@ -891,7 +934,7 @@ class RdlaFilter:
                           dest="niceandclean",
                           action="store_true",
                           help="Applies the following options: --skip-identity, --skip-default, " + \
-                               "--replace-enums, --add-reference-comments, --round-values 5")
+                               "--replace-enums, --round-values 5")
 
         parser.add_option("--minimal",
                           action="store_true",
@@ -925,7 +968,6 @@ class RdlaFilter:
             self.options.skipidentity = True
             self.options.skipdefault = True
             self.options.replaceenums = True
-            self.options.addreferencecomments = True
             if self.options.roundvalues == 13:
                 self.options.roundvalues = 5
 
