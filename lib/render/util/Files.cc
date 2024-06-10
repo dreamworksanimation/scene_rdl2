@@ -297,13 +297,6 @@ createDirectories(const std::string& path)
                 return false;
             }
     }
-    // Set permissions for the last directory in the path
-    #if defined(__APPLE__)
-        if (chmod(path.c_str(), 0777) != 0) {
-            std::cerr << "Failed to set permissions for directory: " << path << std::endl;
-            return false;
-        }
-    #endif
     return true;   
 }
 
