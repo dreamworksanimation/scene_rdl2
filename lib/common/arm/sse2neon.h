@@ -1571,7 +1571,6 @@ FORCE_INLINE __m64 _mm_cvtps_pi8(__m128 a)
 // packed half-precision (16-bit) floating-point elements, and store the results in dst. 
 FORCE_INLINE __m128i _mm_cvtps_ph (__m128 a, int imm8)
 {
-    // TODO: MCAST Triple check this!
     return vcombine_f16(vcvt_f16_f32(a), vdup_n_f32(0));
 }
 
