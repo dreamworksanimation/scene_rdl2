@@ -54,6 +54,11 @@ function(SceneRdl2_cxx_compile_options target)
                 -Wno-deprecated-declarations    # disable auto_ptr deprecated warnings from log4cplus-1.
                 -Wno-unused-value               # caused by opt-debug build and MNRY_VERIFY.
         )
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
+        target_compile_options(${target}
+            PUBLIC
+                -Wno-gnu-alignof-expression
+        )
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL Intel)
         target_compile_options(${target}
             # TODO: Some if not all of these should probably be PUBLIC
