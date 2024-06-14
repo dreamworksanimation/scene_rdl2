@@ -48,6 +48,7 @@ public:
     static AttributeKey<Float> sIntensityKey;
     static AttributeKey<Float> sExposureKey;
     static AttributeKey<Float> sMaxShadowDistanceKey;
+    static AttributeKey<Float> sMinShadowDistanceKey;
     /// enum PresenceShadows {
     ///    PRESENCE_SHADOWS_OFF,         // Presence shadows off for this light.
     ///    PRESENCE_SHADOWS_ON,          // Presence shadows on for this light.

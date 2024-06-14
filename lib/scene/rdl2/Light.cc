@@ -21,6 +21,7 @@ AttributeKey<Rgb>    Light::sColorKey;
 AttributeKey<Float>  Light::sIntensityKey;
 AttributeKey<Float>  Light::sExposureKey;
 AttributeKey<Float>  Light::sMaxShadowDistanceKey;
+AttributeKey<Float>  Light::sMinShadowDistanceKey;
 AttributeKey<Int>    Light::sPresenceShadowsKey;
 AttributeKey<Bool>   Light::sRayTerminationKey;
 AttributeKey<Int>    Light::sTextureFilterKey;
@@ -111,6 +112,15 @@ Light::declare(SceneClass& sceneClass)
     sMaxShadowDistanceKey = sceneClass.declareAttribute<Float>("max_shadow_distance", 0.f);
     sceneClass.setMetadata(sMaxShadowDistanceKey, SceneClass::sComment,
             "The distance from the light beyond which a light-receiving surface will no longer "
+            "receive shadows cast from that light.\n"
+            "Note that the distance is thresholded for each occlusion ray cast for this light, it is possible "
+            "for a receiving point to lie at an intermediate distance such that some parts of the light are "
+            "closer than the threshold distance and other parts beyond it, in which case the point will appear"
+            "to be in partial shadow.");
+
+    sMinShadowDistanceKey = sceneClass.declareAttribute<Float>("min_shadow_distance", 0.f);
+    sceneClass.setMetadata(sMinShadowDistanceKey, SceneClass::sComment,
+            "The distance from the light before which a light-receiving surface will no longer "
             "receive shadows cast from that light.\n"
             "Note that the distance is thresholded for each occlusion ray cast for this light, it is possible "
             "for a receiving point to lie at an intermediate distance such that some parts of the light are "
@@ -295,6 +305,7 @@ Light::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Properties", sIntensityKey);
     sceneClass.setGroup("Properties", sExposureKey);
     sceneClass.setGroup("Properties", sMaxShadowDistanceKey);
+    sceneClass.setGroup("Properties", sMinShadowDistanceKey);
     sceneClass.setGroup("Properties", sPresenceShadowsKey);
     sceneClass.setGroup("Properties", sRayTerminationKey);
     sceneClass.setGroup("Properties", sTextureFilterKey);
