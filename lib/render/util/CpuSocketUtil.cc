@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <fstream>
+#include <functional>
 #include <numeric> // accumulate
 #include <sstream>
 #include <thread>
