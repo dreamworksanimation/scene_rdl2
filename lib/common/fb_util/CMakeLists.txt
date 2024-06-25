@@ -19,7 +19,7 @@ target_sources(${component}
         ReGammaC2FLUT.cc
         ReSrgbC2F.cc
         ReSrgbC2FLUT.cc
-	SnapshotDeltaTestUtil.cc
+        SnapshotDeltaTestUtil.cc
         SnapshotUtil.cc
         SrgbF2C.cc
         SrgbF2CLUT.cc
