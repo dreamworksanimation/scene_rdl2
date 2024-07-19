@@ -9,6 +9,7 @@
 
 from optparse import OptionParser
 import re
+import random
 import subprocess
 
 class SceneObject:
@@ -118,8 +119,12 @@ class RdlaFilter:
         # ObjectType("ObjectName")
         self.component_regex = re.compile('(\w*)\(\"(.*?)\"\)')
 
-        # Regex to capture a parameter name and it's value
         self.param_regex = re.compile('\[\"(.*?)\"\]\s*=\s*(.*?),$')
+
+        self.blur_regex = re.compile(r'Mat4\([^)]*\)')
+        self.vector_type_regex = re.compile(r'(Vec3\([^)]*\))|(Rgb\([^)]*\))|(Vec2\([^)]*\))')
+        self.array_type_regex = re.compile(r'=\s*\{([^}]*)\}')
+        self.vector_regex = re.compile(r'(\w+)\(([^,]+),\s*([^,]+)(?:,\s*([^,]+))?\)')
 
         # Parse output of rdl2_print
         self.rdl2_print_dict = dict()
@@ -171,24 +176,29 @@ class RdlaFilter:
         self.material_list = set()
         self.displacement_list = set()
         self.volume_list = set()
+
         self.get_assignment_objects()
 
         if not self.options.skiplights:
             self.output_handle.write('\n---------- LIGHTS ----------\n\n')
 
-            for l in self.light_set_list:
+            sorted_light_set_list = sorted(self.light_set_list, key=lambda x: x.name)
+            for l in sorted_light_set_list:
                 self.write_object_and_dependents(l)
 
-            for s in self.shadow_set_list:
+            sorted_shadow_set_list = sorted(self.shadow_set_list, key=lambda x: x.name)
+            for s in sorted_shadow_set_list:
                 self.write_object_and_dependents(s)
 
-            for l in self.light_filter_set_list:
+            sorted_light_filter_set_list = sorted(self.light_filter_set_list, key=lambda x: x.name)
+            for l in sorted_light_filter_set_list:
                 self.write_object_and_dependents(l)
 
         if len(self.geom_list) > 0:
             self.output_handle.write('\n---------- GEOMETRY ----------\n\n')
 
-            for g in self.geom_list:
+            sorted_geom_list = sorted(self.geom_list, key=lambda x: x.name)
+            for g in sorted_geom_list:
                 self.write_object_and_dependents(g)
 
             self.write_geometry_set()
@@ -196,20 +206,23 @@ class RdlaFilter:
         if len(self.displacement_list) > 0:
             self.output_handle.write('\n---------- DISPLACEMENTS ----------\n\n')
 
-            for d in self.displacement_list:
-                self.write_object_and_dependents( d)
+            sorted_displacement_list = sorted(self.displacement_list, key=lambda x: x.name)
+            for d in sorted_displacement_list:
+                self.write_object_and_dependents(d)
 
         if len(self.volume_list) > 0:
             self.output_handle.write('\n---------- VOLUMES ----------\n\n')
 
-            for v in self.volume_list:
-                self.write_object_and_dependents( v)
+            sorted_volume_list = sorted(self.volume_list, key=lambda x: x.name)
+            for v in sorted_volume_list:
+                self.write_object_and_dependents(v)
 
         self.replacement_materials = dict()
         if len(self.material_list) > 0:
             self.output_handle.write('\n---------- MATERIALS ----------\n\n')
 
-            for m in self.material_list:
+            sorted_material_list = sorted(self.material_list, key=lambda x: x.name)
+            for m in sorted_material_list:
                 if self.options.replacematerials:
                     self.replacement_materials[m.name] = (m, self.create_material(m.name))
                     self.write_object_and_dependents(self.replacement_materials[m.name][1])
@@ -366,7 +379,7 @@ class RdlaFilter:
     def create_material(self, material_name):
         contents = list()
         contents.append("DwaEmissiveMaterial(\"%s\") {" % material_name)
-        contents.append("    [\"emission\"] = Rgb(1.1, 1.3, 1.2),")
+        contents.append("    [\"emission\"] = Rgb(%f, %f, %f)," % (random.uniform(0.0, 1.0), random.uniform(0.0, 1.0), random.uniform(0.0, 1.0)))
         contents.append("}")
         material = SceneObject(material_name,
                                "DwaEmissiveMaterial",
@@ -638,7 +651,6 @@ class RdlaFilter:
                          "RenderOutput",
                          "Metadata" }
 
-        blur_regex = re.compile(r'Mat4\([^)]*\)')
 
         for i, c in enumerate(obj.contents):
             if self.options.skipuserdata and ("UserData" in c or "part_list" in c):
@@ -651,10 +663,85 @@ class RdlaFilter:
             if self.options.skipidentity and check_identity(c):
                 continue
 
+            if len(c) > self.options.splitdata:
+                # Reconstruct the parameter line, splitting the values
+                # one per line for vector types and 4 per line for
+                # scalar types
+                (param_name, param_value) = self.parse_parameter(c)
+                match_array = self.array_type_regex.search(c)
+                if match_array:
+                    # The parameter is an array type
+                    # i.e. ["float_values_0"] = { 1.25455, -1.54564, 6.43243, 64.245 }
+
+                    c = f'\t["{param_name}"] = ' + "{"
+
+                    values = match_array.group(1)
+
+                    vector_array = self.vector_type_regex.findall(values)
+                    if (len(vector_array)):
+                        # Found a vector array
+                        # i.e
+                        # ["vertex_list_0"] = {
+                        #     Vec3(-1219.3360600000, 504.3591000000, -244.2785950000),
+                        #     Vec3(-1219.3372800000, 504.3577580000, -244.2675020000),
+                        #  ...
+                        #  },
+                        # Matches Vec3, Vec2, and Rgb types
+
+                        c = c + '\n'
+                        for i, d in enumerate(vector_array):
+                            # filter out empty strings from the match tuple
+                            filtered_match = [item for item in d if item]
+                            for item in filtered_match:
+                                match_vector_type = self.vector_regex.search(item)
+                                if match_vector_type:
+                                    # Extract the type and values
+                                    type_name = match_vector_type.group(1)
+                                    x = match_vector_type.group(2)
+                                    y = match_vector_type.group(3)
+                                    z = match_vector_type.group(4)
+                                    wd = 15
+                                    if self.options.roundvalues:
+                                        pr = self.options.roundvalues
+                                        x = round(float(x), pr)
+                                        y = round(float(y), pr)
+                                        if z is not None:
+                                            z = round(float(z), pr)
+
+                                        x = f"{x:.{pr}f}"
+                                        y = f"{y:.{pr}f}"
+                                        if z is not None:
+                                            z = f"{z:.{pr}f}"
+                                        wd = pr + 3
+
+                                    if z is not None:
+                                        c = c + f'\t\t{type_name}({x:>{wd}}, {y:>{wd}}, {z:>{wd}}),\t-- {i}\n'
+                                    else:
+                                        c = c + f'\t\t{type_name}({x:>{wd}}, {y:>{wd}}),\t-- {i}\n'
+                                else:
+                                    c = c + f'\t\t{item},\t-- {i}\n'
+                    else:
+                        # Found a scalar array
+                        for i, d in enumerate(values.split(',')):
+                            if i % 4 == 0:
+                                c = c + '\n\t\t'
+
+                            d = d.strip()
+
+                            wd = 15
+                            if self.options.roundvalues:
+                                pr = self.options.roundvalues
+                                d = round(float(d), pr)
+                                wd = pr + 3
+
+                            c = c + f'{d:>{wd}},'
+
+                    c = c + '\n\t},'
+
             if self.options.removeblur:
                 if 'node_xform' in c and 'blur(' in c:
                     (name, val) = self.parse_parameter(c)
-                    match = re.search(blur_regex, val)
+                    match = re.search(self.blur_regex, val)
                     if match:
                         val = match.group()
                         c = '\t["node_xform"]=%s,' % (val)
@@ -705,6 +792,9 @@ class RdlaFilter:
             if i == 0:
                 # Skip the first line so we don't match ourself
                 continue
+
+            # Don't process very long lines
+            if len(c) > 1000: continue
 
             for p in c.split(','):
                 (object_type, object_name) = get_type_and_name(p, self.component_regex)
@@ -929,6 +1019,13 @@ class RdlaFilter:
                           dest="skipuserdata",
                           action="store_true",
                           help="Skips writing user data")
+
+        parser.add_option("--split-data",
+                          dest="splitdata",
+                          type="int",
+                          default=1000,
+                          help="Splits data lines (i.e. Vec3, Vec2, Rgb vectors) " + \
+                               "longer than the specified length")
 
         parser.add_option("--nice-and-clean",
                           dest="niceandclean",
