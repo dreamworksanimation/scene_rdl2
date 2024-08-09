@@ -15,17 +15,32 @@
 //#define DEBUG_MSG_THREAD_CPUAFFINITY
 //#define DEBUG_MSG_THREAD_POOL
 
+// This directive computes the average time of multiple runs of shutdown() function execution.
+// This directive should not commented out for the release version.
+//#define DEBUG_MSG_SHUTDOWN_TIME
+
+#ifdef DEBUG_MSG_SHUTDOWN_TIME
+#include <scene_rdl2/common/rec_time/RecTime.h>
+
+namespace {
+    
+class TimeMeasurementOfShutdown
+{
+public:
+    ~TimeMeasurementOfShutdown() { if (!mTotal) std::cerr << "avg " << mTime / mTotal << '\n'; };
+    void push(float time) { mTime += time; mTotal++; }
+private:
+    size_t mTotal {0};
+    float mTime {0.0f};
+};
+
+static TimeMeasurementOfShutdown shutdownTime;
+
+} // namespace
+
+#endif // end DEBUG_MSG_SHUTDOWN_TIME
+
 namespace scene_rdl2 {
-
-#ifdef __APPLE__
-int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
-                                  const cpu_set_t *cpuset)
-                                    { return 0; }
-int pthread_getaffinity_np(pthread_t thread, size_t cpusetsize,
-                                  cpu_set_t *cpuset)
-                                    { return 0; }
-#endif 
-
 
 ThreadExecutor::~ThreadExecutor()
 {
@@ -243,19 +258,32 @@ ThreadPoolExecutor::wait()
 void
 ThreadPoolExecutor::shutdown()
 {
+#ifdef DEBUG_MSG_SHUTDOWN_TIME
+    rec_time::RecTime recTime;
+    recTime.start();
+#endif // end DEBUG_MSG_SHUTDOWN_TIME
+
     //
     // In the endurance test of ThreadPoolExecutor, We got lots of shutdown hangups due to some threads
     // that could not wake up even if we sent notify_all().
     // To properly shutdown all threads, We do retry to execute notify_all().
     //
+    // This is a busy loop with no wait.
+    // This code was tested by unitTest (TestThreadPoolExecutor) w/ ENDURANCE_TEST mode and passed for
+    // over 1,500,000 runs without hang-up.
+    // The current average time of this shutdown() function on cobaltcard 128 HT-cores 
+    // (AMD Ryzen Threadripper PRO 5995WX 64-Cores) of 10,000 runs is around 2 ~ 3 ms.
+    //    
     while (true) {
         mShutdown = true;
         mCvTask.notify_all();
 
-        usleep(50000); // 50ms : based on the test runs, 50ms is reasonable and works well.
         if (isShutdownComplete()) break;
-        std::cerr << ">>>=== ThreadPoolExecutor retry to shutdown ===<<<\n";
     }
+
+#ifdef DEBUG_MSG_SHUTDOWN_TIME
+    shutdownTime.push(recTime.end());
+#endif // end DEBUG_MSG_SHUTDOWN_TIME
 }
 
 ThreadPoolExecutor::TaskFunc

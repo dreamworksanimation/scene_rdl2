@@ -6,6 +6,10 @@
 
 #include <unistd.h>
 
+// This directive should not commented out for the release version.
+// This is only used for local debugging purposes.
+//#define ENDURANCE_TEST
+
 namespace scene_rdl2 {
 namespace threadPoolExecutor {
 namespace unittest {
@@ -17,10 +21,17 @@ TestThreadPoolExecutor::testBootAndShutdown()
 {
     std::cerr << "TestThreadPoolExecutor.cc testBootAndShutdown() start\n";
 
+#ifdef ENDURANCE_TEST
+    // Tested on cobaltcard
+    constexpr float maxTestDurationSec = 240.0f; // 4 min
+    constexpr int maxLoop = 10000;
+#else // else ENDURANCE_TEST
     constexpr float maxTestDurationSec = 4.0f;
+    constexpr int maxLoop = 10;
+#endif // end else ENDURANCE_TEST
+
     bootWatcher(maxTestDurationSec);
 
-    constexpr int maxLoop = 10;
     bootAndShutdownLoop("no-CPU-Affinity", maxLoop, nullptr);
     bootAndShutdownLoop("CPU-Affinity", maxLoop, [](size_t id) -> size_t { return id; });
 
