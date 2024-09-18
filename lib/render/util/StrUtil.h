@@ -47,7 +47,7 @@ stringCatHelper(std::string &result, const First &first, const Rest&... rest)
 
 //---------------------------------------------------------------------------------------------------------------
 
-template <typename... T>    
+template <typename... T>
 std::string
 stringCat(const T&... vals)
 {
@@ -63,7 +63,7 @@ inline
 std::string
 addIndent(const std::string &str, const int indentTotal = 1)
 //
-// str should not end by '\n'. 
+// str should not end by '\n'.
 // It works without crash if you use string which terminated by '\n' but not recommended.
 // Last '\n' (new line) control should be done by caller function level.
 // General concensus of using addIndent() requires input string which is not terminated by '\n' (new line).
@@ -189,8 +189,8 @@ inline
 std::string
 replaceNlToSingleSpace(const std::string &str)
 //
-// Replaces newline (i.e. \n) to the single space
-//    
+// Replaces newlines (i.e. \n) with a single space
+//
 {
     std::string result;
     for (size_t i = 0; i < str.size(); ++i) {
@@ -205,10 +205,14 @@ inline
 std::string
 replaceBlankToSingleSpace(const std::string &str)
 //
-// Replaces blank char to the single space
-//    
+// Replaces blank chars with a single space
+//
 {
     std::string result;
+
+    if (str.empty()) {
+        return result;
+    }
 
     // first of all, multi spaces (i.e. blank) should be converted to single space
     for (size_t i = 0; i < str.size(); ++i) {
