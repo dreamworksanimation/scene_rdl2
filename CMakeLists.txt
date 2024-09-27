@@ -112,8 +112,11 @@ if(GLD STREQUAL "$ENV{STUDIO}")
     if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         install(FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/SDKScript
-            DESTINATION
-            .)
+            DESTINATION .
+            PERMISSIONS
+              OWNER_READ OWNER_WRITE
+              GROUP_READ GROUP_WRITE
+              WORLD_READ)
     endif()
 endif()
 
