@@ -187,6 +187,7 @@ public:
     //
 
     static AttributeKey<FloatVector> sMotionSteps;
+    static AttributeKey<Bool> sSlerpXforms;
     static AttributeKey<Float> sFpsKey;
     static AttributeKey<Float> sSceneScaleKey;
 

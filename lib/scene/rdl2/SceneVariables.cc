@@ -40,6 +40,7 @@ AttributeKey<IntVector> SceneVariables::sRegionWindow;
 AttributeKey<IntVector> SceneVariables::sSubViewport;
 
 AttributeKey<FloatVector> SceneVariables::sMotionSteps;
+AttributeKey<Bool>        SceneVariables::sSlerpXforms;
 AttributeKey<Float>       SceneVariables::sFpsKey;
 AttributeKey<Float>       SceneVariables::sSceneScaleKey;
 
@@ -258,6 +259,10 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sMotionSteps = sceneClass.declareAttribute<FloatVector>("motion_steps", defaultMotionSteps, {"motion steps"});
     sceneClass.setMetadata(sMotionSteps, "label", "motion steps");
     sceneClass.setMetadata(sMotionSteps, SceneClass::sComment, "Frame-relative time offsets for motion sampling");
+
+    sSlerpXforms = sceneClass.declareAttribute<Bool>("slerp_xforms", false, {"slerp xforms"});
+    sceneClass.setMetadata(sSlerpXforms, "label", "slerp xforms");
+    sceneClass.setMetadata(sSlerpXforms, SceneClass::sComment, "If use_rotation_motion_blur is false this will use slerp to interpolate the node_xform for motion blur");
 
     sFpsKey = sceneClass.declareAttribute<Float>("fps", 24.0f);
     // TODO: Do a more detailed analysis of how exactly this affects motion blur and provide
@@ -1108,6 +1113,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Image Size", sSubViewport);
 
     sceneClass.setGroup("Motion and Scale", sMotionSteps);
+    sceneClass.setGroup("Motion and Scale", sSlerpXforms);
     sceneClass.setGroup("Motion and Scale", sSceneScaleKey);
 
     sceneClass.setGroup("Sampling", sPixelSamplesSqrt);
