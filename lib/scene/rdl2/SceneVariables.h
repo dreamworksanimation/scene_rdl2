@@ -231,6 +231,7 @@ public:
     static AttributeKey<Int> sVolumeIlluminationSamples;
     static AttributeKey<Float> sVolumeOpacityThreshold;
     static AttributeKey<Int> sVolumeOverlapMode;
+    static AttributeKey<Int>  sVolumeIndirectSamples;
 
     //
     // Volume Multiple Scattering coefficient

@@ -129,6 +129,7 @@ AttributeKey<Int>  SceneVariables::sMaxGeomResolution;
 AttributeKey<Bool> SceneVariables::sEnableDisplacement;
 AttributeKey<Bool> SceneVariables::sEnableSSS;
 AttributeKey<Bool> SceneVariables::sEnableShadowing;
+AttributeKey<Int>  SceneVariables::sVolumeIndirectSamples;
 AttributeKey<Bool> SceneVariables::sEnablePresenceShadows;
 AttributeKey<Bool> SceneVariables::sLightsVisibleInCameraKey;
 AttributeKey<Bool> SceneVariables::sPropagateVisibilityBounceType;
@@ -857,6 +858,12 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         SceneClass::sComment,
         "Enables or disables shadowing through occlusion rays.");
 
+    sVolumeIndirectSamples = sceneClass.declareAttribute<Int>("volume_indirect_samples", 0);
+    sceneClass.setMetadata(sVolumeIndirectSamples, "label", "volume indirect samples");
+    sceneClass.setMetadata(sVolumeIndirectSamples,
+        SceneClass::sComment,
+        "Number of indirect illumination samples on volumes (per primary ray).");
+
     sEnablePresenceShadows =
         sceneClass.declareAttribute<Bool>("enable_presence_shadows", false, {"enable presence shadows"});
     sceneClass.setMetadata(sEnablePresenceShadows, "label", "enable presence shadows");
@@ -1142,6 +1149,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Volumes", sVolumeAttenuationFactor);
     sceneClass.setGroup("Volumes", sVolumeContributionFactor);
     sceneClass.setGroup("Volumes", sVolumePhaseAttenuationFactor);
+    sceneClass.setGroup("Volumes", sVolumeIndirectSamples);
 
     sceneClass.setGroup("Path Guide", sPathGuideEnable);
 
