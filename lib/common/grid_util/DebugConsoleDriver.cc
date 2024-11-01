@@ -60,7 +60,7 @@ DebugConsoleDriver::~DebugConsoleDriver()
 void
 DebugConsoleDriver::showString(const std::string &msg)
 {
-    mTlSvr.send(msg + ((msg.back() == '\n') ? "" : "\n"));
+    mTlSvr.send(msg + ((!msg.empty() && msg.back() == '\n') ? "" : "\n"));
 }
 
 //------------------------------------------------------------------------------------------

@@ -226,8 +226,9 @@ replaceBlankToSingleSpace(const std::string &str)
         }
     }
 
-    if (result.back() == '\n') result.pop_back(); // rm last newline
-    if (result.back() == ' ') result.pop_back(); // rm last space
+    if (!result.empty() && result.back() == '\n') result.pop_back(); // rm last newline
+    if (!result.empty() && result.back() == ' ') result.pop_back(); // rm last space
+
     return result;
 }
 
@@ -247,7 +248,7 @@ std::string
 rmLastNL(const std::string& inStr)
 {
     std::string outStr = inStr;
-    while (outStr.back() == '\n') {
+    while (!outStr.empty() && outStr.back() == '\n') {
         outStr.pop_back();
     }
     return outStr;
