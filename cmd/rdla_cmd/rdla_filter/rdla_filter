@@ -730,9 +730,12 @@ class RdlaFilter:
 
                             wd = 15
                             if self.options.roundvalues:
-                                pr = self.options.roundvalues
-                                d = round(float(d), pr)
-                                wd = pr + 3
+                                try:
+                                    pr = self.options.roundvalues
+                                    d = round(float(d), pr)
+                                    wd = pr + 3
+                                except ValueError:
+                                    pass
 
                             c = c + f'{d:>{wd}},'
 
