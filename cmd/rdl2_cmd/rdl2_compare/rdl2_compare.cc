@@ -131,6 +131,7 @@ bool attrValCompare(const SceneObject* objA,
     case TYPE_MAT4D_VECTOR:           return valCompare<Mat4dVector>(objA, attrA, objB, attrB);
     case TYPE_SCENE_OBJECT_VECTOR:    return refVecCompare<SceneObjectVector>(objA, attrA, objB, attrB);
     case TYPE_SCENE_OBJECT_INDEXABLE: return refVecCompare<SceneObjectIndexable>(objA, attrA, objB, attrB);
+    default: break;
     }
     return false;
 }
