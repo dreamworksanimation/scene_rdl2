@@ -224,6 +224,7 @@ public:
 
     static AttributeKey<Float> sTransparencyThreshold;
     static AttributeKey<Float> sPresenceThreshold;
+    static AttributeKey<Float> sPresenceQuality;
     static AttributeKey<Float> sRussianRouletteThreshold;
     static AttributeKey<Bool> sLockFrameNoise;
     static AttributeKey<Float> sVolumeQuality;

@@ -67,6 +67,7 @@ AttributeKey<Bool>  SceneVariables::sDisableOptimizedHairSampling;
 AttributeKey<Int>   SceneVariables::sMaxSubsurfacePerPath;
 AttributeKey<Float> SceneVariables::sTransparencyThreshold;
 AttributeKey<Float> SceneVariables::sPresenceThreshold;
+AttributeKey<Float> SceneVariables::sPresenceQuality;
 AttributeKey<Float> SceneVariables::sRussianRouletteThreshold;
 AttributeKey<Bool>  SceneVariables::sLockFrameNoise;
 
@@ -452,6 +453,15 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         SceneClass::sComment,
         "The presence threshold defines the point at which the accumulated presence can be considered opaque, skipping "
         "the generation of presence continuation rays.");
+
+    sPresenceQuality = sceneClass.declareAttribute<Float>("presence_quality", Float(0.75), {});
+    sceneClass.setMetadata(sPresenceQuality, "label", "presence quality");
+    sceneClass.setMetadata(sPresenceQuality,
+        SceneClass::sComment,
+        "The presence quality defines the threshold for path throughput after which presence sampling becomes stochastic. This is similar to russian roulette.  "
+        "A value of 1.0 means never use stochastic sampling (highest quality).  "
+        "A value of 0.0 means always use stochastic sampling (faster, but may be noisy).  "
+        "Values between 0.0 and 1.0 will generally be a good trade-off in speed vs. quality when multiple layers of presence are involved.");
 
     sLockFrameNoise = sceneClass.declareAttribute<Bool>("lock_frame_noise", false, {"lock frame noise"});
     sceneClass.setMetadata(sLockFrameNoise, "label", "lock frame noise");
@@ -1138,6 +1148,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Sampling", sRussianRouletteThreshold);
     sceneClass.setGroup("Sampling", sTransparencyThreshold);
     sceneClass.setGroup("Sampling", sPresenceThreshold);
+    sceneClass.setGroup("Sampling", sPresenceQuality);
     sceneClass.setGroup("Sampling", sLockFrameNoise);
 
     sceneClass.setGroup("Volumes", sMaxVolumeDepth);
