@@ -358,6 +358,9 @@ public:
     // Temporary directory
     static AttributeKey<String> sTemporaryDirectory;
 
+    // The aov to use as the primary output
+    static AttributeKey<SceneObject*> sPrimaryAov;
+
     // File output logic
     static AttributeKey<Bool> sTwoStageOutput;
 

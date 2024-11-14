@@ -145,6 +145,7 @@ AttributeKey<Int>    SceneVariables::sProgressiveTileOrder;
 AttributeKey<Int>    SceneVariables::sCheckpointTileOrder;
 AttributeKey<String> SceneVariables::sOutputFile;
 AttributeKey<String> SceneVariables::sTemporaryDirectory;
+AttributeKey<SceneObject*> SceneVariables::sPrimaryAov;
 
 AttributeKey<Bool>   SceneVariables::sDebugKey;
 AttributeKey<Bool>   SceneVariables::sInfoKey;
@@ -1018,6 +1019,11 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "Define temporary directory name for temporary file generation. Use $TMPDIR environment variable value if this "
         "variable is empty.If $TMPDIR is also empty, use /tmp");
 
+    sPrimaryAov = sceneClass.declareAttribute<SceneObject*>("primary_aov", FLAGS_NONE, INTERFACE_RENDEROUTPUT);
+    sceneClass.setMetadata(sPrimaryAov,
+        SceneClass::sComment,
+        "The aov that acts as the primary output. If undefined, it will default to the typical render buffer.");
+    
     sTwoStageOutput = sceneClass.declareAttribute<Bool>("two_stage_output", true, {"two stage output"});
     sceneClass.setMetadata(sTwoStageOutput, "label", "two stage output");
     sceneClass.setMetadata(sTwoStageOutput,
@@ -1219,6 +1225,7 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Driver", sTaskDistributionType);
     sceneClass.setGroup("Driver", sOutputFile);
     sceneClass.setGroup("Driver", sTemporaryDirectory);
+    sceneClass.setGroup("Driver", sPrimaryAov);
 
     sceneClass.setGroup("Logging", sDebugKey);
     sceneClass.setGroup("Logging", sInfoKey);
