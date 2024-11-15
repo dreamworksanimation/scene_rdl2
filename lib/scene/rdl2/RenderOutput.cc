@@ -43,7 +43,8 @@ AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputRefP;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputRefN;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteOutputUV;
 AttributeKey<Bool> RenderOutput::sAttrCryptomatteSupportResumeRender;
-AttributeKey<Bool> RenderOutput::sAttrCryptomatteEnableRefract;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteRecordReflected;
+AttributeKey<Bool> RenderOutput::sAttrCryptomatteRecordRefracted;
 AttributeKey<SceneObject*> RenderOutput::sCamera;
 AttributeKey<SceneObject *> RenderOutput::sAttrDisplayFilter;
 
@@ -418,12 +419,19 @@ RenderOutput::declare(SceneClass &sceneClass)
     sceneClass.setMetadata(sAttrCryptomatteSupportResumeRender, SceneClass::sComment,
         "Whether to add additional cryptomatte layers to support checkpoint/resume rendering");
 
-    // "cryptomatte enable refract"
-    sAttrCryptomatteEnableRefract =
-        sceneClass.declareAttribute<Bool>("cryptomatte_enable_refract", true, {"Enable refractive cryptomatte"});
-    sceneClass.setMetadata(sAttrCryptomatteEnableRefract,
+    // "cryptomatte record reflected"
+    sAttrCryptomatteRecordReflected =
+        sceneClass.declareAttribute<Bool>("cryptomatte_record_reflected", true, {"record reflected cryptomatte"});
+    sceneClass.setMetadata(sAttrCryptomatteRecordReflected,
         SceneClass::sComment,
-        "Enable refractive cryptomatte channels.  Doubles the number of cryptomatte channels.");
+        "Record reflected cryptomatte channels.  Enabling this will increase the number of cryptomatte channels.");
+
+    // "cryptomatte record refracted"
+    sAttrCryptomatteRecordRefracted =
+        sceneClass.declareAttribute<Bool>("cryptomatte_record_refracted", true, {"record refracted cryptomatte"});
+    sceneClass.setMetadata(sAttrCryptomatteRecordRefracted,
+        SceneClass::sComment,
+        "Record refracted cryptomatte channels.  Enabling this will increase the number of cryptomatte channels.");
 
     sCamera = sceneClass.declareAttribute<SceneObject*>("camera", FLAGS_NONE, INTERFACE_CAMERA);
     sceneClass.setMetadata(sCamera, SceneClass::sComment, "Camera to use for this output.  "
@@ -560,7 +568,7 @@ RenderOutput::setCheckpointFileName(String const &fileName)
     set(sAttrCheckpointFileName, fileName);
 }
 
-void    
+void
 RenderOutput::setCheckpointMultiVersionFileName(String const &fileName)
 {
     set(sAttrCheckpointMultiVersionFileName, fileName);
