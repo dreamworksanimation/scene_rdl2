@@ -32,8 +32,7 @@ public:
     static AttributeKey<SceneObject *> sExtraAovsKey;
     static AttributeKey<String> sLabel;
     static AttributeKey<Int> sPriority;
-    static AttributeKey<Bool> sRecordReflectedCryptomatte;
-    static AttributeKey<Bool> sRecordRefractedCryptomatte;
+    static AttributeKey<Bool> sInvisibleRefractiveCryptomatte;
 
     Material(const SceneClass& sceneClass, const std::string& name);
     virtual ~Material();
@@ -86,14 +85,9 @@ public:
         return get(sPriority);
     }
 
-    finline bool getRecordReflectedCryptomatte() const
+    finline bool invisibleRefractiveCryptomatte() const
     {
-        return get(sRecordReflectedCryptomatte);
-    }
-
-    finline bool getRecordRefractedCryptomatte() const
-    {
-        return get(sRecordRefractedCryptomatte);
+        return get(sInvisibleRefractiveCryptomatte);
     }
 
     // Unfortunately, this member has been made public to allow
