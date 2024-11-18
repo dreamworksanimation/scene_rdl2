@@ -15,7 +15,8 @@ namespace rdl2 {
 AttributeKey<SceneObject *> Material::sExtraAovsKey;
 AttributeKey<String> Material::sLabel;
 AttributeKey<Int> Material::sPriority;
-AttributeKey<Bool> Material::sInvisibleRefractiveCryptomatte;
+AttributeKey<Bool> Material::sRecordReflectedCryptomatte;
+AttributeKey<Bool> Material::sRecordRefractedCryptomatte;
 
 Material::Material(const SceneClass& sceneClass, const std::string& name) :
     Parent(sceneClass, name),
@@ -63,10 +64,20 @@ Material::declare(SceneClass& sceneClass)
         "self-overlapping geometry, a non-zero priority must be set on the "
         "geometry's material.");
 
-    sInvisibleRefractiveCryptomatte = sceneClass.declareAttribute<Bool>(
-            "invisible_refractive_cryptomatte", false, {"invisible refractive cryptomatte"});
-    sceneClass.setMetadata(sInvisibleRefractiveCryptomatte, "comment", "Indicates whether material should/should not " 
-                                                                       "appear in the refractive cryptomatte layers");
+    sRecordReflectedCryptomatte = sceneClass.declareAttribute<Bool>(
+            "record_reflected_cryptomatte",
+            false); // default value
+    sceneClass.setMetadata(sRecordReflectedCryptomatte, "label", "record reflected cryptomatte");
+    sceneClass.setMetadata(sRecordReflectedCryptomatte, "comment", "Indicates whether the next reflected surface should "
+                                                                    "appear in the reflected cryptomatte layers");
+
+    sRecordRefractedCryptomatte = sceneClass.declareAttribute<Bool>(
+            "record_refracted_cryptomatte",
+            false, // default value
+            {"invisible_refractive_cryptomatte", "invisible refractive cryptomatte"}); // aliases to support older scenes
+    sceneClass.setMetadata(sRecordRefractedCryptomatte, "label", "record refracted cryptomatte");
+    sceneClass.setMetadata(sRecordRefractedCryptomatte, "comment", "Indicates whether the next refracted surface should "
+                                                                     "appear in the refracted cryptomatte layers");
 
     return interface | INTERFACE_MATERIAL;
 }
