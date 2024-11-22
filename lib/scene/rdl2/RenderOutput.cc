@@ -421,14 +421,14 @@ RenderOutput::declare(SceneClass &sceneClass)
 
     // "cryptomatte record reflected"
     sAttrCryptomatteRecordReflected =
-        sceneClass.declareAttribute<Bool>("cryptomatte_record_reflected", true, {"record reflected cryptomatte"});
+        sceneClass.declareAttribute<Bool>("cryptomatte_record_reflected", false, {"record reflected cryptomatte"});
     sceneClass.setMetadata(sAttrCryptomatteRecordReflected,
         SceneClass::sComment,
         "Record reflected cryptomatte channels.  Enabling this will increase the number of cryptomatte channels.");
 
     // "cryptomatte record refracted"
     sAttrCryptomatteRecordRefracted =
-        sceneClass.declareAttribute<Bool>("cryptomatte_record_refracted", true, {"record refracted cryptomatte"});
+        sceneClass.declareAttribute<Bool>("cryptomatte_record_refracted", false, {"record refracted cryptomatte"});
     sceneClass.setMetadata(sAttrCryptomatteRecordRefracted,
         SceneClass::sComment,
         "Record refracted cryptomatte channels.  Enabling this will increase the number of cryptomatte channels.");
@@ -443,7 +443,7 @@ RenderOutput::declare(SceneClass &sceneClass)
     sceneClass.setMetadata(sAttrDisplayFilter, SceneClass::sComment,
         "If \"result\" is \"display filter\", this attribute refers "
         "to a display filter object which is used to compute the output pixel values.");
-    
+
     return interface | INTERFACE_RENDEROUTPUT;
 }
 
