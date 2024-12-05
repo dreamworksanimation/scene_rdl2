@@ -96,7 +96,7 @@
         ofs = (uint32_t)((intptr_t)(&((((type_name *)(0))->member_name))));      \
         ofs *= numLanes;                                                         \
         sizeOfItem = sizeof(((((type_name *)(0))->member_name)));                \
-        alignOfItem = alignof(((((type_name *)(0))->member_name)));              \
+        alignOfItem = alignof(decltype((((type_name *)(0))->member_name)));      \
         if (verbose) {                                                           \
             if (totalOffset % alignOfItem != 0) {                                \
                 printf("    PADDING NEEDED: %d BYTES (aligned to blocks of size %d)\n",\

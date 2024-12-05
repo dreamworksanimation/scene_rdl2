@@ -1,8 +1,5 @@
 // Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #pragma once
 
 #include <scene_rdl2/common/math/Viewport.h>
@@ -16,24 +13,6 @@
 namespace scene_rdl2 {
 namespace grid_util {
 
-template <typename F>
-void untileSinglePixelMainLoop(const unsigned w,
-                               const unsigned h,
-                               const math::Viewport *roi,
-                               const unsigned dstNumChan,
-                               F untileMain,
-                               const bool top2bottom)
-{
-    if (roi) {
-        untileSinglePixelLoopROI(w, h,
-                                 std::max<unsigned>(0, roi->mMinX), std::max<unsigned>(0, roi->mMinY),
-                                 std::max<unsigned>(0, roi->mMaxX), std::max<unsigned>(0, roi->mMaxY),
-                                 dstNumChan, untileMain, top2bottom);
-    } else {
-        untileSinglePixelLoop(w, h, dstNumChan, untileMain, top2bottom);
-    }
-}
-
 #ifdef SINGLE_THREAD
 template <typename F>
 void untileSinglePixelLoopROI(const unsigned w,
@@ -46,27 +25,27 @@ void untileSinglePixelLoopROI(const unsigned w,
                               F untileMain,
                               const bool top2bottom)
 {
+    auto clamp = [](unsigned v, unsigned lo, unsigned hi) -> unsigned {
+        return std::min<unsigned>(std::max<unsigned>(lo, v), hi);
+    };
+
     fb_util::Tiler tiler(w, h);
-    unsigned sx = clamp(std::min<unsigned>(minX, maxX), 0, w - 1);
-    unsigned ex = clamp(std::max<unsigned>(minX, maxX), 0, w - 1) + 1;
-    unsigned sy = clamp(std::min<unsigned>(minY, maxY), 0, h - 1);
-    unsigned ey = clamp(std::max<unsigned>(minY, maxY), 0, h - 1) + 1;
-    unsigned currW = ex - sx;
-    unsigned currH = ey - sy;
+    const unsigned sx = clamp(std::min<unsigned>(minX, maxX), 0, w - 1);
+    const unsigned ex = clamp(std::max<unsigned>(minX, maxX), 0, w - 1) + 1;
+    const unsigned sy = clamp(std::min<unsigned>(minY, maxY), 0, h - 1);
+    const unsigned ey = clamp(std::max<unsigned>(minY, maxY), 0, h - 1) + 1;
+    const unsigned currW = ex - sx;
+    const unsigned currH = ey - sy;
     for (unsigned y = sy; y < ey; ++y) {
-        unsigned currSx = (sx >> 3) << 3;
+        const unsigned currSx = (sx >> 3) << 3;
+        const unsigned slOfsPix = ((top2bottom) ? (currH - 1 - (y - sy)) : (y - sy)) * currW;
         for (unsigned x = currSx; x < ex; x += 8) {
-            unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-            unsigned scanLength = std::min<unsigned>(ex - x, 8);
+            const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
+            const unsigned scanLength = std::min<unsigned>(ex - x, 8);
+            const unsigned ofs = (slOfsPix + (x - sx)) * dstNumChan;
             for (unsigned pixOfs = 0; pixOfs < scanLength; ++pixOfs) {
                 if (x + pixOfs < sx) continue;
-
-                unsigned dstOfs = 0;
-                if (top2bottom) {
-                    dstOfs = ((currH - 1 - (y - sy)) * currW + (x - sx) + pixOfs) * dstNumChan;
-                } else {
-                    dstOfs = ((y - sy) * currW + (x - sx) + pixOfs) * dstNumChan;
-                }
+                const unsigned dstOfs = ofs + pixOfs * dstNumChan;
                 untileMain(tileOfs, pixOfs, dstOfs);
             }
         }
@@ -89,28 +68,24 @@ void untileSinglePixelLoopROI(const unsigned w,
     };
 
     fb_util::Tiler tiler(w, h);
-    unsigned sx = clamp(std::min<unsigned>(minX, maxX), 0, w - 1);
-    unsigned ex = clamp(std::max<unsigned>(minX, maxX), 0, w - 1) + 1;
-    unsigned sy = clamp(std::min<unsigned>(minY, maxY), 0, h - 1);
-    unsigned ey = clamp(std::max<unsigned>(minY, maxY), 0, h - 1) + 1;
-    unsigned currW = ex - sx;
-    unsigned currH = ey - sy;
+    const unsigned sx = clamp(std::min<unsigned>(minX, maxX), 0, w - 1);
+    const unsigned ex = clamp(std::max<unsigned>(minX, maxX), 0, w - 1) + 1;
+    const unsigned sy = clamp(std::min<unsigned>(minY, maxY), 0, h - 1);
+    const unsigned ey = clamp(std::max<unsigned>(minY, maxY), 0, h - 1) + 1;
+    const unsigned currW = ex - sx;
+    const unsigned currH = ey - sy;
     tbb::blocked_range<unsigned> range(sy, ey, 8);
     tbb::parallel_for(range, [&](const tbb::blocked_range<unsigned> &r) {
             for (unsigned y = r.begin(); y < r.end(); ++y) {
-                unsigned currSx = (sx >> 3) << 3;
+                const unsigned currSx = (sx >> 3) << 3;
+                const unsigned slOfsPix = ((top2bottom) ? (currH - 1 - (y - sy)) : (y - sy)) * currW;
                 for (unsigned x = currSx; x < ex; x += 8) {
-                    unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-                    unsigned scanLength = std::min<unsigned>(ex - x, 8);
+                    const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y); 
+                    const unsigned scanLength = std::min<unsigned>(ex - x, 8);
+                    const unsigned ofs = (slOfsPix + (x - sx)) * dstNumChan;
                     for (unsigned pixOfs = 0; pixOfs < scanLength; ++pixOfs) {
                         if (x + pixOfs < sx) continue;
-
-                        unsigned dstOfs = 0;
-                        if (top2bottom) {
-                            dstOfs = ((currH - 1 - (y - sy)) * currW + (x - sx) + pixOfs) * dstNumChan;
-                        } else {
-                            dstOfs = ((y - sy) * currW + (x - sx) + pixOfs) * dstNumChan;
-                        }
+                        const unsigned dstOfs = ofs + pixOfs * dstNumChan;
                         untileMain(tileOfs, pixOfs, dstOfs);
                     }
                 }
@@ -129,17 +104,14 @@ void untileSinglePixelLoop(const unsigned w,
 {
     fb_util::Tiler tiler(w, h);
     for (unsigned y = 0; y < h; ++y) {
+        const unsigned slOfsPix = ((top2bottom) ? (h - 1 - y) : y) * w;
         for (unsigned x = 0; x < w; x += 8) {
-            unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-            unsigned scanLength = std::min<unsigned>(w - x, 8);
+            const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
+            const unsigned scanLength = std::min<unsigned>(w - x, 8);
+            unsigned dstOfs = (slOfsPix + x) * dstNumChan;
             for (unsigned pixOfs = 0; pixOfs < scanLength; ++pixOfs) {
-                unsigned dstOfs = 0;
-                if (top2bottom) {
-                    dstOfs = ((h - 1 - y) * w + x + pixOfs) * dstNumChan;
-                } else {
-                    dstOfs = (y * w + x + pixOfs) * dstNumChan;
-                }
                 untileMain(tileOfs, pixOfs, dstOfs);
+                dstOfs += dstNumChan;
             }
         }
     }
@@ -156,17 +128,14 @@ void untileSinglePixelLoop(const unsigned w,
     tbb::blocked_range<unsigned> range(0, h, 8);
     tbb::parallel_for(range, [&](const tbb::blocked_range<unsigned> &r) {
             for (unsigned y = r.begin(); y < r.end(); ++y) {
+                const unsigned slOfsPix = ((top2bottom) ? (h - 1 - y) : y) * w; 
                 for (unsigned x = 0; x < w; x += 8) {
-                    unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-                    unsigned scanLength = std::min<unsigned>(w - x, 8);
+                    const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
+                    const unsigned scanLength = std::min<unsigned>(w - x, 8);
+                    unsigned dstOfs = (slOfsPix + x) * dstNumChan;
                     for (unsigned pixOfs = 0; pixOfs < scanLength; ++pixOfs) {
-                        unsigned dstOfs = 0;
-                        if (top2bottom) {
-                            dstOfs = ((h - 1 - y) * w + x + pixOfs) * dstNumChan;
-                        } else {
-                            dstOfs = (y * w + x + pixOfs) * dstNumChan;
-                        }
                         untileMain(tileOfs, pixOfs, dstOfs);
+                        dstOfs += dstNumChan;
                     }
                 }
             }
@@ -185,8 +154,8 @@ void untileDualPixelLoop(const unsigned w,
     fb_util::Tiler tiler(w, h);
     for (unsigned y = 0; y < h; ++y) {
         for (unsigned x = 0; x < w; x += 8) {
-            unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-            unsigned scanLength = std::min<unsigned>(w - x, 8);
+            const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
+            const unsigned scanLength = std::min<unsigned>(w - x, 8);
             for (unsigned pixOfs = 0; pixOfs < scanLength; pixOfs += 2) {
                 unsigned dstOfs = 0;
                 if (top2bottom) {
@@ -212,8 +181,8 @@ void untileDualPixelLoop(const unsigned w,
     tbb::parallel_for(range, [&](const tbb::blocked_range<unsigned> &r) {
             for (unsigned y = r.begin(); y < r.end(); ++y) {
                 for (unsigned x = 0; x < w; x += 8) {
-                    unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
-                    unsigned scanLength = std::min<unsigned>(w - x, 8);
+                    const unsigned tileOfs = tiler.linearCoordsToTiledOffset(x, y);
+                    const unsigned scanLength = std::min<unsigned>(w - x, 8);
                     for (unsigned pixOfs = 0; pixOfs < scanLength; pixOfs += 2) {
                         unsigned dstOfs = 0;
                         if (top2bottom) {
@@ -228,6 +197,24 @@ void untileDualPixelLoop(const unsigned w,
         });
 }
 #endif // end !SINGLE_THREAD    
+
+template <typename F>
+void untileSinglePixelMainLoop(const unsigned w,
+                               const unsigned h,
+                               const math::Viewport *roi,
+                               const unsigned dstNumChan,
+                               F untileMain,
+                               const bool top2bottom)
+{
+    if (roi) {
+        untileSinglePixelLoopROI(w, h,
+                                 std::max<unsigned>(0, roi->mMinX), std::max<unsigned>(0, roi->mMinY),
+                                 std::max<unsigned>(0, roi->mMaxX), std::max<unsigned>(0, roi->mMaxY),
+                                 dstNumChan, untileMain, top2bottom);
+    } else {
+        untileSinglePixelLoop(w, h, dstNumChan, untileMain, top2bottom);
+    }
+}
 
 } // namespace grid_util
 } // namespace scene_rdl2

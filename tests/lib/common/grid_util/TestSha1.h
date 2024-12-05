@@ -19,7 +19,7 @@ class TestSha1 : public CppUnit::TestFixture
 {
 public:
     void setUp() {}
-    void testDown() {}
+    void tearDown() {}
 
     void testParams();
     void testBuffer();
@@ -75,4 +75,3 @@ protected:
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

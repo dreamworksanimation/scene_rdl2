@@ -134,6 +134,9 @@ public:
     bool msg(const std::string &msg) const; // Message output to source of arg input
     bool fmtMsg(const char *fmt, ...) const; // formatted message output to source of arg input
 
+    // To retrieve the TlSvr pointer for sending back messages by TlSvr without Arg
+    TlSvr* getTlSvr() { return mTlSvr; }
+
     //
     // etc
     //

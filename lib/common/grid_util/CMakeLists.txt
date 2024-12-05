@@ -40,6 +40,9 @@ target_sources(${component}
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
+	ShmData.cc
+	ShmFb.cc
+	ShmFbOutput.cc
 	ShmFootmark.cc
         SockUtil.cc
         TlSvr.cc
@@ -67,6 +70,9 @@ set_property(TARGET ${component}
         RenderPrepStats.h
         RunLenBitTable.h
         Sha1Util.h
+	ShmData.h
+	ShmFb.h
+	ShmFbOutput.h
 	ShmFootmark.h
         SockUtil.h
         TlSvr.h
@@ -87,6 +93,7 @@ target_link_libraries(${component}
         ${PROJECT_NAME}::common_math
         ${PROJECT_NAME}::common_platform
         ${PROJECT_NAME}::common_rec_time
+	${PROJECT_NAME}::render_cache
         ${PROJECT_NAME}::scene_rdl2
         OpenSSL::SSL
         TBB::tbb

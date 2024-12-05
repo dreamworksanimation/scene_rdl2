@@ -9,9 +9,11 @@ target_sources(${target}
     PRIVATE
         main.cc
         TestArg.cc
+	TestFbUtils.cc
         TestParser.cc
         TestPixelBufferSha1.cc
         TestSha1.cc
+	TestShmFb.cc
 )
 
 target_link_libraries(${target}
