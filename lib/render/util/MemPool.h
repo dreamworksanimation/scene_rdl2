@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-//
 // This is a multi-threaded allocator optimized specifically dealing with latent
 // state in a ray tracing context.
 //
@@ -309,8 +308,6 @@ public:
     }
 
     //
-    // Not thread safe. It must be called on the thread which owns this block.
-    //
     // This takes all the entries in the pending free list and makes them
     // available for allocation again. It doesn't stall however and other
     // threads are free to continue adding further entries to the pending free
@@ -479,8 +476,8 @@ private:
 
     enum
     {
-        NUM_LEAF_NODES              = sizeof(uint64_t) * 8,  // 64 leaf nodes
-        ENTRIES_PER_LEAF_NODE       = sizeof(uint64_t) * 8,  // 64 entries per leaf node
+        NUM_LEAF_NODES              = sizeof(uint64_t) * 8,  // 8byte * 8bit = 64 leaf nodes
+        ENTRIES_PER_LEAF_NODE       = sizeof(uint64_t) * 8,  // 8byte * 8bit = 64 entries per leaf node
         ENTRIES_PER_LEAF_NODE_SHIFT = math::compile_time::log2i(ENTRIES_PER_LEAF_NODE), // 6
         NUM_ENTRIES                 = NUM_LEAF_NODES * ENTRIES_PER_LEAF_NODE, // 4096 total entries
     };
@@ -524,7 +521,6 @@ private:
     // the main allocation hierarchy, and thus can't be handed out just yet.
     // Any access to these members should be protected with mPendingFreeMutex.
     //
-
     tbb::spin_mutex mPendingFreeMutex;
     uint64_t        mInternalFree;
     uint64_t        mFreeEntries[NUM_LEAF_NODES];
@@ -636,6 +632,8 @@ public:
             MNRY_ASSERT(isValidBlockAddress(block));
             MNRY_ASSERT(block->isValid());
             MNRY_ASSERT(block->isEmpty());
+
+            mAllocateBlockCounter++; // for performance analysis
         }
         return block;
     }
@@ -734,6 +732,16 @@ public:
         return numBlocks * NUM_ENTRIES_PER_BLOCK * entryStride;
     }
 
+    uint8_t* getEntryMemory() const { return mEntryMemory; }
+    unsigned getActualPoolSize() const { return mNumBlocks * MemBlock::getNumEntries(); }
+
+    std::string showStatisticalInfo() const
+    {
+        std::ostringstream ostr;
+        ostr << "MemBlockManager mAllocateBlockCounter:" << mAllocateBlockCounter;
+        return ostr.str();
+    }
+
 protected:
     void freeSingleEntry(void *entry)
     {
@@ -764,6 +772,9 @@ protected:
     unsigned    mEntryToBlockDivider;
 
     CACHE_ALIGN util::ConcurrentSList mFreeBlocks;
+
+    // statistical info for performance analysis
+    std::atomic<size_t> mAllocateBlockCounter {0};
 };
 
 //-----------------------------------------------------------------------------
@@ -1079,6 +1090,9 @@ public:
         return mBlockManager;
     }
 
+    uint8_t* getEntryMemory() const { return mBlockManager->getEntryMemory(); }
+    unsigned getActualPoolSize() const { return mBlockManager->getActualPoolSize(); }
+
     // Returns the number of entries allocated at this point in time.
     // The result may be over estimated since it doesn't account for entries
     // which may be lying in the pending free list.
@@ -1230,5 +1244,3 @@ public:
 
 } // namespace alloc
 } // namespace scene_rdl2
-
-
