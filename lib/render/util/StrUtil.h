@@ -1,5 +1,6 @@
 // Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <cmath> // log10(), round()
@@ -156,15 +157,6 @@ std::string
 boolStr(const bool b)
 {
     return (b)? "true": "false";
-}
-
-inline
-bool
-isTrueStr(const std::string& str)
-{
-    return (str == "true" || str == "TRUE" || str == "True" ||
-            str == "1" ||
-            str == "on" || str == "ON" || str == "On");
 }
 
 inline

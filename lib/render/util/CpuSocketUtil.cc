@@ -45,22 +45,6 @@ CpuSocketInfo::show() const
 
 //------------------------------------------------------------------------------------------
 
-CpuSocketUtil::CpuSocketUtil()
-{
-    std::string errMsg;
-    if (!setupCpuInfo(errMsg)) {
-        std::ostringstream ostr;
-        ostr << "CpuSocketUtil::setupCpuInfo() failed. " << errMsg;
-        throw except::RuntimeError(ostr.str());
-    }
-    if (!verifyCpuInfo()) {
-        throw except::RuntimeError("CpuSocketUtil::verifyCpuInfo failed");
-    }
-}
-
-// static function
-bool
-CpuSocketUtil::parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, std::string& errMsg)
 //
 // This function parses idDef string and generates idTbl.
 //
@@ -82,6 +66,9 @@ CpuSocketUtil::parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, 
 //     "0-2,3,4-6"    # => 0 1 2 3 4 5 6
 //     "4,7-8,1-3"    # => 1 2 3 4 7 8
 //        
+static
+bool
+parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, std::string& errMsg)
 {
     auto pushCpuId = [&](const int id) {
         // Store id to the out if it is not saved yet.
@@ -137,6 +124,21 @@ CpuSocketUtil::parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, 
     }
     std::sort(out.begin(), out.end()); // The result table is always sorted
     return true;
+}
+
+//------------------------------------------------------------------------------------------
+
+CpuSocketUtil::CpuSocketUtil()
+{
+    std::string errMsg;
+    if (!setupCpuInfo(errMsg)) {
+        std::ostringstream ostr;
+        ostr << "CpuSocketUtil::setupCpuInfo() failed. " << errMsg;
+        throw except::RuntimeError(ostr.str());
+    }
+    if (!verifyCpuInfo()) {
+        throw except::RuntimeError("CpuSocketUtil::verifyCpuInfo failed");
+    }
 }
 
 bool

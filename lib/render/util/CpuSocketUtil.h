@@ -57,8 +57,6 @@ public:
 
     CpuSocketUtil(); // Might throw scene_rdl2::except::RuntimeError when error
 
-    static bool parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, std::string& errMsg);
-
     // Convert socketId definition to cpuId table based on the current machine's kernel configurations.
     // Return true when no error.
     // Return false when an internally happened error and return an error message to the errMsg
