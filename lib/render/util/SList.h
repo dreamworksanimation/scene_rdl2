@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-//
 // Low level, non-thread safe and thread safe singly linked list implementations.
 //
 // The next pointer is overlaid with the memory itself so adding a structure to
@@ -129,8 +128,14 @@ public:
         return oldHead;
     }
 
+    finline unsigned size() const
+    {
+        Mutex::scoped_lock lock(mMutex);
+        return SList::size();
+    }
+
 protected:
-    /*CACHE_ALIGN*/ Mutex   mMutex;
+    /*CACHE_ALIGN*/ mutable Mutex mMutex;
 };
 
 } // namespace util

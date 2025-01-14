@@ -13,10 +13,12 @@ if(NOT IsDarwinPlatform)
     set(PlatformSpecificHeaders
         CpuAffinityMask.h
         CpuSocketUtil.h
+	NumaUtil.h
         ProcCpuAffinity.h)
     set(PlatformSpecificSources
         CpuAffinityMask.cc
         CpuSocketUtil.cc
+	NumaUtil.cc
         ProcCpuAffinity.cc)
 endif()
 
