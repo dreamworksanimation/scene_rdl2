@@ -1,5 +1,9 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
+//
+//
+
 #pragma once
 
 #include <scene_rdl2/common/grid_util/Sha1Util.h>
@@ -29,26 +33,23 @@ public:
 
 protected:
 
-    bool initTest()
+    void initTest()
     {
-        if (!mSha1Gen.init()) return false;
+        mSha1Gen.init();
         mData.clear();
-        return true;
     }
 
-    template <typename T> bool
+    template <typename T> void
     push(const T &t)
     {
-        if (!mSha1Gen.update<T>(t)) return false;
+        mSha1Gen.update<T>(t);
         pushDataByte(static_cast<const void *>(&t), sizeof(t));
-        return true;
     }
 
-    bool pushBuff(const std::string &data)
+    void pushBuff(const std::string &data)
     {
-        if (!mSha1Gen.updateStr(data)) return false;
+        mSha1Gen.updateStr(data);
         pushDataByte(static_cast<const void *>(data.data()), data.size());
-        return true;
     }
 
     void pushDataByte(const void *data, size_t dataSize)

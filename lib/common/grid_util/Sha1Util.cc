@@ -1,11 +1,12 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
+//
+//
 #include "Sha1Util.h"
 
-#include <algorithm>
 #include <iomanip>
 #include <sstream>
-#include <openssl/evp.h>
 #include <openssl/sha.h>
 
 namespace scene_rdl2 {
@@ -43,128 +44,65 @@ class Sha1Gen::Impl
 public:
     using Hash = Sha1Util::Hash;
 
-    Impl()
-    //
-    // Might throw std:string if error
-    //
+    Impl() {}
+    ~Impl() {}
+
+    void init()
     {
-        // OpenSSL recommended to always create EVP_MD_CTX dynamically by EVP_MD_CTX_new()
-        if ((mCtx = EVP_MD_CTX_new()) == nullptr) {
-            throw(std::string("Sha1Gen::Impl() EVP_MD_CTX_new() failed"));
-        }
-    }
-    ~Impl()
-    {
-        if (mCtx) EVP_MD_CTX_free(mCtx);
-        mCtx = nullptr;
+        SHA1_Init(&mCtx);
     }
 
-    bool isError() const { return mInternalError; }
-
-    bool init()
+    void updateByteData(const void *data, size_t dataSize)
     {
-        if (!mCtx) {
-            mInternalError = true;
-            return false;
-        }
-
-        mInternalError = false; // initialize internal error flag
-
-        if (EVP_DigestInit_ex(mCtx, EVP_sha1(), NULL) != 1) {
-            mInternalError = true;
-            return false;
-        }
-        return true;
-    }
-
-    bool updateByteData(const void *data, size_t size)
-    {
-        if (mInternalError) return true; // skip operation and return true
-        
-        if (EVP_DigestUpdate(mCtx, data, size) != 1) {
-            mInternalError = true;
-            return false;
-        }
-        return true;
+        SHA1_Update(&mCtx, data, dataSize);
     }
 
     Hash finalize()
-    //
-    // Might throw std::string if error
-    //
     {
-        unsigned char hashData[EVP_MAX_MD_SIZE];
-        unsigned hashLen;
-
-        if (mInternalError) {
-            throw(std::string("Sha1Gen::Impl::finalize() encountered internal error"));
-        }
-
-        if (EVP_DigestFinal_ex(mCtx, hashData, &hashLen) != 1) {
-            throw(std::string("Sha1Gen::Impl::finalize() EVP_DigestFinal_ex() failed"));
-        }
-
-        if (hashLen != HASH_SIZE) {
-            throw(std::string("Sha1Gen::Impl::finalize() Generated HASH_SIZE mismatch"));
-        }
-
         Hash hash;
-        for (int i = 0; i < HASH_SIZE; ++i) {
-            hash[i] = hashData[i];
-        }
+        SHA1_Final(hash.data(), &mCtx);
         return hash;
     }
-
+    
 private:
-    bool mInternalError {false};
-    EVP_MD_CTX* mCtx {nullptr};
+    SHA_CTX mCtx;
 };
 
-Sha1Gen::Sha1Gen() 
-//
-// Might throw std::string if error
-//
+Sha1Gen::Sha1Gen()
 {
     mImpl.reset(new Impl);
+    mImpl->init();
 }
 
 Sha1Gen::~Sha1Gen()
 {
 }
 
-bool
+void
 Sha1Gen::init()
 {
-    return mImpl->init();
+    mImpl->init();
 }
 
-bool
-Sha1Gen::isError() const
-{
-    return mImpl->isError();
-}
-
-bool
+void
 Sha1Gen::updateStr(const std::string &str)
 {
     // std::cerr << ">> Sha1Util.cc updateStr():" << str << '\n'; // useful for debug
-    return updateByteData(static_cast<const void *>(str.data()), str.size());
+    updateByteData(static_cast<const void *>(str.data()), str.size());
 }
 
-bool
+void
 Sha1Gen::updateByteData(const void *buff, size_t len)
 {
-    return mImpl->updateByteData(buff, len);
+    mImpl->updateByteData(buff, len);
 }
     
 Sha1Gen::Hash
 Sha1Gen::finalize()
-//
-// Might throw std::string if error
-//
 {
     return mImpl->finalize();
 }
 
 } // namespace grid_util
 } // namespace scene_rdl2
+

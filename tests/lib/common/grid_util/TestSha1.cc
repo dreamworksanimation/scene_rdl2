@@ -1,10 +1,9 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+
 #include "TestSha1.h"
 
-#include <scene_rdl2/render/util/StrUtil.h>
 #include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
-#include <scene_rdl2/scene/rdl2/ValueContainerUtil.h>
 
 #include <random>
 
@@ -15,18 +14,18 @@ namespace unittest {
 void
 TestSha1::testParams()
 {
-    CPPUNIT_ASSERT(initTest());
-
-    CPPUNIT_ASSERT(push<char>(-43));
-    CPPUNIT_ASSERT(push<unsigned char>(43));
-    CPPUNIT_ASSERT(push<int>(-123));
-    CPPUNIT_ASSERT(push<unsigned int>(123));
-    CPPUNIT_ASSERT(push<short>(-567));
-    CPPUNIT_ASSERT(push<unsigned short>(567));
-    CPPUNIT_ASSERT(push<long>(-1234567890));
-    CPPUNIT_ASSERT(push<unsigned long>(1234567890));
-    CPPUNIT_ASSERT(push<float>(9.876f));
-    CPPUNIT_ASSERT(push<double>(5.4321));
+    initTest();
+    
+    push<char>(-43);
+    push<unsigned char>(43);
+    push<int>(-123);
+    push<unsigned int>(123);
+    push<short>(-567);
+    push<unsigned short>(567);
+    push<long>(-1234567890);
+    push<unsigned long>(1234567890);    
+    push<float>(9.876f);
+    push<double>(5.4321);
 
     CPPUNIT_ASSERT("testParam" && verifyResult());
 }
@@ -34,11 +33,11 @@ TestSha1::testParams()
 void
 TestSha1::testBuffer()
 {
-    CPPUNIT_ASSERT(initTest());
+    initTest();
 
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(1234)));
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(123)));
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(123456)));
+    pushBuff(randomDataGen(1234));
+    pushBuff(randomDataGen(123));
+    pushBuff(randomDataGen(123456));
 
     CPPUNIT_ASSERT("testBuffer" && verifyResult());    
 }
@@ -46,21 +45,21 @@ TestSha1::testBuffer()
 void
 TestSha1::testMix()
 {
-    CPPUNIT_ASSERT(initTest());
+    initTest();
 
-    CPPUNIT_ASSERT(push<char>(-43));
-    CPPUNIT_ASSERT(push<int>(-123));
-    CPPUNIT_ASSERT(push<unsigned char>(43));
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(1234)));
-    CPPUNIT_ASSERT(push<unsigned int>(123));
-    CPPUNIT_ASSERT(push<unsigned long>(1234567890));
-    CPPUNIT_ASSERT(push<short>(-567));
-    CPPUNIT_ASSERT(push<unsigned short>(567));
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(123)));
-    CPPUNIT_ASSERT(push<long>(-1234567890));
-    CPPUNIT_ASSERT(push<float>(9.876f));
-    CPPUNIT_ASSERT(pushBuff(randomDataGen(123456)));
-    CPPUNIT_ASSERT(push<double>(5.4321));
+    push<char>(-43);
+    push<int>(-123);
+    push<unsigned char>(43);
+    pushBuff(randomDataGen(1234));
+    push<unsigned int>(123);
+    push<unsigned long>(1234567890);    
+    push<short>(-567);
+    push<unsigned short>(567);
+    pushBuff(randomDataGen(123));
+    push<long>(-1234567890);
+    push<float>(9.876f);
+    pushBuff(randomDataGen(123456));
+    push<double>(5.4321);
 
     CPPUNIT_ASSERT("testMix" && verifyResult());    
 }
@@ -68,25 +67,13 @@ TestSha1::testMix()
 bool
 TestSha1::verifyResult()
 {
-    try {
-        Sha1Gen::Hash hash0 = mSha1Gen.finalize();
-        Sha1Gen::Hash hash1 = Sha1Util::hash(mData.data(), mData.size());
-
-        /* useful for debug
-        std::cerr << "verifyResult() {\n";
-        auto showData = [&]() { return rdl2::ValueContainerUtil::hexDump("mData", mData.data(), mData.size()); };
-        std::cerr << str_util::addIndent(showData()) << '\n';
-        std::cerr << str_util::addIndent(Sha1Util::show(hash0)) << '\n';
-        std::cerr << str_util::addIndent(Sha1Util::show(hash1)) << '\n';
-        std::cerr << "}\n";
-        */
-        return (hash0 == hash1);
-    }
-    catch (std::string error) {
-        std::cerr << "ERROR " << __FILE__ << " line:" << __LINE__ << " func:" << __func__
-                  << " failed. error:" << error << '\n'; 
-        return false;
-    }
+    Sha1Gen::Hash hash0 = mSha1Gen.finalize();
+    Sha1Gen::Hash hash1 = Sha1Util::hash(mData.data(), mData.size());
+    /* useful for debug
+    std::cerr << Sha1Util::show(hash0) << '\n';
+    std::cerr << Sha1Util::show(hash1) << '\n';
+    */
+    return (hash0 == hash1);
 }
 
 std::string
