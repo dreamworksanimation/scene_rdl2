@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -92,6 +92,9 @@ private:
     }
 
     void savePrimaryHash(const size_t startTileId, const size_t endTileId, Sha1Gen& workSha1)
+    //
+    // Might throw std::string if error
+    //
     {
         mPrimaryStartTileId = startTileId;
         mPrimaryEndTileId = endTileId;
@@ -100,6 +103,9 @@ private:
     }
 
     void saveSecondaryHash(const size_t startTileId, const size_t endTileId, Sha1Gen& workSha1)
+    //
+    // Might throw std::string if error
+    //
     {
         mSecondaryStartTileId = startTileId;
         mSecondaryEndTileId = endTileId;
