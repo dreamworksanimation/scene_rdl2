@@ -1,0 +1,2392 @@
+#!/bin/env python3
+# Copyright 2025 DreamWorks Animation LLC
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# @file rdla_gui
+# $Id$
+#
+
+from enum import Enum
+import math
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog
+import colorsys
+import sys
+import argparse
+import os
+import json
+import re
+import scene_rdl2
+import subprocess
+import tempfile
+import textwrap
+
+rdl2_print_dict = dict()
+scene_header_lines = list()
+object_specs = dict()
+object_controls = dict()
+root = None
+input_file = None
+output_file = None
+deltas_file = None
+show_all_parameters = False
+
+POSITION_FILE = os.path.expanduser("~/.rdla_gui_position")
+
+# Global color constants
+DK_BG_COLOR = "#121212"
+BG_COLOR = "#2B2B2B"
+FG_COLOR = "#FFFFFF"
+BUTTON_BG = "#3C3F41"
+BUTTON_FG = "#FFFFFF"
+ENTRY_BG = "#45494A"
+ENTRY_FG = "#FFFFFF"
+SELECT_BG = "#4A6984"
+
+class RotationOrder(Enum):
+    XYZ = "XYZ"
+    XZY = "XZY"
+    YXZ = "YXZ"
+    YZX = "YZX"
+    ZXY = "ZXY"
+    ZYX = "ZYX"
+
+    @classmethod
+    def from_string(cls, string):
+        for member in cls:
+            if member.value == string:
+                return member
+        raise ValueError(f"'{string}' is not a valid {cls.__name__} value")
+
+class TransformationOrder(Enum):
+    SRT = "SRT"
+    STR = "STR"
+    RST = "RST"
+    RTS = "RTS"
+    TSR = "TSR"
+    TRS = "TRS"
+
+    @classmethod
+    def from_string(cls, string):
+        for member in cls:
+            if member.value == string:
+                return member
+        raise ValueError(f"'{string}' is not a valid {cls.__name__} value")
+
+
+class PopupMenuMixin:
+    def _setup_reset_menu(self):
+        """Initialize the reset context menu and bindings"""
+        # Create right-click context menu
+        self.context_menu = tk.Menu(self, tearoff=0)
+        self.context_menu.add_command(
+            label="Reset to Initial Value",
+            command=lambda: self.reset_value(None, self.initial_value)
+        )
+        self.context_menu.add_command(
+            label="Reset to Default Value",
+            command=lambda: self.reset_value(None, self.default_value)
+        )
+
+        # Bind right-click to show context menu
+        self.bind('<Button-3>', self.show_context_menu)
+
+        # Bind reset keyboard shortcuts
+        self.bind('<Control-Button-2>',
+                  lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                  lambda e, v=self.default_value: self.reset_value(e, v))
+
+    def show_context_menu(self, event):
+        """Show the context menu at the mouse position"""
+        try:
+            self.context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.context_menu.grab_release()
+        return "break"  # Prevent default right-click behavior
+
+    def reset_value(self, event, value_to_set):
+        """Reset to the specified value. Must be implemented by the child class."""
+        raise NotImplementedError("Child class must implement reset_value method")
+
+
+class NodeXformControl(ttk.Frame):
+    def __init__(self, master, initial_operations=None, **kwargs):
+        super().__init__(master, **kwargs)
+
+        # Initialize values
+        self.translation = [tk.StringVar(value="0.000") for _ in range(3)]
+        self.rotation = [tk.StringVar(value="0.000") for _ in range(3)]
+        self.scale = [tk.StringVar(value="1.000") for _ in range(3)]
+        self.transformation_order = tk.StringVar(value="SRT")
+        self.rotation_order = tk.StringVar(value="XYZ")
+
+        # Store default values
+        self.default_translation = ["0.000" for _ in range(3)]
+        self.default_rotation = ["0.000" for _ in range(3)]
+        self.default_scale = ["1.000" for _ in range(3)]
+        self.default_transformation_order = "SRT"
+        self.default_rotation_order = "XYZ"
+
+        # Store initial values
+        self.initial_translation = ["0.000" for _ in range(3)]
+        self.initial_rotation = ["0.000" for _ in range(3)]
+        self.initial_scale = ["1.000" for _ in range(3)]
+        self.initial_transformation_order = "SRT"
+        self.initial_rotation_order = "XYZ"
+
+        if initial_operations:
+            self.set_from_operations(initial_operations)
+            # After setting from operations, store these as initial values
+            self.initial_translation = [var.get() for var in self.translation]
+            self.initial_rotation = [var.get() for var in self.rotation]
+            self.initial_scale = [var.get() for var in self.scale]
+            self.initial_transformation_order = self.transformation_order.get()
+            self.initial_rotation_order = self.rotation_order.get()
+
+        # Create UI elements
+        self.create_ui()
+
+        # Assume 21 spaces of indentation
+        self.indentation = 21
+
+    def is_dirty(self):
+        # Compare all current values against initial values
+        if self.transformation_order.get() != self.initial_transformation_order:
+            return True
+        if self.rotation_order.get() != self.initial_rotation_order:
+            return True
+
+        for i in range(3):
+            # Use float comparison with small epsilon for translation and rotation
+            current_trans = float(self.translation[i].get())
+            initial_trans = float(self.initial_translation[i])
+            if abs(current_trans - initial_trans) > 0.0001:
+                return True
+
+            current_rot = float(self.rotation[i].get())
+            initial_rot = float(self.initial_rotation[i])
+            if abs(current_rot - initial_rot) > 0.0001:
+                return True
+
+            current_scale = float(self.scale[i].get())
+            initial_scale = float(self.initial_scale[i])
+            if abs(current_scale - initial_scale) > 0.0001:
+                return True
+
+    def is_not_default(self):
+        # Compare all current values against default values
+        if self.transformation_order.get() != self.default_transformation_order:
+            return True
+        if self.rotation_order.get() != self.default_rotation_order:
+            return True
+
+        for i in range(3):
+            # Use float comparison with small epsilon for translation and rotation
+            current_trans = float(self.translation[i].get())
+            default_trans = float(self.default_translation[i])
+            if abs(current_trans - default_trans) > 0.0001:
+                return True
+
+            current_rot = float(self.rotation[i].get())
+            default_rot = float(self.default_rotation[i])
+            if abs(current_rot - default_rot) > 0.0001:
+                return True
+
+            current_scale = float(self.scale[i].get())
+            default_scale = float(self.default_scale[i])
+            if abs(current_scale - default_scale) > 0.0001:
+                return True
+
+        return False
+
+    def update_transformation_order(self, menu):
+        new_order = menu.get()
+        self.transformation_order.set(new_order)
+        self.run_command()
+
+    def update_rotation_order(self, menu):
+        new_order = menu.get()
+        self.rotation_order.set(new_order)
+        self.run_command()
+
+    def set_command(self, command):
+        self.command = command
+
+    def run_command(self):
+        if self.command and callable(self.command):
+            self.command()
+
+    def set_from_operations(self, operations):
+        # Reset values
+        for i in range(3):
+            self.translation[i].set("0.000")
+            self.rotation[i].set("0.000")
+            self.scale[i].set("1.000")
+
+        transformation_order = ""
+        rotation_axes = []
+
+        for op in operations:
+            if op.startswith("translate"):
+                match = re.search(r"""
+                    translate\(
+                    ([-+]?[0-9]*\.?[0-9]+),\s*  # First number (x)
+                    ([-+]?[0-9]*\.?[0-9]+),\s*  # Second number (y)
+                    ([-+]?[0-9]*\.?[0-9]+)      # Third number (z)
+                    \)
+                    """, op, re.VERBOSE)
+                if match:
+                    for i, value in enumerate(match.groups()):
+                        self.translation[i].set(f"{float(value):.3f}")
+                transformation_order += "T"
+            elif op.startswith("rotate"):
+                match = re.search(r"""
+                    rotate\(
+                    ([-+]?[0-9]*\.?[0-9]+),\s*  # Angle
+                    ([01]),\s*                  # X (0 or 1)
+                    ([01]),\s*                  # Y (0 or 1)
+                    ([01])                      # Z (0 or 1)
+                    \)
+                    """, op, re.VERBOSE)
+                if match:
+                    angle, x, y, z = match.groups()
+                    axis = 'X' if x == '1' else 'Y' if y == '1' else 'Z'
+                    rotation_axes.append(axis)
+                    index = 'XYZ'.index(axis)
+                    self.rotation[index].set(f"{float(angle):.3f}")
+                transformation_order += "R"
+            elif op.startswith("scale"):
+                match = re.search(r"""
+                    scale\(
+                    ([-+]?[0-9]*\.?[0-9]+),\s*  # First number (x)
+                    ([-+]?[0-9]*\.?[0-9]+),\s*  # Second number (y)
+                    ([-+]?[0-9]*\.?[0-9]+)      # Third number (z)
+                    \)
+                    """, op, re.VERBOSE)
+                if match:
+                    for i, value in enumerate(match.groups()):
+                        self.scale[i].set(f"{float(value):.3f}")
+                transformation_order += "S"
+
+        # Set transformation order
+        if len(operations) == 1:
+            self.transformation_order.set("SRT")
+        else:
+            all_transformations = set("TRS")
+            unique_order = ''.join(dict.fromkeys(transformation_order))
+            missing_transformations = all_transformations - set(unique_order)
+            complete_order = unique_order + ''.join(missing_transformations)
+            self.transformation_order.set(complete_order)
+
+        # Set rotation order
+        all_axes = set("XYZ")
+        unique_axes = ''.join(dict.fromkeys(rotation_axes))
+        missing_axes = all_axes - set(unique_axes)
+        complete_axes = unique_axes + ''.join(missing_axes)
+        self.rotation_order.set(complete_axes)
+
+
+    def create_ui(self):
+        self.collapsible_frame = CollapsibleFrame(self, text="")
+        self.collapsible_frame.grid(row=0, column=0, sticky="ew")
+
+        # Bind the toggle function to the button
+        self.collapsible_frame.toggle_button.config(command=self.toggle_controls)
+
+        self.create_controls(self.collapsible_frame.sub_frame)
+
+        # Start collapsed
+        self.collapsible_frame.toggle()
+
+    def create_controls(self, parent):
+        vert_pad = 10
+        row = 0
+
+        # Transformation Order
+        ttk.Label(parent, text="Transform Order:").grid(row=row, column=0,
+                                                        columnspan=2, sticky="e",
+                                                        padx=(5,0), pady=(vert_pad,0))
+        transform_order_menu = CustomOptionMenu(parent,
+                                                values=[order.value for order in TransformationOrder],
+                                                default_value=self.transformation_order.get(),
+                                                initial_value=self.transformation_order.get(),
+                                                width=5)
+        transform_order_menu.grid(row=row, column=2, columnspan=4, sticky="w")
+        transform_order_menu.var.trace('w', lambda *args: self.update_transformation_order(transform_order_menu))
+        row += 1
+
+        # Rotation Order
+        ttk.Label(parent, text="Rotation Order:").grid(row=row, column=0,
+                                                       columnspan=2, sticky="e",
+                                                       padx=(5,0), pady=(vert_pad, vert_pad))
+        rotation_order_menu = CustomOptionMenu(parent,
+                                               values=[order.value for order in RotationOrder],
+                                               default_value=self.rotation_order.get(),
+                                               initial_value=self.rotation_order.get(),
+                                               width=5)
+        rotation_order_menu.grid(row=row, column=2, columnspan=4, sticky="w")
+        rotation_order_menu.var.trace('w', lambda *args: self.update_rotation_order(rotation_order_menu))
+        row += 1
+
+        labels = ['X', 'Y', 'Z']
+        for i, label in enumerate(labels):
+            ttk.Label(parent, text=f"T{label}:").grid(row=row, column=i*2, padx=(5,0), pady=(0,vert_pad))
+            spinbox = DragSpinbox(parent,
+                                  default_value=float(self.default_translation[i]),
+                                  initial_value=float(self.translation[i].get()),
+                                  textvariable=self.translation[i],
+                                  width=10,
+                                  increment=0.1,
+                                  command=self.run_command)
+            spinbox.grid(row=row, column=i*2+1, pady=(0,vert_pad))
+        row += 1
+
+        for i, label in enumerate(labels):
+            ttk.Label(parent, text=f"R{label}:").grid(row=row, column=i*2, padx=(5,0), pady=(0,vert_pad))
+            spinbox = DragSpinbox(parent,
+                                  default_value=float(self.default_rotation[i]),
+                                  initial_value=float(self.rotation[i].get()),
+                                  textvariable=self.rotation[i],
+                                  width=10,
+                                  increment=0.1,
+                                  command=self.run_command)
+            spinbox.grid(row=row, column=i*2+1, pady=(0,vert_pad))
+        row += 1
+
+        for i, label in enumerate(labels):
+            ttk.Label(parent, text=f"S{label}:").grid(row=row, column=i*2, padx=(5,0), pady=(0,vert_pad))
+            spinbox = DragSpinbox(parent,
+                                  default_value=float(self.default_scale[i]),
+                                  initial_value=float(self.scale[i].get()),
+                                  textvariable=self.scale[i],
+                                  width=10,
+                                  increment=0.1,
+                                  command=self.run_command)
+            spinbox.grid(row=row, column=i*2+1, pady=(0,vert_pad))
+
+    def toggle_controls(self):
+        self.collapsible_frame.toggle()
+        self.run_command()  # Ensure any necessary updates occur after toggling
+
+    def run_command(self):
+        if hasattr(self, 'command') and callable(self.command):
+            self.command()
+
+    def __str__(self):
+        # Get the current transformation and rotation orders
+        transform_order = self.transformation_order.get()
+        rot_order = self.rotation_order.get()
+
+        # Read values directly from the controls
+        translation = [float(var.get()) for var in self.translation]
+        rotation = [float(var.get()) for var in self.rotation]
+        scale = [float(var.get()) for var in self.scale]
+
+        # Initialize list to store the operations
+        operations = []
+
+        # Helper function to create rotation string
+        def rotation_str(angle, axis):
+            if abs(angle) > 0.001:  # Only include non-zero rotations
+                return f"rotate({angle:.3f}, {1 if axis == 'x' else 0}, {1 if axis == 'y' else 0}, {1 if axis == 'z' else 0})"
+            return None
+
+        # Add operations based on the transformation order
+        for op in transform_order:
+            if op == 'T':
+                # Always include translation, even if it's (0, 0, 0)
+                operations.append(f"translate({translation[0]:.3f}, {translation[1]:.3f}, {translation[2]:.3f})")
+            elif op == 'R':
+                for axis in rot_order:
+                    index = 'XYZ'.index(axis)
+                    rot = rotation_str(rotation[index], axis.lower())
+                    if rot:
+                        operations.append(rot)
+            elif op == 'S':
+                if not all(abs(s - 1.0) < 0.001 for s in scale):  # Only include if scale is not uniformly 1.0
+                    operations.append(f"scale({scale[0]:.3f}, {scale[1]:.3f}, {scale[2]:.3f})")
+
+        # Format the operations string
+        if not operations:
+            return ""
+
+        result = ""
+        indent = " " * self.indentation 
+
+
+        for i, op in enumerate(operations):
+            if i == 0:
+                result += op
+            else:
+                result += f"\n{indent}{op}"
+
+            if i < len(operations) - 1:
+                result += " *"
+
+        return result
+
+
+class BlurredNodeXformControl(ttk.Frame):
+    def __init__(self, master, initial_operations1=None, initial_operations2=None, **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.node_xform1 = NodeXformControl(self, initial_operations=initial_operations1)
+        self.node_xform2 = NodeXformControl(self, initial_operations=initial_operations2)
+
+        self.node_xform2.transformation_order.set(self.node_xform1.transformation_order.get())
+        self.node_xform2.rotation_order.set(self.node_xform1.rotation_order.get())
+
+        # Create UI elements
+        self.create_ui()
+
+    def is_dirty(self):
+        # Return True if either the start or end transform is dirty
+        return self.node_xform1.is_dirty() or self.node_xform2.is_dirty()
+
+    def is_not_default(self):
+        # Return True if either the start or end transform is dirty
+        return self.node_xform1.is_not_default() or self.node_xform2.is_not_default()
+
+    def create_ui(self):
+        ttk.Label(self, text="Blur Start:").grid(row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 5))
+        self.node_xform1.grid(row=1, column=0, sticky="w", padx=(20, 0))
+
+        ttk.Label(self, text="Blur End:").grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(10, 5))
+        self.node_xform2.grid(row=3, column=0, sticky="w", padx=(20, 0))
+
+    def set_command(self, command):
+        self.node_xform1.command = command
+        self.node_xform2.command = command
+
+    def __str__(self):
+        # Assume 26 spaces of indentation for blurred xforms
+        self.node_xform1.indentation = 26
+        self.node_xform2.indentation = 26
+
+        xform1 = str(self.node_xform1).strip()
+        xform2 = str(self.node_xform2).strip()
+
+        # Remove the parameter name if present
+        if xform1.startswith('["node_xform"] = '):
+            xform1 = xform1[17:]
+        if xform2.startswith('["node_xform"] = '):
+            xform2 = xform2[17:]
+
+        # Construct the blur call
+        blur_call = f'blur({xform1},\n     {" " * 21}{xform2})'
+
+        # Add the parameter name back
+        return blur_call
+
+
+class DragSpinbox(PopupMenuMixin, ttk.Spinbox):
+    def __init__(self, master, default_value, initial_value, **kwargs):
+        self.command_callback = kwargs.pop('command', None)
+        self.var = kwargs.pop('textvariable', tk.StringVar())
+        self.default_value = default_value
+        self.initial_value = initial_value
+        kwargs['textvariable'] = self.var
+
+        # Set minimum and maximum widths
+        self.min_width = 3
+        self.max_width = 8
+
+        # Set initial width
+        initial_width = max(min(kwargs.get('width', 5), self.max_width), self.min_width)
+        kwargs['width'] = initial_width
+
+        super().__init__(master, **kwargs)
+
+        self.drag_start_x = None
+        self.drag_start_value = None
+
+        self.bind('<Button-2>', self.start_drag)
+        self.bind('<B2-Motion>', self.dragging)
+        self.bind('<ButtonRelease-2>', self.end_drag)
+
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        self.bind('<<Increment>>', self.increment)
+        self.bind('<<Decrement>>', self.decrement)
+
+        self.bind('<Up>', self.increment)
+        self.bind('<Down>', self.decrement)
+        self.bind('<Shift-Up>', lambda e: self.increment(e, shift=True))
+        self.bind('<Shift-Down>', lambda e: self.decrement(e, shift=True))
+
+        self.configure(state='readonly')
+
+        self.bind('<Double-1>', self.on_double_click)
+        self.bind('<Return>', self.on_enter)
+        self.bind('<FocusOut>', self.on_focus_out)
+
+        self.var.trace_add('write', self.on_value_change)
+
+        self.set_value(initial_value)
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.set_value(value_to_set)
+        self.trigger_command()
+
+    def configure(self, cnf=None, **kw):
+        if 'width' in kw:
+            kw['width'] = max(self.min_width, min(kw['width'], self.max_width))
+        super().configure(cnf, **kw)
+
+    def get(self):
+        try:
+            return float(self.var.get())
+        except ValueError:
+            return self.initial_value
+
+    def set_value(self, value):
+        self.var.set(f"{float(value):.3f}")
+
+    def increment(self, event=None, shift=False):
+        current = self.get()
+        increment = float(self.cget('increment'))
+        if shift:
+            increment *= 10
+        self.set_value(current + increment)
+        self.trigger_command()
+        return "break"
+
+    def decrement(self, event=None, shift=False):
+        current = self.get()
+        increment = float(self.cget('increment'))
+        if shift:
+            increment *= 10
+        self.set_value(current - increment)
+        self.trigger_command()
+        return "break"
+
+    def start_drag(self, event):
+        self.drag_start_x = event.x
+        self.drag_start_value = self.get()
+
+    def dragging(self, event):
+        if self.drag_start_x is not None:
+            dx = event.x - self.drag_start_x
+            increment = float(self.cget('increment'))
+            delta = dx / 10 * increment
+            new_value = self.drag_start_value + delta
+            self.set_value(new_value)
+
+    def end_drag(self, event):
+        self.drag_start_x = None
+        self.drag_start_value = None
+        self.trigger_command()
+
+    def on_double_click(self, event):
+        self.configure(state='normal')
+        self.select_range(0, tk.END)
+        self.icursor(tk.END)
+        return "break"
+
+    def on_enter(self, event):
+        self.on_focus_out(event)
+        return "break"
+
+    def on_focus_out(self, event):
+        try:
+            new_value = float(self.var.get())
+            self.set_value(new_value)
+        except ValueError:
+            self.set_value(self.initial_value)
+        self.configure(state='readonly')
+        self.trigger_command()
+
+    def on_value_change(self, *args):
+        # Don't try to convert to float here
+        pass
+
+    def trigger_command(self):
+        if callable(self.command_callback):
+            self.command_callback()
+
+
+class IntSpinbox(DragSpinbox):
+    def __init__(self, master, default_value, initial_value, **kwargs):
+        self.int_var = tk.IntVar(value=int(initial_value))
+        kwargs['textvariable'] = self.int_var
+        super().__init__(master, default_value, initial_value, **kwargs)
+        self.initial_value = initial_value
+
+    def get(self):
+        try:
+            return self.int_var.get()
+        except tk.TclError:
+            return self.initial_value
+
+    def set_value(self, value):
+        self.int_var.set(int(value))
+
+    def increment(self, event=None, shift=False):
+        current = self.get()
+        increment = int(self.cget('increment'))
+        if shift:
+            increment *= 10
+        self.set_value(current + increment)
+        self.trigger_command()
+        return "break"
+
+    def decrement(self, event=None, shift=False):
+        current = self.get()
+        increment = int(self.cget('increment'))
+        if shift:
+            increment *= 10
+        self.set_value(current - increment)
+        self.trigger_command()
+        return "break"
+
+    def dragging(self, event):
+        if self.drag_start_x is not None:
+            dx = event.x - self.drag_start_x
+            increment = int(self.cget('increment'))
+            delta = int(dx / 10) * increment
+            new_value = self.drag_start_value + delta
+            self.set_value(new_value)
+
+    def on_focus_out(self, event):
+        try:
+            new_value = int(self.get())
+            self.set_value(new_value)
+        except ValueError:
+            self.set_value(self.initial_value)
+        self.configure(state='readonly')
+        self.trigger_command()
+
+
+class SliderWithSpinbox(PopupMenuMixin, ttk.Frame):
+    def __init__(self, master, control_type, default_value, initial_value, min_val, max_val, command=None, **kwargs):
+        super().__init__(master, **kwargs)
+        self.control_type = control_type
+        self.command = command
+        self.default_value = default_value
+        self.initial_value = initial_value
+
+        self.slider = tk.Scale(self, from_=min_val, to=max_val, orient='horizontal',
+                               resolution=(1 if control_type == "int" else 0.01),
+                               showvalue=0, length=200,
+                               bg=DK_BG_COLOR, fg=FG_COLOR, troughcolor=DK_BG_COLOR,
+                               highlightthickness=0)  # Remove highlight border
+        self.slider.set(initial_value)
+        self.slider.pack(side=tk.LEFT, expand=True, fill=tk.X)
+
+        if control_type == "int":
+            self.spinbox = IntSpinbox(self,
+                                      int(default_value),
+                                      int(initial_value),
+                                      width=5, increment=1)
+        else:
+            self.spinbox = DragSpinbox(self,
+                                       float(default_value),
+                                       float(initial_value),
+                                       width=5, increment=0.1)
+
+        self.spinbox.pack(side=tk.LEFT, padx=(5, 0))
+
+        self.spinbox.command_callback = self.spinbox_callback
+        self.slider.config(command=self.slider_callback)
+        self.slider.bind("<Button-1>", self.on_slider_click)
+
+        # Completely block all middle mouse button events on the slider
+        self.slider.bind("<Button-2>", lambda e: "break")
+        self.slider.bind("<B2-Motion>", lambda e: "break")
+        self.slider.bind("<ButtonRelease-2>", lambda e: "break")
+
+        # Bind to configure event
+        self.bind('<Configure>', self.on_configure)
+        self.last_width = self.winfo_width()
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+        # Bind reset controls to both frame and slider using a single reset function
+        for widget in (self, self.slider):
+            widget.bind('<Control-Button-2>',
+                       lambda e, v=self.initial_value: self.reset_value(e, v))
+            widget.bind('<Control-Shift-Button-2>',
+                       lambda e, v=self.default_value: self.reset_value(e, v))
+            # Bind right-click to show context menu
+            widget.bind('<Button-3>', self.show_context_menu)
+
+    def reset_value(self, event, value_to_set):
+        value = int(value_to_set) if self.control_type == "int" else float(value_to_set)
+
+        # Check if value is outside current range and expand if needed
+        current_min = self.slider.cget('from')
+        current_max = self.slider.cget('to')
+
+        if value < current_min:
+            self.slider.configure(from_=value)
+        elif value > current_max:
+            self.slider.configure(to=value)
+
+        self.set(value)
+        if self.command:
+            self.command()
+
+        # Return "break" to prevent event from propagating and stop default Scale widget
+        # behavior from overriding our reset value with the mouse position
+        return "break" if event else None  # Only return "break" for event-based calls
+
+    def is_dirty(self):
+        current_value = self.get()
+        if self.control_type == "int":
+            return int(current_value) != int(self.initial_value)
+        else:
+            # Use small epsilon for float comparison
+            return abs(float(current_value) - float(self.initial_value)) > 0.001
+
+    def is_not_default(self):
+        current_value = self.get()
+        if self.control_type == "int":
+            return int(current_value) != int(self.default_value)
+        else:
+            # Use small epsilon for float comparison
+            return abs(float(current_value) - float(self.default_value)) > 0.001
+
+    def on_configure(self, event):
+        # Only adjust if the width has changed significantly
+        if abs(event.width - self.last_width) > 10:
+            self.last_width = event.width
+            # Adjust the spinbox width based on the frame width
+            frame_width = event.width
+            slider_width = max(100, frame_width - 80)  # Minimum slider width of 100
+            spinbox_width = max(5, min((frame_width - slider_width) // 8, 8))
+
+            self.slider.config(length=slider_width)
+            self.spinbox.configure(width=spinbox_width)
+
+    def spinbox_callback(self):
+        self.update_slider_from_spinbox()
+        if self.command:
+            self.command()
+
+    def slider_callback(self, value):
+        self.update_spinbox_from_slider(value)
+        if self.command:
+            self.command()
+
+    def on_slider_click(self, event):
+        click_position = event.x / self.slider.winfo_width()
+        value = self.slider.cget('from') + click_position * (self.slider.cget('to') - self.slider.cget('from'))
+        self.slider.set(value)
+        self.update_spinbox_from_slider(value)
+        if self.command:
+            self.command()
+
+    def update_slider_from_spinbox(self):
+            try:
+                value = self.spinbox.get()
+
+                # Check if value is outside current range and expand if needed
+                current_min = self.slider.cget('from')
+                current_max = self.slider.cget('to')
+
+                if value < current_min:
+                    self.slider.configure(from_=value)
+                elif value > current_max:
+                    self.slider.configure(to=value)
+
+                self.slider.set(value)
+
+            except ValueError:
+                pass
+
+    def update_spinbox_from_slider(self, value):
+        self.spinbox.set_value(value)
+
+    def get(self):
+        return self.spinbox.get()
+
+    def set(self, value):
+        self.slider.set(value)
+        self.spinbox.set_value(value)
+
+
+class CustomRGBButton(PopupMenuMixin, tk.Button):
+    def __init__(self, master, default_value, initial_value, **kwargs):
+        self.initial_value = initial_value
+        super().__init__(master, **kwargs)
+        self.default_value = default_value
+        self.initial_value = initial_value
+        self.value = initial_value
+        self.config(bg=self.rgb_to_hex(initial_value), command=self.choose_value)
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.value = value_to_set
+        self.config(bg=self.rgb_to_hex(self.value))
+        control_changed()
+
+    def choose_value(self):
+        dialog = CustomColorChooser(self.master, self.value)
+        dialog.wait_window()
+        if dialog.result:
+            self.value = dialog.result
+            self.config(bg=self.rgb_to_hex(self.value))
+            control_changed()
+
+    def is_dirty(self):
+        return any(self.value[i] != self.initial_value[i] for i in range(3))
+
+    def is_not_default(self):
+        return any(self.value[i] != self.default_value[i] for i in range(3))
+
+    @staticmethod
+    def rgb_to_hex(rgb):
+        return '#{:02x}{:02x}{:02x}'.format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+
+
+class CustomCheckbutton(PopupMenuMixin, ttk.Checkbutton):
+    def __init__(self, master, default_value, initial_value, **kwargs):
+        self.var = tk.BooleanVar(value=initial_value)
+        self.default_value = default_value
+        self.initial_value = initial_value
+        super().__init__(master, variable=self.var, command=control_changed, **kwargs)
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.var.set(value_to_set)
+        self.run_command()
+
+    def reset_to_default(self, event):
+        self.var.set(self.default_value)
+        self.run_command()
+
+    def get(self):
+        return self.var.get()
+
+    def is_dirty(self):
+        return self.var.get() != self.initial_value
+
+    def is_not_default(self):
+        return self.var.get() != self.default_value
+
+class CustomOptionMenu(PopupMenuMixin, ttk.OptionMenu):
+    def __init__(self, master, values, default_value, initial_value, width=20, **kwargs):
+        self.var = tk.StringVar()
+        self.initial_value = initial_value
+        self.default_value = default_value
+
+        # Remove 'width' from kwargs as it's not a valid option for ttk.OptionMenu
+        kwargs.pop('width', None)
+
+        super().__init__(master, self.var, initial_value, *values, **kwargs)
+
+        # Configure the button part of the OptionMenu
+        self.configure(style="TMenubutton")
+
+        # Set the width of the underlying Combobox
+        self['menu'].config(font=('TkDefaultFont', 9))
+        self.configure(width=width)
+
+        self.var.set(initial_value)
+        self.var.trace('w', lambda *args: control_changed())
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.var.set(value_to_set)
+        control_changed()
+
+    def reset_to_default(self, event):
+        self.var.set(self.default_value)
+        control_changed()
+
+    def get(self):
+        return self.var.get()
+
+    def is_dirty(self):
+        return self.var.get() != self.initial_value
+
+    def is_not_default(self):
+        return self.var.get() != self.default_value
+
+class CustomColorChooser(tk.Toplevel):
+    def __init__(self, parent, initial_color):
+        super().__init__(parent)
+        self.title("Color Selector")
+        self.geometry("500x250")
+        self.resizable(False, False)
+        self.result = None
+
+        r, g, b = initial_color
+
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        sliders_frame = ttk.Frame(main_frame)
+        sliders_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.r_slider, self.r_value = self.create_slider(sliders_frame, "R:", r, 0, 1)
+        self.g_slider, self.g_value = self.create_slider(sliders_frame, "G:", g, 0, 1)
+        self.b_slider, self.b_value = self.create_slider(sliders_frame, "B:", b, 0, 1)
+
+        ttk.Separator(sliders_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+
+        h, s, v = colorsys.rgb_to_hsv(r, g, b)
+        self.h_slider, self.h_value = self.create_slider(sliders_frame, "H:", h, 0, 1)
+        self.s_slider, self.s_value = self.create_slider(sliders_frame, "S:", s, 0, 1)
+        self.v_slider, self.v_value = self.create_slider(sliders_frame, "V:", v, 0, 1)
+
+        preview_frame = ttk.Frame(main_frame)
+        preview_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(10, 0))
+        self.preview = tk.Canvas(preview_frame, width=100, height=100, bg=self.rgb_to_hex(r, g, b))
+        self.preview.pack(pady=10)
+
+        button_frame = ttk.Frame(preview_frame)
+        button_frame.pack(side=tk.TOP, pady=(30, 0))
+        ttk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.on_cancel).pack(side=tk.LEFT, padx=5)
+
+        for slider in [self.r_slider, self.g_slider, self.b_slider]:
+            slider.bind("<Button-1>", lambda e, s="rgb": self.on_slider_click(e, s))
+            slider.bind("<B1-Motion>", lambda e, s="rgb": self.on_slider_click(e, s))
+        for slider in [self.h_slider, self.s_slider, self.v_slider]:
+            slider.bind("<Button-1>", lambda e, s="hsv": self.on_slider_click(e, s))
+            slider.bind("<B1-Motion>", lambda e, s="hsv": self.on_slider_click(e, s))
+
+    def create_slider(self, parent, label, initial, from_, to):
+        frame = ttk.Frame(parent)
+        frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(frame, text=label, width=2).pack(side=tk.LEFT, padx=(0, 5))
+        slider = tk.Scale(frame, from_=from_, to=to, resolution=0.01, orient=tk.HORIZONTAL, showvalue=0)
+        slider.set(initial)
+        slider.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        value_label = ttk.Label(frame, text=f"{initial:.2f}", width=5)
+        value_label.pack(side=tk.LEFT, padx=(5, 0))
+
+        return slider, value_label
+
+    def on_slider_click(self, event, slider_type):
+        slider = event.widget
+        value = (event.x / slider.winfo_width()) * (slider.cget('to') - slider.cget('from')) + slider.cget('from')
+        slider.set(value)
+        if slider_type == "rgb":
+            self.update_color_from_rgb()
+        else:
+            self.update_color_from_hsv()
+
+    def update_color_from_rgb(self):
+        r, g, b = self.r_slider.get(), self.g_slider.get(), self.b_slider.get()
+        h, s, v = colorsys.rgb_to_hsv(r, g, b)
+        self.h_slider.set(h)
+        self.s_slider.set(s)
+        self.v_slider.set(v)
+        self.preview.config(bg=self.rgb_to_hex(r, g, b))
+        self.update_value_labels()
+
+    def update_color_from_hsv(self):
+        h, s, v = self.h_slider.get(), self.s_slider.get(), self.v_slider.get()
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        self.r_slider.set(r)
+        self.g_slider.set(g)
+        self.b_slider.set(b)
+        self.preview.config(bg=self.rgb_to_hex(r, g, b))
+        self.update_value_labels()
+
+    def update_value_labels(self):
+        self.r_value.config(text=f"{self.r_slider.get():.2f}")
+        self.g_value.config(text=f"{self.g_slider.get():.2f}")
+        self.b_value.config(text=f"{self.b_slider.get():.2f}")
+        self.h_value.config(text=f"{self.h_slider.get():.2f}")
+        self.s_value.config(text=f"{self.s_slider.get():.2f}")
+        self.v_value.config(text=f"{self.v_slider.get():.2f}")
+
+    def rgb_to_hex(self, r, g, b):
+        return f'#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}'
+
+    def on_ok(self):
+        self.result = (self.r_slider.get(), self.g_slider.get(), self.b_slider.get())
+        self.destroy()
+
+    def on_cancel(self):
+        self.result = None
+        self.destroy()
+
+class CollapsibleFrame(ttk.Frame):
+    all_frames = []  # Class variable to keep track of all frames
+
+    def __init__(self, parent, text, *args, **kwargs):
+        ttk.Frame.__init__(self, parent, *args, **kwargs)
+
+        self.show = tk.BooleanVar()
+        self.show.set(True)  # Start expanded
+
+        self.title_frame = ttk.Frame(self)
+        self.title_frame.pack(fill="x", expand=1)
+
+        self.toggle_button = ttk.Button(self.title_frame, width=2, text='-',
+                                        style='Collapsible.TButton')
+        self.toggle_button.pack(side="left", pady=5, padx=5)
+
+        ttk.Label(self.title_frame,
+                  text=text,
+                  font=("TkDefaultFont", 10, "bold")).pack(side="left", pady=5, padx=5)
+
+        self.sub_frame = ttk.Frame(self, padding=(20, 0, 0, 0))
+        self.sub_frame.pack(fill="x", expand=1)  # Start expanded
+
+        CollapsibleFrame.all_frames.append(self)  # Add this frame to the list of all frames
+
+    def toggle(self):
+        if self.show.get():
+            self.sub_frame.pack_forget()
+            self.toggle_button.configure(text='+')
+        else:
+            self.sub_frame.pack(fill="x", expand=1)
+            self.toggle_button.configure(text='-')
+        self.show.set(not self.show.get())
+
+    @classmethod
+    def clear_all(cls):
+        cls.all_frames = list()
+
+    @classmethod
+    def toggle_all(cls, show):
+        for frame in cls.all_frames:
+            frame.show.set(not show)
+            frame.toggle()
+
+
+class CustomSeparator(tk.Frame):
+    def __init__(self, master, color, thickness=1, **kwargs):
+        super().__init__(master, height=thickness, bg=color, **kwargs)
+
+
+class FileEntryWithBrowse(PopupMenuMixin, tk.Frame):
+    def __init__(self, master, default_value, initial_value, command=None, **kwargs):
+        super().__init__(master, **kwargs)
+        self.command = command
+        self.initial_value = initial_value.replace('"', '')
+        self.default_value = default_value.replace('"', '')
+
+        # Use CustomStringEntry instead of tk.Entry
+        self.entry = CustomStringEntry(self, default_value, initial_value)
+        self.entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 10))  # Add right padding
+
+        # Create and configure the browse button
+        self.browse_button = tk.Button(self, text="Browse", command=self.browse)
+        self.browse_button.configure(
+            bg="#3C3F41",  # Dark gray background to match the theme
+            fg=FG_COLOR,
+            activebackground="#4A6984",  # Slightly lighter when clicked
+            activeforeground=FG_COLOR,
+            font=("TkDefaultFont", 12)
+        )
+        self.browse_button.pack(side=tk.RIGHT)
+
+        # Use the entry's StringVar
+        self.var = self.entry.var
+
+        self.var.trace('w', self.on_value_change)
+
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.var.set(value_to_set)
+        control_changed()
+
+    def browse(self):
+        initial_dir = os.path.dirname(self.var.get()) or os.getcwd()
+        filename = filedialog.askopenfilename(initialdir=initial_dir)
+        if filename:
+            self.var.set(filename)
+
+    def on_value_change(self, *args):
+        if self.command:
+            self.command()
+
+    def get(self):
+        return self.entry.get()
+
+    def set(self, value):
+        self.entry.set(value)
+
+    def is_dirty(self):
+        return self.get() != self.initial_value
+
+    def is_not_default(self):
+        return self.get() != self.default_value
+
+class CustomStringEntry(PopupMenuMixin, tk.Entry):
+    def __init__(self, master, default_value, initial_value, **kwargs):
+        self.var = tk.StringVar(value=initial_value)
+        self.initial_value = initial_value
+        self.default_value = default_value
+
+        super().__init__(master, textvariable=self.var, **kwargs)
+
+        # Configure the entry's appearance
+        self.configure(bg=DK_BG_COLOR,
+                       fg=FG_COLOR,
+                       insertbackground=FG_COLOR,
+                       font=("TkDefaultFont", 12)
+        )
+
+        self.var.trace('w', lambda *args: control_changed())
+        self.bind('<Control-Button-2>',
+                   lambda e, v=self.initial_value: self.reset_value(e, v))
+        self.bind('<Control-Shift-Button-2>',
+                   lambda e, v=self.default_value: self.reset_value(e, v))
+
+        # Set up the reset menu
+        self._setup_reset_menu()
+
+    def reset_value(self, event, value_to_set):
+        self.var.set(value_to_set)
+        control_changed()
+
+    def get(self):
+        return self.var.get()
+
+    def set(self, value):
+        self.var.set(value)
+
+    def is_dirty(self):
+        return self.var.get() != self.initial_value
+
+    def is_not_default(self):
+        return self.var.get() != self.default_value
+
+
+class ScrollableFrame(ttk.Frame):
+    def __init__(self, container, *args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+
+        self.canvas_frame = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.canvas.bind('<Configure>', self.resize_frame)
+
+        # Bind mousewheel to the canvas
+        self.bind_mousewheel()
+
+    def resize_frame(self, event):
+        self.canvas.itemconfig(self.canvas_frame, width=event.width)
+
+    def bind_mousewheel(self):
+        # This function will be called when the mouse enters the canvas
+        def _bound_to_mousewheel(event):
+            self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            self.canvas.bind_all("<Button-4>", _on_mousewheel)
+            self.canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        # This function will be called when the mouse leaves the canvas
+        def _unbound_to_mousewheel(event):
+            self.canvas.unbind_all("<MouseWheel>")
+            self.canvas.unbind_all("<Button-4>")
+            self.canvas.unbind_all("<Button-5>")
+
+        def _on_mousewheel(event):
+            if event.num == 4 or event.delta > 0:
+                self.canvas.yview_scroll(-1, "units")
+            elif event.num == 5 or event.delta < 0:
+                self.canvas.yview_scroll(1, "units")
+
+        # Bind the mousewheel event to the canvas
+        self.canvas.bind('<Enter>', _bound_to_mousewheel)
+        self.canvas.bind('<Leave>', _unbound_to_mousewheel)
+
+    def reset_scrollregion(self):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+
+def write_file(output_filename, only_deltas=False):
+    with open(output_filename, 'w') as f:
+        for line in scene_header_lines:
+            f.write(line)
+
+        for (assignment, class_name, obj_name), controls in object_controls.items():
+
+            if only_deltas:
+                object_is_dirty = False
+                # Don't write the object if none of the controls are dirty
+                for control_spec in controls:
+                    if not isinstance(control_spec, tuple):
+                        continue
+
+                    control = control_spec[1]
+                    try:
+                        if control.is_dirty():
+                            object_is_dirty = True
+                            break
+                    except AttributeError:
+                        continue
+
+                if not object_is_dirty:
+                    continue
+
+            # Don't write the object if none of the controls are different from the default
+            object_is_default = True
+            for control_spec in controls:
+                if not isinstance(control_spec, tuple):
+                    continue
+
+                control = control_spec[1]
+                try:
+                    if control.is_not_default():
+                        object_is_default = False
+                        break
+                except AttributeError:
+                    continue
+
+            if object_is_default:
+                continue
+
+            # Write the object header
+            object_header = ""
+            if assignment: object_header += assignment
+
+            if class_name == "SceneVariables":
+                object_header += f'{class_name}'
+                f.write(f'{object_header} {{\n')
+            else:
+                object_header += f'{class_name}("{obj_name}")'
+                f.write(f'{object_header} {{\n')
+
+            # Write the parameters
+            for control_spec in controls:
+                if not isinstance(control_spec, tuple):
+                    # Non-control lines just pass through to output file
+                    f.write(control_spec)
+                    continue
+
+                control_name = control_spec[0]
+                control = control_spec[1]
+                control_type = control_spec[2]
+                metadata_dict = control_spec[3]
+
+                # Only write dirty controls of -delta mode is active
+                try:
+                    if only_deltas and not control.is_dirty():
+                        continue
+                except AttributeError:
+                    continue
+
+                # Only write non-default values
+                try:
+                    if not control.is_not_default():
+                        continue
+                except AttributeError:
+                    continue
+
+                control_line = f'    ["{control_name}"] = '
+                try:
+                    if control_type == "bool":
+                        value = control.get()
+                        control_line += f'{str(value).lower()},'
+                    elif control_type == "float":
+                        value = control.get()
+                        control_line += f'{value},'
+                    elif control_type == "int":
+                        if isinstance(control, CustomOptionMenu):  # This is for OptionMenu
+                            selected_value = control.get()
+                            # Extract the enumeration value (everything after the colon and space)
+                            value = selected_value.split(': ', 1)[1]
+                            # If the value is a string, we need to enclose it in quotes
+                            if not value.isdigit():
+                                value = f'"{value}"'
+                            control_line += f'{value},'
+                        else:
+                            value = int(control.get())
+                            control_line += f'{value},'
+                    elif control_type == "rgb":
+                        r, g, b = control.initial_value
+                        control_line += f'Rgb({r:.3f}, {g:.3f}, {b:.3f}),'
+                    elif control_type == "mat4d":
+                        control_line += f'{control},'
+                    elif control_type == "string":
+                        value = control.get()
+                        control_line += f'"{value}",'
+                    else:
+                        if control_name != "geometries" and control_name != "lights":
+                            print(f'Warning: Unknown control type {control_type} for {object_header} ["{control_name}"], skipping.')
+                        continue
+
+                    if metadata_dict:
+                        control_line += ' -- '
+                        for key in metadata_dict.keys():
+                            control_line += f'{key}={metadata_dict[key]} '
+
+                    f.write(f'{control_line}\n')
+
+                except Exception as e:
+                    print(f"Warning: Error processing {control_name} of type {control_type}. Error: {e}")
+
+
+def set_dark_theme(root):
+    # Create and configure the dark theme
+    style = ttk.Style(root)
+    style.theme_create("dark_theme", parent="alt", settings={
+        "TFrame": {"configure": {"background": BG_COLOR}},
+        "TLabel": {"configure": {"background": BG_COLOR, "foreground": FG_COLOR}},
+        "TButton": {"configure": {"background": BUTTON_BG, "foreground": BUTTON_FG}},
+        "TEntry": {"configure": {"fieldbackground": ENTRY_BG, "foreground": ENTRY_FG}},
+        "TScale": {
+            "configure": {
+                "background": DK_BG_COLOR,
+                "troughcolor": DK_BG_COLOR,
+                "slidercolor": BUTTON_BG,
+            }
+        },
+        "TCheckbutton": {
+            "configure": {
+                "background": BG_COLOR,
+                "foreground": FG_COLOR,
+                "indicatorbackground": ENTRY_BG,
+                "indicatorforeground": SELECT_BG,
+            },
+            "map": {
+                "background": [("active", BG_COLOR)],
+                "foreground": [("disabled", "gray")],
+            }
+        },
+        "TSpinbox": {
+            "configure": {
+                "fieldbackground": DK_BG_COLOR,
+                "background": DK_BG_COLOR,
+                "foreground": FG_COLOR,
+                "arrowcolor": FG_COLOR,
+                "insertcolor": FG_COLOR,
+                "selectbackground": SELECT_BG,
+                "selectforeground": FG_COLOR
+            }
+        },
+        "TMenubutton": {
+            "configure": {
+                "background": DK_BG_COLOR,
+                "foreground": FG_COLOR,
+                "relief": "raised",
+            }
+        },
+        "Collapsible.TButton": {
+            "configure": {
+                "background": DK_BG_COLOR,
+                "foreground": FG_COLOR,
+                "relief": "raised",
+            },
+        },
+    })
+    style.theme_use("dark_theme")
+
+    # Configure colors for non-ttk widgets
+    root.config(bg=BG_COLOR)
+    root.option_add("*Background", BG_COLOR)
+    root.option_add("*Entry.Background", ENTRY_BG)
+    root.option_add("*Entry.Foreground", ENTRY_FG)
+
+    # Adjust checkbox appearance
+    style.map('TCheckbutton',
+              background=[('active', BG_COLOR)],
+              indicatorcolor=[('selected', SELECT_BG), ('!selected', ENTRY_BG)])
+
+    # Configure colors for dropdown menu
+    root.option_add("*Menu*Background", 'black')
+    root.option_add("*Menu*Foreground", 'white')
+    root.option_add("*Menu*activeBackground", 'black')
+    root.option_add("*Menu*activeForeground", 'white')
+
+    # Add styles for tooltip
+    style.configure("Tooltip.TLabel",
+                    background="#2B2B2B",
+                    foreground="#FFFFFF",
+                    font=("Helvetica", "12", "normal"))
+
+def control_changed(*args):
+    write_file(output_file)
+    if deltas_file:
+        write_file(deltas_file, True)
+
+def choose_color(button):
+    current_color = button.color
+
+    # Get the position of the main window
+    main_window = button.master.winfo_toplevel()
+    main_window_x = main_window.winfo_rootx()
+    main_window_y = main_window.winfo_rooty()
+
+    # Create the color chooser dialog
+    dialog = CustomColorChooser(main_window, current_color)
+
+    # Set the position of the dialog relative to the main window
+    dialog.geometry(f"+{main_window_x+50}+{main_window_y+50}")
+
+    dialog.wait_window()
+    if dialog.result:
+        button.color = dialog.result
+        hex_color = '#{:02x}{:02x}{:02x}'.format(int(dialog.result[0]*255),
+                                                 int(dialog.result[1]*255),
+                                                 int(dialog.result[2]*255))
+        button.config(bg=hex_color)
+        control_changed()
+
+def on_closing():
+    # Save the window position and size
+    geometry = root.geometry().split('+')
+    size = geometry[0].split('x')
+    position = geometry[1:]
+    with open(POSITION_FILE, 'w') as f:
+        json.dump({"width": size[0], "height": size[1], "x": position[0], "y": position[1]}, f)
+    root.destroy()
+
+def add_separator(parent, row, is_object_separator=False):
+    if is_object_separator:
+        separator = CustomSeparator(parent, color='#999999', thickness=2)
+        separator.grid(row=row, column=0, columnspan=3, sticky='ew', pady=0)
+    else:
+        separator = CustomSeparator(parent, color='#555555', thickness=1)
+        separator.grid(row=row, column=0, columnspan=3, sticky='ew', pady=5)
+    return row + 1
+
+def on_toggle(event):
+    frame = event.widget.master.master  # Navigate up to the CollapsibleFrame
+    if event.state & 0x4:  # Check if Ctrl key is pressed
+        show = frame.toggle_button.cget('text') == '+'  # Determine the new state
+        CollapsibleFrame.toggle_all(show)
+    else:
+        # Toggle just this frame
+        frame.toggle()
+    return "break"  # Prevent the event from propagating
+
+def create_tooltip(widget, text):
+    def enter(event):
+        global tooltip
+        x = y = 0
+        x, y, _, _ = widget.bbox("insert")
+        x += widget.winfo_rootx() + 25
+        y += widget.winfo_rooty() + 25
+
+        # Creates a toplevel window
+        tooltip = tk.Toplevel(widget)
+        tooltip.wm_overrideredirect(True)
+        tooltip.wm_geometry(f"+{x}+{y}")
+
+        # Wrap text to 80 characters per line
+        wrapped_text = textwrap.fill(text, width=80)
+
+        # Use colors that contrast with the dark theme and a 12-point font
+        label = ttk.Label(tooltip, text=wrapped_text, justify='left',
+                          style="Tooltip.TLabel",
+                          relief='solid', borderwidth=1,
+                          font=("Helvetica", "12", "normal"))
+        label.pack(ipadx=4, ipady=2)
+
+        # Ensure the tooltip is on top and visible
+        tooltip.lift()
+        tooltip.attributes('-topmost', True)
+        tooltip.update()
+
+    def leave(event):
+        global tooltip
+        if tooltip:
+            tooltip.destroy()
+
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+def is_file_path(value):
+    # Check if the string looks like a file path with an extension
+    return bool(re.match(r'^(.*/)?(?:$|(.+?)(?:(\.[^.]*$)|$))', value) and '.' in value)
+
+def refresh_gui(filename):
+    # Clear existing GUI elements
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    CollapsibleFrame.clear_all()
+
+    parse_file(filename)
+
+    # Recreate the GUI
+    create_main_gui()
+
+    # Initial write to file
+    write_file(output_file)
+    if deltas_file:
+        write_file(deltas_file, True)
+
+def create_menu_bar():
+    global root
+    menu_bar = tk.Menu(root)
+    root.config(menu=menu_bar)
+
+    # Create File menu
+    file_menu = tk.Menu(menu_bar, tearoff=0)
+    menu_bar.add_cascade(label="File", menu=file_menu)
+
+    # Add Refresh submenu to File menu
+    file_menu.add_command(label="Re-read input file", command=lambda: refresh_gui(input_file))
+
+    # Create View menu
+    view_menu = tk.Menu(menu_bar, tearoff=0)
+    view_menu.configure(
+        bg='black',
+        fg='white',
+        activebackground='black',
+        activeforeground='white',
+        selectcolor='white'  # This makes the checkmark visible
+    )
+
+    menu_bar.add_cascade(label="View", menu=view_menu)
+
+    # Add show_all_parameters as a checkbutton menu item
+    show_all = tk.BooleanVar(value=show_all_parameters)
+
+    def on_show_all_changed(*args):
+        global show_all_parameters
+        show_all_parameters = show_all.get()
+        with tempfile.NamedTemporaryFile() as temp_file:
+            write_file(temp_file.name)
+            refresh_gui(temp_file.name)
+
+    view_menu.add_checkbutton(label="Show all parameters",
+                             variable=show_all,
+                             command=on_show_all_changed)
+
+def create_search_frame(parent):
+    search_frame = ttk.Frame(parent)
+    search_frame.pack(fill=tk.X, padx=10, pady=5)
+
+    ttk.Label(search_frame, text="Filter controls:").pack(side=tk.LEFT, padx=(0, 5))
+
+    search_var = tk.StringVar()
+    search_entry = ttk.Entry(search_frame, textvariable=search_var)
+    search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    # Store original grid configurations when initializing
+    original_configs = {}
+
+    def store_original_configs():
+        for frame in CollapsibleFrame.all_frames:
+            sub_frame = frame.sub_frame
+            for widget in sub_frame.winfo_children():
+                info = widget.grid_info()
+                if info:
+                    original_configs[widget] = {
+                        'row': info['row'],
+                        'column': info['column'],
+                        'sticky': info['sticky'],
+                        'padx': info['padx'],
+                        'pady': info['pady'],
+                        'columnspan': info['columnspan']
+                    }
+
+    def restore_all_controls():
+        """Restore all controls to their original state"""
+        for frame in CollapsibleFrame.all_frames:
+            frame.grid()
+            sub_frame = frame.sub_frame
+            for widget in sub_frame.winfo_children():
+                if widget in original_configs:
+                    widget.grid(**original_configs[widget])
+                    if isinstance(widget, (NodeXformControl, BlurredNodeXformControl)):
+                        widget.collapsible_frame.pack()
+                        if not widget.collapsible_frame.show.get():
+                            widget.collapsible_frame.toggle()
+
+    def restore_widget(widget):
+        if widget in original_configs:
+            widget.grid(**original_configs[widget])
+            if isinstance(widget, (NodeXformControl, BlurredNodeXformControl)):
+                widget.collapsible_frame.pack()
+                if not widget.collapsible_frame.show.get():
+                    widget.collapsible_frame.toggle()
+
+    def hide_widget(widget):
+        widget.grid_remove()
+        if isinstance(widget, (NodeXformControl, BlurredNodeXformControl)):
+            widget.collapsible_frame.pack_forget()
+
+    def filter_controls(*args):
+        search_term = search_var.get().lower()
+
+        # If this is the first time filtering, store original configurations
+        if not original_configs:
+            store_original_configs()
+
+        # Always start by restoring all controls
+        restore_all_controls()
+
+        # If search is empty, we're done
+        if not search_term:
+            return
+
+        for frame in CollapsibleFrame.all_frames:
+            sub_frame = frame.sub_frame
+            frame_visible = False
+
+            # Get all widgets by row
+            rows = {}
+            last_visible_row = -1
+            for widget in sub_frame.winfo_children():
+                info = widget.grid_info()
+                if info:
+                    row = info['row']
+                    if row not in rows:
+                        rows[row] = []
+                    rows[row].append(widget)
+
+            # Process each row
+            for row_num in sorted(rows.keys()):
+                row_widgets = rows[row_num]
+
+                # Check if this row is a separator
+                is_separator = any(isinstance(w, CustomSeparator) for w in row_widgets)
+                if is_separator:
+                    # Only show separator if we have visible controls before and after it
+                    has_visible_before = last_visible_row >= 0
+                    has_visible_after = False
+                    # Look ahead for next visible non-separator row
+                    for next_row in sorted(rows.keys()):
+                        if next_row <= row_num:
+                            continue
+                        next_widgets = rows[next_row]
+                        if any(isinstance(w, CustomSeparator) for w in next_widgets):
+                            continue
+                        # Found next non-separator row, check if it will be visible
+                        next_label = next((w for w in next_widgets if isinstance(w, ttk.Label)), None)
+                        if next_label:
+                            next_text = next_label.cget('text').lower().strip(' :')
+                            if search_term in next_text:
+                                has_visible_after = True
+                        break
+                    
+                    if not (has_visible_before and has_visible_after):
+                        for widget in row_widgets:
+                            hide_widget(widget)
+                    continue
+
+                # Find the label in this row
+                label = None
+                for widget in row_widgets:
+                    if isinstance(widget, ttk.Label):
+                        label = widget
+                        break
+
+                should_show = True  # Default to showing if no label (separators, etc)
+                if label:
+                    label_text = label.cget('text').lower().strip(' :')
+                    should_show = search_term in label_text
+                    if should_show:
+                        frame_visible = True
+                        last_visible_row = row_num
+
+                # Hide widgets in rows that don't match
+                if not should_show:
+                    for widget in row_widgets:
+                        hide_widget(widget)
+
+            # Hide the frame if it has no visible controls
+            if not frame_visible:
+                frame.grid_remove()
+
+    # Bind the filter function to the search box
+    search_var.trace('w', filter_controls)
+
+    # Create a clear button
+    def clear_search():
+        search_var.set('')
+
+    clear_button = ttk.Button(search_frame, text="✕", width=3, command=clear_search)
+    clear_button.pack(side=tk.LEFT, padx=(5, 0))
+
+    return search_frame
+
+
+def create_main_gui():
+    global root, object_controls
+    object_controls = dict()
+
+    if root is None:
+        root = tk.Tk()
+        set_dark_theme(root)
+        script_name = os.path.basename(sys.argv[0])
+        root.title(script_name)
+
+    create_menu_bar()
+
+    # Load the saved position and size
+    if os.path.exists(POSITION_FILE):
+        with open(POSITION_FILE, 'r') as f:
+            try:
+                saved_geometry = json.load(f)
+                if all(key in saved_geometry for key in ['width', 'height', 'x', 'y']):
+                    root.geometry(f"{saved_geometry['width']}x{saved_geometry['height']}+{saved_geometry['x']}+{saved_geometry['y']}")
+                elif all(key in saved_geometry for key in ['x', 'y']):
+                    root.geometry(f"+{saved_geometry['x']}+{saved_geometry['y']}")
+            except json.JSONDecodeError:
+                pass  # If the file is corrupted, just use default position
+
+    # Create the search frame at the top
+    create_search_frame(root)
+
+    # Create a scrollable frame
+    scrollable_frame = ScrollableFrame(root)
+    scrollable_frame.pack(fill=tk.BOTH, expand=True)
+
+    # Configure the scrollable_frame to expand
+    scrollable_frame.scrollable_frame.columnconfigure(0, weight=1)
+
+    row = 0
+
+    # Create controls for all objects
+    for idx, ((assignment, class_name, obj_name), controls_spec) in enumerate(object_specs.items()):
+        if class_name == "SceneVariables":
+            section_title = f"{class_name}"
+        else:
+            section_title = f"{class_name}(\"{obj_name}\")"
+
+        # All of the controls are on collapsible frames
+        collapsible_frame = CollapsibleFrame(scrollable_frame.scrollable_frame, text=section_title)
+        collapsible_frame.grid(row=row, column=0, sticky="ew", pady=5)
+        collapsible_frame.toggle_button.bind('<Button-1>', on_toggle)
+
+        row += 1
+
+        sub_frame = collapsible_frame.sub_frame
+        sub_frame.columnconfigure(1, weight=1)  # Make the control column expandable
+        sub_row = 0
+
+        controls = controls_spec.copy()
+        object_controls[(assignment, class_name, obj_name)] = controls
+
+        # Add all parameters if menu option is checked
+        if show_all_parameters:
+            all_controls = rdl2_print_dict.get(class_name, {})
+            for all_control_name in all_controls:
+                control_exists = False
+                for i, control_spec in enumerate(controls):
+                    if not isinstance(control_spec, tuple):
+                        continue
+                    control_name = control_spec[0]
+                    if control_name == all_control_name:
+                        control_exists = True
+                        break
+
+                if not control_exists:
+                    param_def = rdl2_print_dict.get(class_name, {}).get(all_control_name)
+                    control_spec = (param_def.name, param_def._type.lower(), param_def.default, {})
+                    controls.insert(0, control_spec)
+
+
+        for i, control_spec in enumerate(controls):
+            if not isinstance(control_spec, tuple):
+                continue
+
+            control_name = control_spec[0]
+            control_type = control_spec[1]
+            initial_value = control_spec[2]
+            metadata_dict = control_spec[3]
+
+            # Get the RdlParameterDef for this parameter
+            param_def = rdl2_print_dict.get(class_name, {}).get(control_name)
+
+            default_value = param_def.default
+
+            # Add label with tooltip
+            control_label = ttk.Label(sub_frame, text=f"  {control_name}:")
+            control_label.grid(row=sub_row, column=0, padx=(0, 5), pady=2, sticky="e")
+            if param_def and param_def.comment:
+                tooltip_text = param_def.comment.strip()
+                tooltip_text = tooltip_text.replace("-- comment:", "", 1).strip()
+                if tooltip_text:
+                    create_tooltip(control_label, tooltip_text)
+
+
+            if control_type == "bool":
+                control = CustomCheckbutton(sub_frame,
+                                            default_value,
+                                            initial_value,
+                                            style='TCheckbutton')
+
+            elif control_type == "rgb":
+                control = CustomRGBButton(sub_frame,
+                                          tuple(default_value.toList()),
+                                          initial_value,
+                                          width=10,
+                                          text="")
+
+            elif control_type == "mat4d":
+                if  len(initial_value) == 2 and  isinstance(initial_value[0], list) and isinstance(initial_value[1], list):
+                    control = BlurredNodeXformControl(sub_frame,
+                                                      initial_operations1=initial_value[0],
+                                                      initial_operations2=initial_value[1])
+                else:
+                    control = NodeXformControl(sub_frame,
+                                               initial_operations=initial_value)
+                control.set_command(control_changed)
+
+            elif control_type == "int" and param_def and param_def.enumerable and param_def.enumeration:
+                values = [f"{key}: {value}" for key, value in param_def.enumeration.items()]
+                for v in values:
+                    if initial_value in v:
+                        initial_value = v.split(':')[0]
+                initial_value = f"{initial_value}: {param_def.get_enumeration(initial_value)}"
+                default_value = f"{default_value}: {param_def.get_enumeration(default_value)}"
+                control = CustomOptionMenu(sub_frame,
+                                           values,
+                                           default_value,
+                                           initial_value,
+                                           width=20)
+
+            elif control_type == "int" or control_type == "float":  # float and int types
+                try:
+                    min_val = float(metadata_dict['min'])
+                    max_val = float(metadata_dict['max'])
+                except KeyError:
+                    min_val = 0
+                    if initial_value == 0:
+                        max_val = 10
+                    else:
+                        max_val = float(initial_value) + 10
+                control = SliderWithSpinbox(sub_frame,
+                                            control_type,
+                                            default_value,
+                                            initial_value,
+                                            min_val,
+                                            max_val,
+                                            command=control_changed)
+
+            elif control_type == "string":
+                default_value = default_value.replace('"', '')
+                initial_value = initial_value.replace('"', '')
+                if is_file_path(initial_value):
+                    control = FileEntryWithBrowse(sub_frame,
+                                                  default_value,
+                                                  initial_value,
+                                                  command=control_changed)
+                else:
+                    control = CustomStringEntry(sub_frame,
+                                                default_value,
+                                                initial_value)
+
+            object_controls[(assignment, class_name, obj_name)][i] = (control_name,
+                                                                      control,
+                                                                      control_type,
+                                                                      metadata_dict)
+
+            control.grid(row=sub_row, column=1, padx=(0, 5), pady=2, sticky="ew")
+
+            sub_row += 1
+
+            # Add a light separator after each control, except the last one
+            if i < len(controls) - 1:
+                sub_row = add_separator(sub_frame, sub_row, is_object_separator=False)
+
+        # Add a thick separator after each object, except the last one
+        if idx < len(object_specs) - 1:
+            row = add_separator(scrollable_frame.scrollable_frame, row, is_object_separator=True)
+
+    # Set minimum size
+    root.update_idletasks()
+    root.minsize(200, 200)
+
+    # Set the closing protocol
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    # Initial write to file
+    write_file(output_file)
+    if deltas_file:
+        write_file(deltas_file, True)
+
+    return root
+
+def decompose_matrix(matrix):
+    # Extract translation
+    translation = matrix[3][:3]
+
+    # Extract scales
+    scale_x = math.sqrt(sum(matrix[i][0]**2 for i in range(3)))
+    scale_y = math.sqrt(sum(matrix[i][1]**2 for i in range(3)))
+    scale_z = math.sqrt(sum(matrix[i][2]**2 for i in range(3)))
+    scale = (scale_x, scale_y, scale_z)
+
+    # Remove scale from rotation matrix
+    rotation_matrix = [
+        [matrix[i][j] / scale[j] for j in range(3)]
+        for i in range(3)
+    ]
+
+    # Extract rotation (in radians)
+    rotation_y = math.asin(-rotation_matrix[2][0])
+
+    if abs(math.cos(rotation_y)) > 1e-6:
+        rotation_x = math.atan2(rotation_matrix[2][1], rotation_matrix[2][2])
+        rotation_z = math.atan2(rotation_matrix[1][0], rotation_matrix[0][0])
+    else:
+        rotation_x = math.atan2(-rotation_matrix[1][2], rotation_matrix[1][1])
+        rotation_z = 0
+
+    # Convert rotation to degrees
+    rotation = (math.degrees(rotation_x), math.degrees(rotation_y), math.degrees(rotation_z))
+
+    return translation, rotation, scale
+
+def process_multi_line_value(value, lines, line_number, join_with_comma=False):
+    if 'blur' in value:
+        pattern = r'\)\s*\)\s*,?\s*$'
+    else:
+        pattern = r'\)\s*,?\s*$'
+    while not re.search(pattern, value) and line_number < len(lines):
+        next_line = lines[line_number].strip()
+        line_number += 1
+        if join_with_comma and not value.endswith(','):
+            value += ', '
+        value += next_line
+    return value.strip(), line_number
+
+def parse_single_xform(value, lines, line_number):
+    operations = []
+
+    if 'Mat4' in value:
+        # Extract the numbers from the Mat4 representation:
+        #
+        # ["node_xform"] = Mat4(1.0, 0.0, 0.0, 0.0,
+        #                       0.0, 1.0, 0.0, 0.0,
+        #                       0.0, 0.0, 1.0, 0.0,
+        #                       5.0, 0.0, 0.0, 1.0),
+        value, line_number = process_multi_line_value(value, lines, line_number, join_with_comma=True)
+        match = re.search(
+            r'''
+            Mat4\s*\(                       # Match "Mat4(" with optional whitespace
+            \s*                             # Optional whitespace after the opening parenthesis
+            (                               # Start capturing group
+                [-+]?[0-9]*\.?[0-9]+        # Match a number (integer or float)
+                (?:[eE][-+]?[0-9]+)?        # Optional scientific notation
+                (?:\s*,\s*                  # Followed by a comma with optional surrounding whitespace
+                    [-+]?[0-9]*\.?[0-9]+    # Another number
+                    (?:[eE][-+]?[0-9]+)?    # Optional scientific notation
+                ){15}                       # Repeat this 15 times (for a total of 16 numbers)
+            )                               # End capturing group
+            \s*\)                           # Match closing parenthesis with optional leading whitespace
+            ''',
+            value,
+            re.VERBOSE | re.DOTALL  # DOTALL allows . to match newlines as well
+        )
+
+        if not match:
+            raise ValueError("Invalid Mat4 format")
+
+        # Split the matched string into individual float values
+        values = [float(x) for x in match.group(1).split(',')]
+
+        if len(values) != 16:
+            raise ValueError("Mat4 should contain exactly 16 values")
+
+        # Create a matrix
+        matrix = [
+            values[0:4],
+            values[4:8],
+            values[8:12],
+            values[12:16]
+        ]
+
+        # Decompose the matrix
+        translation, rotation, scale = decompose_matrix(matrix)
+
+        # Create operations from decomposed values
+        operations.append(f"translate({translation[0]:.3f}, {translation[1]:.3f}, {translation[2]:.3f})")
+
+        for i, axis in enumerate(['X', 'Y', 'Z']):
+            if abs(rotation[i]) > 0.001:
+                if axis == 'X':
+                    operations.append(f"rotate({rotation[i]:.3f}, 1, 0, 0)")
+                elif axis == 'Y':
+                    operations.append(f"rotate({rotation[i]:.3f}, 0, 1, 0)")
+                elif axis == 'Z':
+                    operations.append(f"rotate({rotation[i]:.3f}, 0, 0, 1)")
+
+        if not all(abs(s - 1.0) < 0.001 for s in scale):
+            operations.append(f"scale({scale[0]:.3f}, {scale[1]:.3f}, {scale[2]:.3f})")
+
+    elif any(op in value for op in ('translate', 'rotate', 'scale')):
+        # Parse translate, rotate, and scale operations
+        #
+        #    ["node xform"] = translate(0.0, 0.0, 20.0) *
+        #                     rotate(-20, 1, 0, 0.0) *
+        #                     rotate(180.0, 0, 1, 0),
+        value, line_number = process_multi_line_value(value, lines, line_number, join_with_comma=False)
+        ops = re.findall(r'(translate|rotate|scale)\(([^)]+)\)', value)
+
+        if not ops:
+            raise ValueError("Invalid node_xform format")
+
+        for op, args in ops:
+            args = [float(arg.strip()) for arg in args.split(',')]
+            if op == 'translate':
+                if len(args) != 3:
+                    raise ValueError(f"Invalid number of arguments for translate: {len(args)}")
+                operations.append(f"translate({args[0]:.3f}, {args[1]:.3f}, {args[2]:.3f})")
+            elif op == 'rotate':
+                if len(args) != 4:
+                    raise ValueError(f"Invalid number of arguments for rotate: {len(args)}")
+                angle, x, y, z = args
+                if abs(angle) > 0.001:
+                    operations.append(f"rotate({angle:.3f}, {x:.0f}, {y:.0f}, {z:.0f})")
+            elif op == 'scale':
+                if len(args) != 3:
+                    raise ValueError(f"Invalid number of arguments for scale: {len(args)}")
+                if not all(abs(s - 1.0) < 0.001 for s in args):
+                    operations.append(f"scale({args[0]:.3f}, {args[1]:.3f}, {args[2]:.3f})")
+    else:
+        raise ValueError("Invalid node_xform format")
+
+    return operations, line_number
+
+def parse_node_xform(value, lines, line_number):
+    if 'blur(' in value:
+        # Handle multi-line blur input
+        value, line_number = process_multi_line_value(value, lines, line_number, join_with_comma=False)
+        blur_match = re.match(r'blur\((.*?)\)(\s*,?)\s*$', value, re.DOTALL)
+        if blur_match:
+            blur_content = blur_match.group(1)
+            # Split the blur content into two transforms
+            xforms = re.split(r'\),\s*', blur_content)
+            if len(xforms) == 2:
+                xform1 = xforms[0] + ')'  # Add back the closing parenthesis
+                xform2 = xforms[1]
+                operations1, line_number = parse_single_xform(xform1, lines, line_number)
+                operations2, line_number = parse_single_xform(xform2, lines, line_number)
+                return [operations1, operations2 ], line_number
+            else:
+                raise ValueError("Invalid blur format: couldn't split into two transforms")
+        else:
+            raise ValueError("Invalid blur format")
+    else:
+        operations, line_number = parse_single_xform(value, lines, line_number)
+        return operations, line_number
+
+def parse_metadata(metadata_string):
+    metadata_dict = {}
+    if metadata_string:
+        parts = metadata_string.split()
+        for part in parts:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                metadata_dict[key] = value
+    return metadata_dict
+
+def get_param_type(class_name, param_name):
+    try:
+        if class_name == 'Camera':
+            class_name = 'PerspectiveCamera'
+        return rdl2_print_dict[class_name][param_name]._type.lower()
+    except KeyError:
+        print(f"Warning: Can't determine parameter type for \"{param_name}\"")
+        return None
+
+def parse_parameter(class_name, param_name, value, metadata, line, line_number, lines):
+    param_name = param_name.replace(' ', '_')
+    param_type = get_param_type(class_name, param_name)
+    if param_type is None:
+        return line, line_number
+
+    metadata_dict = parse_metadata(metadata)
+
+    if param_type == 'mat4d':
+        try:
+            operations, line_number = parse_node_xform(value, lines, line_number)
+            return (param_name, param_type, operations, metadata_dict), line_number
+        except ValueError as e:
+            print(f"Warning: Invalid node_xform values at line {line_number}. Skipping. {e}")
+            return line, line_number
+    elif param_type == 'bool':
+        if value.endswith(','): value = value[:-1]
+        default = value.lower()
+        return (param_name, param_type, default, metadata_dict), line_number
+    elif param_type == 'rgb':
+        match = re.match(r'Rgb\(([\d., ]+)\)', value)
+        if match:
+            try:
+                r, g, b = map(float, match.group(1).split(','))
+                if not all(0 <= x <= 1 for x in (r, g, b)):
+                    raise ValueError
+            except ValueError:
+                print(f"Warning: Invalid RGB values at line {line_number}. Skipping.")
+                return line, line_number
+            return (param_name, param_type, (r, g, b), metadata_dict), line_number
+        else:
+            print(f"Warning: Invalid RGB format at line {line_number}. Skipping.")
+            return line, line_number
+    elif param_type in ['float', 'int']:
+        try:
+            if value.endswith(','): value = value[:-1]
+            if param_type == 'float':
+                default = float(value)
+                if 0.0 < default < 1.0:
+                    min_val = 0.0
+                    max_val = 1.0
+                else:
+                    min_val = 0.0
+                    max_val = default + default * 10.0
+            elif param_type == 'int':
+                try:
+                    default = int(float(value))
+                    min_val = default - default
+                    max_val = default + default
+                except ValueError:
+                    default = value.replace('"', '')
+                    min_val = 0
+                    max_val = 0
+
+            if 'min' in metadata_dict:
+                min_val = float(metadata_dict.get('min'))
+            if 'max' in metadata_dict:
+                max_val = float(metadata_dict.get('max'))
+            metadata_dict['min'] = min_val
+            metadata_dict['max'] = max_val
+            return (param_name, param_type, default, metadata_dict), line_number
+        except ValueError:
+            print(f"Warning: Invalid {param_type} value at line {line_number}. Skipping.")
+            return line, line_number
+    elif param_type == 'string':
+        # Remove quotes
+        value = value.replace('",', '')
+        value = value.replace('"', '')
+        return (param_name, param_type, value, metadata_dict), line_number
+    else:
+        print(f"Warning: Unsupported parameter type \"{param_type}\" for \"{param_name}\" at line {line_number}. Skipping.")
+        return line, line_number
+
+def parse_file(filename):
+    global object_specs
+    object_specs = dict()
+    global scene_header_lines
+    scene_header_lines = list()
+    current_object = None
+    class_name = None
+    line_number = 0
+
+    # Match an object header like this:
+    # env = EnvLight("/Scene/lighting/env") {
+    header_regex = re.compile(r"""
+        \s*                # Optional whitespace at beginning of line
+        ((?:\w+\s*=\s*)?)  # Optional assignment (group 1)
+        (\w+)              # Class name (group 2)
+        (?:                # Non-capturing group for optional object name
+            \("            # Opening parenthesis and quote
+            ([^"]*)        # Object name (group 3)
+            "\)            # Closing quote and parenthesis
+        )?                 # The entire object name part is optional
+        \s*{               # Optional whitespace and opening brace
+        \s*$               # Optional whitespace until the end of the line
+        """, re.VERBOSE)
+
+    # Match a parameter like this:
+    #   ["intensity"] = 0.1, -- min=0.0 max=10.0
+    parameter_regex = re.compile(r"""
+        \s*           # Optional whitespace at beginning of line
+        \[            # Opening square bracket
+        "([^"]*)"     # Capture the parameter name (group 1)
+        \]            # Closing square bracket
+        \s*=\s*       # Equals sign with optional surrounding whitespace
+        (.+?)         # Capture the value (group 2), non-greedy
+        (?:           # Non-capturing group for optional comment
+            \s*,\s*   # Optional comma and whitespace
+            --\s*     # Double dash and optional whitespace
+            (.+)      # Capture the comment (group 3)
+        )?            # The entire comment part is optional
+        $             # End of line
+        """, re.VERBOSE)
+
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        line_number = 0
+        while line_number < len(lines):
+            line = lines[line_number]
+            line_number += 1
+
+            match_object_header = re.search(header_regex, line)
+            match_parameter = re.search(parameter_regex, line)
+
+            if match_object_header:
+                assignment = match_object_header.group(1)
+                class_name = match_object_header.group(2)
+                if class_name == "SceneVariables":
+                    obj_name = ""
+                else:
+                    obj_name = match_object_header.group(3)
+                if class_name == "Camera":
+                    class_name = "PerspectiveCamera"
+                current_object = (assignment, class_name, obj_name)
+                object_specs[current_object] = []
+            elif match_parameter and current_object:
+                param_name, value, metadata = match_parameter.groups()
+                parsed_parameter, line_number = parse_parameter(class_name,
+                                                                param_name,
+                                                                value,
+                                                                metadata,
+                                                                line,
+                                                                line_number,
+                                                                lines)
+                if parsed_parameter:
+                    object_specs[current_object].append(parsed_parameter)
+            else: # Unrecognized lines
+                if current_object:
+                    object_specs[current_object].append(line)
+                else:
+                    # These lines appear at the beginning of the rdla file before any objects
+                    scene_header_lines.append(line)
+
+    if not object_specs:
+        print("Warning: No valid object specifications found in the input file.")
+
+def parse_arguments():
+    global input_file
+    global output_file
+    global deltas_file
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+                                     description=textwrap.dedent("""\
+                                                  Create a GUI for parameters in the input_rdla_file and write out the
+                                                  results to a separate output_rdla_file."""))
+
+    parser.add_argument("-in", dest='inputfile', metavar="input.rdla", required=True,
+                        help=textwrap.dedent("""\
+                                             Input rdla file to read.  Parameters are converted to
+                                             gui controls. Optionally add comment at the end of
+                                             float or int parameters to specify range
+                                             (i.e. -- min=-1 max=1)
+
+                                             """))
+
+    parser.add_argument("-out", dest='outputfile', metavar="output.rdla", required=True,
+                        help=textwrap.dedent("""\
+                                             Output rdla file to write to.
+
+                                             """))
+
+    parser.add_argument("-deltas", dest='deltasfile' ,metavar="deltas.rdla",
+                        help=textwrap.dedent("""\
+                                             Output only parameter differences to separate deltas file
+
+                                             """))
+
+
+    args = parser.parse_args()
+
+    input_file = args.inputfile
+    output_file = args.outputfile
+    deltas_file = args.deltasfile
+
+    if not os.path.exists(input_file):
+        print(f"Error: Input file '{input_file}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    return input_file, output_file, deltas_file
+
+class RdlParameterDef:
+    def __init__(self,
+                 name,
+                 _type,
+                 default,
+                 enumerable,
+                 enumeration,
+                 comment):
+        self.name = name
+        self._type = _type
+        self.default = default
+        self.enumerable = enumerable
+        self.enumeration = enumeration
+        self.comment = comment
+
+    def get_enumeration(self, keyValue):
+        try:
+            key = int(keyValue)
+            if not self.enumerable or not self.enumeration or not key in self.enumeration:
+                return key
+            else:
+                return self.enumeration[key]
+        except ValueError:
+            return keyValue
+
+def get_type_and_name(input_string, regex):
+    match = re.search(regex, input_string)
+    if match:
+        type_name = match.group(1)
+        object_name = match.group(2)
+        return (type_name, object_name)
+    else:
+        return (None, None)
+
+def parse_rdl2_print():
+    context = scene_rdl2.SceneContext()
+    context.setProxyModeEnabled(True)
+    context.loadAllSceneClasses()
+
+    for class_name in context.getSceneClassNames():
+        sc = context.getSceneClass(class_name)
+        obj = context.createSceneObject(class_name, class_name + "_obj")
+        attr_dict = dict()
+        for attr_name in sc.getAttributeNames():
+            attr = sc.getAttribute(attr_name)
+            comment = attr.getMetadata('comment') if attr.metadataExists('comment') else ''
+            attr_dict[attr_name] = RdlParameterDef(attr_name,
+                                                   attr.getTypeName(),
+                                                   obj.get(attr_name),
+                                                   attr.isEnumerable(),
+                                                   attr.getEnumValMap(),
+                                                   comment)
+        rdl2_print_dict[class_name] = attr_dict
+
+
+if __name__ == "__main__":
+    parse_arguments()
+    parse_rdl2_print()
+    parse_file(input_file)
+    if object_specs:
+        root = create_main_gui()
+        root.mainloop()
+    else:
+        print("No valid specifications found. Exiting.")
