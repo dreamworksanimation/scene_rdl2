@@ -74,6 +74,7 @@ requires = [
 private_build_requires = [
     'cmake_modules-1.0',
     'ispc-1.20.0.x',
+    'ssl'
 ]
 
 commandstr = lambda i: "cd build/"+os.path.join(*variants[i])+"; ctest -j $(nproc)"

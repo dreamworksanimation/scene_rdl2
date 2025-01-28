@@ -1,10 +1,12 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 #include "PixelBufferSha1Hash.h"
 
 #include <scene_rdl2/common/fb_util/FbTypes.h>
 #include <scene_rdl2/render/util/StrUtil.h>
+
+#define ERR_HEADER "ERROR " << __FILE__ << " L." << __LINE__ << " func:" << __func__
 
 namespace { // anonymous
 
@@ -21,7 +23,7 @@ allTilesAreActive(const PixelBufferSha1Hash::PartialMergeTilesTbl& tbl)
 }
 
 template <typename T>
-void
+bool
 updateSha1HashSingleRegion(const int startTileId,
                            const int endTileId,
                            PixelBuffer<T>& buffer,
@@ -45,7 +47,7 @@ updateSha1HashSingleRegion(const int startTileId,
     std::cerr << ostr.str() << '\n';
     */
 
-    sha1.updateByteData(reinterpret_cast<const void*>(dataStartAddr), dataSize);
+    return sha1.updateByteData(reinterpret_cast<const void*>(dataStartAddr), dataSize);
 }
 
 template <typename T>
@@ -161,87 +163,99 @@ PixelBufferSha1Hash::calcHashForVerify(unsigned tileStartId, unsigned tileEndId,
     const unsigned tileTotalX = getTotalTileX(buffer);
     const unsigned tileTotalY = getTotalTileY(buffer);
 
-    Sha1Gen sha1;
-    sha1.init();
+    try {
+        Sha1Gen sha1;
+        if (!sha1.init()) {
+            std::cerr << ERR_HEADER << " sha1.init() failed.";
+            return false;
+        }
 
-    const size_t pixDataSize = sizeof(T);
-    const size_t tileDataSize = pixDataSize * 64;
-    const uintptr_t dataStartAddr = reinterpret_cast<uintptr_t>(buffer.getData());
+        const size_t pixDataSize = sizeof(T);
+        const size_t tileDataSize = pixDataSize * 64;
+        const uintptr_t dataStartAddr = reinterpret_cast<uintptr_t>(buffer.getData());
 
-    uintptr_t activeTileStartAddr = 0x0;
-    uintptr_t activeTileEndAddr = 0x0;
+        uintptr_t activeTileStartAddr = 0x0;
+        uintptr_t activeTileEndAddr = 0x0;
 
-    size_t tileId = 0;
-    size_t totalActiveTile = 0;
-    bool continuousActiveMem = true;
-    for (unsigned tileY = 0; tileY < tileTotalY; ++tileY) {
-        for (unsigned tileX = 0; tileX < tileTotalX; ++tileX) {
-            if (tileStartId <= tileId && tileId <= tileEndId) {
-                size_t offset = tileId * tileDataSize;
-                uintptr_t currAddr = dataStartAddr + static_cast<uintptr_t>(offset);
-                sha1.updateByteData(reinterpret_cast<const void*>(currAddr), tileDataSize);
-
-                uintptr_t currEndAddr = currAddr + tileDataSize;
-                if (activeTileStartAddr == 0x0) {
-                    activeTileStartAddr = currAddr;
-                    activeTileEndAddr = currEndAddr;
-                } else {
-                    if (activeTileEndAddr != currAddr) {
-                        continuousActiveMem = false;
-                    } else {
-                        activeTileEndAddr = currEndAddr;
+        size_t tileId = 0;
+        size_t totalActiveTile = 0;
+        bool continuousActiveMem = true;
+        for (unsigned tileY = 0; tileY < tileTotalY; ++tileY) {
+            for (unsigned tileX = 0; tileX < tileTotalX; ++tileX) {
+                if (tileStartId <= tileId && tileId <= tileEndId) {
+                    size_t offset = tileId * tileDataSize;
+                    uintptr_t currAddr = dataStartAddr + static_cast<uintptr_t>(offset);
+                    if (!sha1.updateByteData(reinterpret_cast<const void*>(currAddr), tileDataSize)) {
+                        std::cerr << ERR_HEADER << " sha1.updateByteData() failed.";
+                        return false;
                     }
-                }
+
+                    uintptr_t currEndAddr = currAddr + tileDataSize;
+                    if (activeTileStartAddr == 0x0) {
+                        activeTileStartAddr = currAddr;
+                        activeTileEndAddr = currEndAddr;
+                    } else {
+                        if (activeTileEndAddr != currAddr) {
+                            continuousActiveMem = false;
+                        } else {
+                            activeTileEndAddr = currEndAddr;
+                        }
+                    }
                 
-                ++totalActiveTile;
-            }
-            ++tileId;
-        }
-    }
-
-    /* useful verify dump for all zero data
-    {
-        char* data = reinterpret_cast<char *>(activeTileStartAddr);
-        size_t dataSize = static_cast<size_t>(activeTileEndAddr - activeTileStartAddr);
-        bool nonZero = false;
-        for (size_t i = 0; i < dataSize; ++i) {
-            if (data[i] != 0x0) {
-                nonZero = true;
+                    ++totalActiveTile;
+                }
+                ++tileId;
             }
         }
-        std::cerr << ">> FbSha1Hash.cc nonZero:" << str_util::boolStr(nonZero) << '\n';
+
+        /* useful verify dump for all zero data
+        {
+            char* data = reinterpret_cast<char *>(activeTileStartAddr);
+            size_t dataSize = static_cast<size_t>(activeTileEndAddr - activeTileStartAddr);
+            bool nonZero = false;
+            for (size_t i = 0; i < dataSize; ++i) {
+                if (data[i] != 0x0) {
+                    nonZero = true;
+                }
+            }
+            std::cerr << ">> FbSha1Hash.cc nonZero:" << str_util::boolStr(nonZero) << '\n';
+        }
+        */
+
+        verifyResult = continuousActiveMem;
+
+        if (!verifyResult) {
+            const size_t pixSize = sizeof(T);
+            const size_t dataSize = activeTileEndAddr - activeTileStartAddr;
+            const size_t totalActivePix = dataSize / pixSize;
+            const size_t totalActiveTile = totalActivePix / 64;
+            const bool pixAlignmentVerify = ((dataSize % pixSize) == 0) ? true : false;
+            const bool tileAlignmentVerify = ((totalActivePix % 64) == 0) ? true : false;
+            const bool alignmentVerify = pixAlignmentVerify && tileAlignmentVerify;
+            std::ostringstream ostr;
+            ostr << ">> FbSha1Hash.cc calcHashForVerify() FAILED {\n"
+                 << "      alignmentVerify:" << str_util::boolStr(alignmentVerify) << '\n'
+                 << "  continuousActiveMem:" << str_util::boolStr(continuousActiveMem) << '\n'
+                 << "          tileStartId:" << tileStartId << '\n'
+                 << "            tileEndId:" << tileEndId << '\n'
+                 << "      verifyTileCount:" << (tileEndId - tileStartId + 1) << '\n'
+                 << "  activeTileStartAddr:0x" << std::hex << activeTileStartAddr << std::dec << '\n'
+                 << "    activeTileEndAddr:0x" << std::hex << activeTileEndAddr << std::dec << '\n'
+                 << "       activeDataSize:" << dataSize << " byte\n"
+                 << "       totalActivePix:" << totalActivePix << '\n'
+                 << "      totalActiveTile:" << totalActiveTile << '\n'
+                 << "}";
+            std::cerr << ostr.str() << '\n';
+        }
+
+        if (totalActiveTile == 0) return false;
+
+        outHash = sha1.finalize();
     }
-    */
-
-    verifyResult = continuousActiveMem;
-
-    if (!verifyResult) {
-        const size_t pixSize = sizeof(T);
-        const size_t dataSize = activeTileEndAddr - activeTileStartAddr;
-        const size_t totalActivePix = dataSize / pixSize;
-        const size_t totalActiveTile = totalActivePix / 64;
-        const bool pixAlignmentVerify = ((dataSize % pixSize) == 0) ? true : false;
-        const bool tileAlignmentVerify = ((totalActivePix % 64) == 0) ? true : false;
-        const bool alignmentVerify = pixAlignmentVerify && tileAlignmentVerify;
-        std::ostringstream ostr;
-        ostr << ">> FbSha1Hash.cc calcHashForVerify() FAILED {\n"
-             << "      alignmentVerify:" << str_util::boolStr(alignmentVerify) << '\n'
-             << "  continuousActiveMem:" << str_util::boolStr(continuousActiveMem) << '\n'
-             << "          tileStartId:" << tileStartId << '\n'
-             << "            tileEndId:" << tileEndId << '\n'
-             << "      verifyTileCount:" << (tileEndId - tileStartId + 1) << '\n'
-             << "  activeTileStartAddr:0x" << std::hex << activeTileStartAddr << std::dec << '\n'
-             << "    activeTileEndAddr:0x" << std::hex << activeTileEndAddr << std::dec << '\n'
-             << "       activeDataSize:" << dataSize << " byte\n"
-             << "       totalActivePix:" << totalActivePix << '\n'
-             << "      totalActiveTile:" << totalActiveTile << '\n'
-             << "}";
-        std::cerr << ostr.str() << '\n';
+    catch (std::string error) {
+        std::cerr << ERR_HEADER << " failed. error:" << error;
+        return false;
     }
-
-    if (totalActiveTile == 0) return false;
-
-    outHash = sha1.finalize();
     return true;
 }
 
@@ -377,10 +391,23 @@ PixelBufferSha1Hash::processSingleRegion(const PartialMergeTilesTbl* partialMerg
     }
 
     if (endTileId > 0) {
-        Sha1Gen sha1;
-        sha1.init();
-        updateSha1HashSingleRegion(startTileId, endTileId, buffer, sha1);
-        savePrimaryHash(startTileId, endTileId, sha1);
+        try {
+            Sha1Gen sha1;
+            if (!sha1.init()) {
+                std::cerr << ERR_HEADER << " sha1.init() failed";
+                return;
+            }
+
+            if (!updateSha1HashSingleRegion(startTileId, endTileId, buffer, sha1)) {
+                std::cerr << ERR_HEADER << " updateSha1HashSingleRegion() failed";
+                return;
+            }
+
+            savePrimaryHash(startTileId, endTileId, sha1);
+        }
+        catch (std::string error) {
+            std::cerr << ERR_HEADER << " filed. error:" << error;
+        }
     }
 }
 
@@ -411,31 +438,42 @@ PixelBufferSha1Hash::processDualRegion(const PartialMergeTilesTbl* partialMergeT
         }
     };
 
-    int stageId = -1;
-    Sha1Gen sha1;
-    int startTileId = -1;
-    int endTileId = -1;;
-    int totalTiles = getTotalTilesByBuffer(buffer);
-    for (int tileId = 0; tileId < totalTiles; ++tileId) {
-        if (isStartRegion(tileId)) {
-            ++stageId;
-            sha1.init();
-            startTileId = endTileId = tileId;
+    try {
+        int stageId = -1;
+        Sha1Gen sha1;
+        int startTileId = -1;
+        int endTileId = -1;;
+        int totalTiles = getTotalTilesByBuffer(buffer);
+        for (int tileId = 0; tileId < totalTiles; ++tileId) {
+            if (isStartRegion(tileId)) {
+                ++stageId;
+                if (!sha1.init()) {
+                    std::cerr << ERR_HEADER << " sha1.init() failed";
+                    return;
+                }
+                startTileId = endTileId = tileId;
+            }
+
+            if ((*partialMergeTilesTbl)[tileId]) { // active tile
+                endTileId = tileId; // update endTileId
+            }
+
+            if (isEndRegion(tileId)) {
+                endTileId = tileId;
+
+                // calculate SHA1 hash for this tileId span from startTileId to endTileId.
+                if (!updateSha1HashSingleRegion(startTileId, endTileId, buffer, sha1)) {
+                    std::cerr << ERR_HEADER << " updateSha1HashSingleRegion() failed";
+                    return;
+                }
+
+                if (stageId == 0) savePrimaryHash(startTileId, endTileId, sha1);
+                else saveSecondaryHash(startTileId, endTileId, sha1);
+            }
         }
-
-        if ((*partialMergeTilesTbl)[tileId]) { // active tile
-            endTileId = tileId; // update endTileId
-        }
-
-        if (isEndRegion(tileId)) {
-            endTileId = tileId;
-
-            // calculate SHA1 hash for this tileId span from startTileId to endTileId.
-            updateSha1HashSingleRegion(startTileId, endTileId, buffer, sha1);
-
-            if (stageId == 0) savePrimaryHash(startTileId, endTileId, sha1);
-            else saveSecondaryHash(startTileId, endTileId, sha1);
-        }
+    }
+    catch (std::string error) {
+        std::cerr << ERR_HEADER << " failed. error:" << error;
     }
 }
 
