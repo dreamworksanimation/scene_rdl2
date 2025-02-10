@@ -220,6 +220,12 @@ namespace py_scene_rdl2
         }
 
         void
+        setSkipDefaults(bool skipDefaults)
+        {
+            mAsciiWriter.setSkipDefaults(skipDefaults);
+        }
+
+        void
         toFile(const std::string& filename)
         {
             mAsciiWriter.toFile(filename);
@@ -252,6 +258,11 @@ namespace py_scene_rdl2
                  "\n"
                  "Input:    deltaEncoding    True to enable delta encoding, false to disable it (Disabled by default.)")
 
+            .def("setSkipDefaults",
+                 &PyAsciiWriter::setSkipDefaults,
+                 bp::arg("skipDefaults"),
+                 "Attributes at their default value are not written")
+                 
             .def("toFile", &PyAsciiWriter::toFile, bp::arg("filename"))
 
             .def("toString", &PyAsciiWriter::toString);
@@ -288,6 +299,12 @@ namespace py_scene_rdl2
         setDeltaEncoding(bool deltaEncoding)
         {
             mBinaryWriter.setDeltaEncoding(deltaEncoding);
+        }
+
+        void
+        setSkipDefaults(bool skipDefaults)
+        {
+            mBinaryWriter.setSkipDefaults(skipDefaults);
         }
 
         void
@@ -377,8 +394,15 @@ namespace py_scene_rdl2
                  "encoding. If you're encoding data to be stored on disk, leave it off. \n"
                  "\n"
                  "Input:    transientEncoding    True to enable transient encoding, false to disable"
-                 " it (Disabled by default.)");
-                 ;
+                 " it (Disabled by default.)")
+            
+            .def("setSkipDefaults",
+                 &PyBinaryWriter::setSkipDefaults,
+                 bp::arg("skipDefaults"),
+                 "Attributes at their default value are not written")
+                ;
+                 
+    
     }
 
     //------------------------------------

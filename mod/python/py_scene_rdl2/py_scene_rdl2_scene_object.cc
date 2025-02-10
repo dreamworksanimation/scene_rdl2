@@ -225,6 +225,14 @@ namespace py_scene_rdl2
                  "is supplied for an attribute by the SceneClass, a reasonable default is supplied for "
                  "you (0, empty string, null, etc.)")
 
+            .def("commitChanges",
+                 &rdl2::SceneObject::commitChanges,
+                 "Clear the changed flag on all attributes and mark it clean")
+
+            .def("markAttributeChanged",
+                 &markAttributeChanged,
+                 "mark the attribute as changed, and mark the object dirty")
+
             //------------------------------------------------
             // Get information on class Attributes
 

@@ -741,6 +741,22 @@ public:
      */
     finline void commitChanges();
 
+    /**
+     * Mark an attribute as changed
+    */
+    finline void markAttributeChanged(const Attribute* attribute);
+
+    /**
+     * Test if an attribute has changed
+    */
+    bool isAttributeSet(const Attribute* attribute) const
+    { return mAttributeSetMask.test(attribute->mIndex); }
+    
+    /**
+     * Test if object is dirty
+    */
+    bool isDirty() const { return mDirty;}
+
     // The memory block where we store attribute values.
     void* mAttributeStorage;
 
@@ -1256,6 +1272,14 @@ SceneObject::commitChanges()
     mAttributeSetMask.reset();
     mBindingSetMask.reset();
     mDirty = false;
+}
+
+void
+SceneObject::markAttributeChanged(const Attribute* attribute)
+{
+        mAttributeSetMask.set(attribute->mIndex, true);
+        mAttributeUpdateMask.set(attribute->mIndex, true);
+        mDirty = true;
 }
 
 namespace {

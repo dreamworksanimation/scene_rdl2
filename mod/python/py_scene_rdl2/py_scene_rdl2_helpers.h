@@ -816,6 +816,9 @@ namespace py_scene_rdl2
     const scene_rdl2::rdl2::Attribute*
     getAttributeAt(scene_rdl2::rdl2::SceneClass& sceneClass, unsigned int index);
 
+    void
+    markAttributeChanged(scene_rdl2::rdl2::SceneObject& sceneObject, const std::string& attrName);
+
     //-----------------------------------------
     // Wrapper for rdl2::BoolVector
 
@@ -902,6 +905,60 @@ namespace py_scene_rdl2
 
         SceneObjectVectorWrapper(SceneObjectVectorWrapper&&) = default;
         SceneObjectVectorWrapper& operator=(SceneObjectVectorWrapper&&) = default;
+
+        //----------------------------------
+
+        bp::list toList() { return mPyList; }
+
+        std::string repr() const
+        {
+            return bp::extract<std::string>(mPyList.attr("__repr__")());
+        }
+    };
+
+    //-----------------------------------------
+    // Wrapper for rdl2::SceneObjectIndexable
+
+    class SceneObjectIndexableWrapper
+    {
+    private:
+        bp::list mPyList;
+
+    public:
+        // Hold a copy of the input data
+        explicit
+        SceneObjectIndexableWrapper(const scene_rdl2::rdl2::SceneObjectIndexable& data)
+            : mPyList()
+        {
+            for (auto iter = data.cbegin(); iter != data.cend(); ++iter) {
+                const scene_rdl2::rdl2::SceneObject* ptr = *iter;
+                if (ptr)
+                    mPyList.append(boost::cref( *ptr ));
+                else
+                    mPyList.append(bp::object()); // Python None object
+            }
+        }
+
+        // Hold a copy of the input data
+        explicit
+        SceneObjectIndexableWrapper(bp::list& pydata)
+            : mPyList(pydata)
+        {
+        }
+
+        explicit
+        SceneObjectIndexableWrapper(bp::tuple& pydata)
+            : mPyList(pydata)
+        {
+        }
+
+        SceneObjectIndexableWrapper() = default;
+
+        SceneObjectIndexableWrapper(const SceneObjectIndexableWrapper&) = default;
+        SceneObjectIndexableWrapper& operator=(const SceneObjectIndexableWrapper&) = default;
+
+        SceneObjectIndexableWrapper(SceneObjectIndexableWrapper&&) = default;
+        SceneObjectIndexableWrapper& operator=(SceneObjectIndexableWrapper&&) = default;
 
         //----------------------------------
 

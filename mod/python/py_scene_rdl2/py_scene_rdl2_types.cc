@@ -1269,6 +1269,26 @@ namespace py_scene_rdl2
                 .def("__repr__", &SceneObjectVectorWrapper::repr);
         }
 
+        // Special case: SceneObjectIndexable
+        {
+            bp::class_<SceneObjectIndexableWrapper, std::shared_ptr<SceneObjectIndexableWrapper>>(
+                    "SceneObjectIndexable",
+                    "Searchable array of SceneObject references (IndexableArray<rdl2::SceneObject*>).\n"
+                    "\n"
+                    "NOTE (Python only): this is a proxy object that holds the actual data; call its toList() "
+                    "member function to get a Python list to read, modify, and pass around.")
+
+                .def(bp::init<const scene_rdl2::rdl2::SceneObjectIndexable&>())
+                .def(bp::init<bp::list&>())
+                .def(bp::init<bp::tuple&>())
+
+                .def("toList",
+                     &SceneObjectIndexableWrapper::toList,
+                     "Returns a copy of internal data as a Python list.")
+
+                .def("__repr__", &SceneObjectIndexableWrapper::repr);
+        }
+
 #ifdef DO_NOT_USE_BOOSTPYTHON_INDEXING_SUITS
 
         registerRdl2VectorPrimType<rdl2::Int>("Int");

@@ -247,6 +247,10 @@ getAttributeValueByName(scene_rdl2::rdl2::SceneObject& sceneObject, const std::s
         return bp::object{ SceneObjectVectorWrapper(
                             sceneObject.get<scene_rdl2::rdl2::SceneObjectVector>(
                                     sc.getAttributeKey<scene_rdl2::rdl2::SceneObjectVector>(attrName))) };
+    } else if (checkType(attr, scene_rdl2::rdl2::AttributeType::TYPE_SCENE_OBJECT_INDEXABLE)) {
+        return bp::object{ SceneObjectIndexableWrapper(
+                            sceneObject.get<scene_rdl2::rdl2::SceneObjectIndexable>(
+                                    sc.getAttributeKey<scene_rdl2::rdl2::SceneObjectIndexable>(attrName))) };
     }
 
     return bp::object{ };
@@ -1031,6 +1035,16 @@ extractAndSetAttributeValue(scene_rdl2::rdl2::SceneObject& sceneObject,
     else {
         throw std::runtime_error("TEMP DEBUG: Object of unknown type passed to SceneObject.set()");
     }
+}
+
+void
+markAttributeChanged(scene_rdl2::rdl2::SceneObject& sceneObject,
+                     const std::string& attrName)
+{
+   const scene_rdl2::rdl2::SceneClass& sc = sceneObject.getSceneClass();
+   const scene_rdl2::rdl2::Attribute* attr = sc.getAttribute(attrName); 
+   if (attr)
+        sceneObject.markAttributeChanged(attr);
 }
 
 bp::dict
