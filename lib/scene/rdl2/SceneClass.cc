@@ -506,6 +506,92 @@ SceneClass::destroyValue(void* storage, const Attribute* attribute) const
     } while (attribute->isBlurrable() && timestep < NUM_TIMESTEPS);
 }
 
+
+/* static */ bool
+SceneClass::copyValue(void* dest, const Attribute* destAttr,
+                      void* source, const Attribute* sourceAttr, 
+                      AttributeTimestep timestep)
+{
+    switch (destAttr->getType()) {
+        case TYPE_BOOL:
+            return copyHelper<Bool>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_INT:
+            return copyHelper<Int>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_LONG:
+            return copyHelper<Long>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_FLOAT:
+            return copyHelper<Float>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_DOUBLE:
+            return copyHelper<Double>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_STRING:
+            return copyHelper<String>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_RGB:
+            return copyHelper<Rgb>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_RGBA:
+            return copyHelper<Rgba>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC2F:
+            return copyHelper<Vec2f>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC2D:
+            return copyHelper<Vec2d>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC3F:
+            return copyHelper<Vec3f>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC3D:
+            return copyHelper<Vec3d>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC4F:
+            return copyHelper<Vec4f>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC4D:
+            return copyHelper<Vec4d>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_MAT4F:
+            return copyHelper<Mat4f>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_MAT4D:
+            return copyHelper<Mat4d>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_SCENE_OBJECT:
+            return copyHelper<SceneObject*>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_BOOL_VECTOR:
+            return copyHelper<BoolVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_INT_VECTOR:
+            return copyHelper<IntVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_LONG_VECTOR:
+            return copyHelper<LongVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_FLOAT_VECTOR:
+            return copyHelper<FloatVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_DOUBLE_VECTOR:
+            return copyHelper<DoubleVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_STRING_VECTOR:
+            return copyHelper<StringVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_RGB_VECTOR:
+            return copyHelper<RgbVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_RGBA_VECTOR:
+            return copyHelper<RgbaVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC2F_VECTOR:
+            return copyHelper<Vec2fVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC2D_VECTOR:
+            return copyHelper<Vec2dVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC3F_VECTOR:
+            return copyHelper<Vec3fVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC3D_VECTOR:
+            return copyHelper<Vec3dVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC4F_VECTOR:
+            return copyHelper<Vec4fVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_VEC4D_VECTOR:
+            return copyHelper<Vec4dVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_MAT4F_VECTOR:
+            return copyHelper<Mat4fVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_MAT4D_VECTOR:
+            return copyHelper<Mat4dVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_SCENE_OBJECT_VECTOR:
+            return copyHelper<SceneObjectVector>(dest, destAttr, source, sourceAttr, timestep);
+        case TYPE_SCENE_OBJECT_INDEXABLE:
+            return copyHelper<SceneObjectIndexable>(dest, destAttr, source, sourceAttr, timestep);
+        default:
+            {
+                std::stringstream errMsg;
+                errMsg << "Attempt to copy a value for Attribute '" <<
+                    destAttr->getName() << "' of unknown type.";
+                throw except::TypeError(errMsg.str());
+            }
+        }
+}
 void
 SceneClass::setEnumValue(AttributeKey<Int> attributeKey, Int enumValue,
                          const std::string& description)

@@ -374,18 +374,7 @@ public:
      *          no binding.
      */
     template <typename T>
-    finline const SceneObject* getBinding(AttributeKey<T> key) const;
-
-    /**
-     * Overload of the getBinding() method for non-const (writable) SceneObjects
-     * that returns a non-const (writable) bound object.
-     *
-     * @param   key     The attribute you want to fetch the binding on.
-     * @return  The bound object as a generic SceneObject, or null if there is
-     *          no binding.
-     */
-    template <typename T>
-    finline SceneObject* getBinding(AttributeKey<T> key);
+    finline SceneObject* getBinding(AttributeKey<T> key) const;
 
     /**
      * Alternative const binding accessor : get binding on a given Attribute
@@ -394,16 +383,7 @@ public:
      * @return  The bound object as a generic SceneObject, or null if there is
      *          no binding.
      */
-    finline const SceneObject* getBinding(const Attribute& attr) const;
-
-    /**
-     * Alternative binding accessor : get binding on a given Attribute
-     *
-     * @param   attr     The attribute you want to fetch the binding on.
-     * @return  The bound object as a generic SceneObject, or null if there is
-     *          no binding.
-     */
-    finline SceneObject* getBinding(const Attribute& attr);
+    finline SceneObject* getBinding(const Attribute& attr) const;
 
     /**
      * Sets the bound object on the given attribute to the given SceneObject.
@@ -443,6 +423,17 @@ public:
      * @throw   except::KeyError    If no attribute with that name exists.
      */
     void setBinding(const std::string& name, SceneObject* sceneObject);
+
+   
+    /**
+     * Copies attribute values from source 
+     * to this object. source must be the same class as this object.
+     * 
+     * @param attr attribute to copy from/to
+     * @param  source object to copy from
+    */
+    void copyValues(const Attribute& attr, const SceneObject& source);
+    void copyAll(const SceneObject& source);
 
     /**
      * Declares attributes common to all SceneObjects.
@@ -1166,7 +1157,7 @@ SceneObject::getMutable(AttributeKey<T> key, AttributeTimestep timestep)
 }
 
 template <typename T>
-const SceneObject*
+SceneObject*
 SceneObject::getBinding(AttributeKey<T> key) const
 {
     if (!key.isBindable()) {
@@ -1180,37 +1171,8 @@ SceneObject::getBinding(AttributeKey<T> key) const
     return mBindings[key.mIndex];
 }
 
-template <typename T>
 SceneObject*
-SceneObject::getBinding(AttributeKey<T> key)
-{
-    if (!key.isBindable()) {
-        std::stringstream errMsg;
-        errMsg << "Cannot get binding for Attribute '" <<
-            mSceneClass.getAttribute(key)->getName() << "' on SceneObject '" <<
-            mName << "' because it is not bindable.";
-        throw except::RuntimeError(errMsg.str());
-    }
-
-    return mBindings[key.mIndex];
-}
-
-const SceneObject*
 SceneObject::getBinding(const Attribute& attr) const
-{
-    if (!attr.isBindable()) {
-        std::stringstream errMsg;
-        errMsg << "Cannot get binding for Attribute '" <<
-            attr.getName() << "' on SceneObject '" <<
-            mName << "' because it is not bindable.";
-        throw except::RuntimeError(errMsg.str());
-    }
-
-    return mBindings[attr.mIndex];
-}
-
-SceneObject*
-SceneObject::getBinding(const Attribute& attr)
 {
     if (!attr.isBindable()) {
         std::stringstream errMsg;

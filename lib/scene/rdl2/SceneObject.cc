@@ -607,6 +607,49 @@ SceneObject::setBinding(const std::string& name, SceneObject* sceneObject)
             [&name]() { return name; });
 }
 
+void 
+SceneObject::copyValues(const Attribute& attr, const SceneObject& source)
+{
+    if (!mUpdateActive) {
+        throw except::RuntimeError(util::buildString("SceneObject '", mName,
+                "' can only be copied into between beginUpdate() and endUpdate() calls."));
+    }
+
+    int timestep = TIMESTEP_BEGIN;
+    bool changed = false;
+    do {
+        changed |= SceneClass::copyValue(mAttributeStorage, &attr,
+                                        source.mAttributeStorage, &attr,
+                                        static_cast<AttributeTimestep>(timestep));
+        ++timestep;
+    } while (attr.isBlurrable() && timestep < NUM_TIMESTEPS);
+
+    if (changed) {
+        mAttributeSetMask.set(attr.mIndex, true);
+        mAttributeUpdateMask.set(attr.mIndex, true);
+        mDirty = true;
+    }
+}
+
+void
+SceneObject::copyAll(const SceneObject& source)
+{
+    if (&mSceneClass != &source.mSceneClass) {
+        throw except::TypeError(util::buildString("Cannot copy to SceneObject '",
+            mName, "' (of class '",
+            mSceneClass.getName(), "') from '", source.getName(),
+            "' (of class '", source.mSceneClass.getName(), 
+            "') because classes are not the same"));
+    }
+    
+    for (auto it = mSceneClass.beginAttributes(); 
+         it != mSceneClass.endAttributes(); ++it) {
+        copyValues(**it, source);
+        if ((*it)->isBindable())
+            setBinding(**it, source.getBinding(**it));
+    }
+}
+
 // Explicit instantiations of interpolated get() for attribute types that
 // support interpolation.
 template Int SceneObject::get(AttributeKey<Int>, float) const;

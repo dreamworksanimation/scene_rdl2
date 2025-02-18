@@ -252,6 +252,15 @@ public:
     finline Attribute* getAttribute(const std::string& name);
 
     /**
+     * Tests whether the class has an attribute with the given
+     * name.
+     *
+     * @param   name    The name of the attribute you want.
+     * @return  true if the attribute exists on this class
+     */
+    finline bool hasAttribute(const std::string& name);
+
+    /**
      * Retrieves a typed AttributeKey for the attribute with the given name.
      * You must get the type of the attribute right, and RDL will complain
      * if you don't, in the form of throwing a TypeError.
@@ -525,6 +534,19 @@ private:
     // their declaration.
     void destroyValue(void* storage, const Attribute* attribute) const;
 
+    // Helper function to copy an attribute value
+    // dest and source are storage pointers, as for create and destroyValue
+    // sourceAttr and destAttr must hold the same type.
+    template<typename T> 
+    static finline bool copyHelper(void* dest, const Attribute* destAttr,
+                                   void* source, const Attribute* sourceAttr, 
+                                    AttributeTimestep timestep);
+
+    static bool copyValue(void* dest, const Attribute* destAttr, 
+                          void* source, const Attribute* sourceAttr,
+                          AttributeTimestep timestep);
+    
+
     // Back reference to the SceneContext which owns this SceneClass.
     SceneContext* mContext;
 
@@ -777,6 +799,12 @@ SceneClass::getAttribute(const std::string& name)
     return iter->second;
 }
 
+bool
+SceneClass::hasAttribute(const std::string& name)
+{
+    return mNameMap.find(name) != mNameMap.end();
+}
+
 template <typename T>
 void
 SceneClass::setGroup(const std::string& groupName, AttributeKey<T> attributeKey)
@@ -922,6 +950,17 @@ SceneClass::getDataPtr(const std::string &name) const
         result = static_cast<const T *>(itr->second);
     }
     return result;
+}
+
+template<typename T> 
+bool SceneClass::copyHelper(void* dest, const Attribute* destAttr,
+                            void* source, const Attribute* sourceAttr, 
+                            AttributeTimestep timestep)
+{
+    return setValue(dest,
+                    AttributeKey<T>(*destAttr),
+                    timestep,
+                    getValue(source, AttributeKey<T>(*sourceAttr), timestep));
 }
 
 
