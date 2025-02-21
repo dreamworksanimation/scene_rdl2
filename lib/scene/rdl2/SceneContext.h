@@ -13,8 +13,8 @@
 #include <scene_rdl2/render/util/Alloc.h>
 #include <scene_rdl2/common/platform/Platform.h>
 #include <tbb/concurrent_hash_map.h>
-#include <tbb/mutex.h>
 
+#include <mutex>
 #include <string>
 
 namespace scene_rdl2 {
@@ -382,7 +382,7 @@ private:
     // it's being updated. In other words, doing an interpolated get() against
     // ANY object while the camera's shutter interval or SceneVariables motion
     // steps are being updated is a recipe for threading errors.
-    tbb::mutex mTimeRescalingCoeffsMutex;
+    std::mutex mTimeRescalingCoeffsMutex;
 
     // All cameras in the rdl context (including the primary camera).
     // This is in creation order.  The primary camera can't be assumed to be
@@ -414,7 +414,7 @@ private:
     // Mutex to sync write access to thread unsafe vectors like mGeometries only in
     // conditioning time. Those vectors will remain lock free for reading and reading / writing
     // at the same time is not allowed or protected in any way
-    mutable tbb::mutex mCreateSceneObjectMutex;
+    mutable std::mutex mCreateSceneObjectMutex;
 
     RenderOutputVector mRenderOutputs;
     std::string mDsoPath;
