@@ -84,8 +84,6 @@ AttributeKey<Float> SceneVariables::sVolumeAttenuationFactor;
 AttributeKey<Float> SceneVariables::sVolumeContributionFactor;
 AttributeKey<Float> SceneVariables::sVolumePhaseAttenuationFactor;
 
-AttributeKey<Bool> SceneVariables::sPathGuideEnable;
-
 AttributeKey<Float> SceneVariables::sTextureBlur;
 AttributeKey<Float> SceneVariables::sPixelFilterWidth;
 AttributeKey<Int>   SceneVariables::sPixelFilterType;
@@ -541,13 +539,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         SceneClass::sComment,
         "Controls how phase function (anisotropy) gets exponentially scaled down when rendering multiple scattering "
         "volumes. This variable is only effective when \"max volume depth\" is greater than 1");
-
-    sPathGuideEnable = sceneClass.declareAttribute<Bool>("path_guide_enable", false);
-    sceneClass.setMetadata(sPathGuideEnable, "label", "path guide enable");
-    sceneClass.setMetadata(sPathGuideEnable,
-        SceneClass::sComment,
-        "Turn on path guiding to handle difficult light transport problems (e.g. caustics) at the cost of increased "
-        "memory");
 
     sSampleClampingValue =
         sceneClass.declareAttribute<Float>("sample_clamping_value", Float(10.0f), {"sample clamping value"});
@@ -1167,8 +1158,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Volumes", sVolumeContributionFactor);
     sceneClass.setGroup("Volumes", sVolumePhaseAttenuationFactor);
     sceneClass.setGroup("Volumes", sVolumeIndirectSamples);
-
-    sceneClass.setGroup("Path Guide", sPathGuideEnable);
 
     sceneClass.setGroup("Fireflies Removal", sSampleClampingValue);
     sceneClass.setGroup("Fireflies Removal", sSampleClampingDepth);

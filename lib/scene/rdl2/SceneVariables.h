@@ -242,11 +242,6 @@ public:
     static AttributeKey<Float> sVolumePhaseAttenuationFactor;
 
     //
-    // Path Guiding
-    //
-    static AttributeKey<Bool> sPathGuideEnable;
-
-    //
     // Fireflies removal
     //
 
