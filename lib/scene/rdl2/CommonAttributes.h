@@ -43,12 +43,14 @@
         {"resolution factor", "subd resolution", "subd_resolution"});          \
     sceneClass.setMetadata(attrMeshResolution, "label", "mesh resolution");    \
     sceneClass.setMetadata(attrMeshResolution, "comment",                      \
-        "The maximum resolution to tessellate a mesh. An edge on "             \
-        "input face will be tessellated to at most n segments when "           \
-        "\"mesh resolution\" is set to n. If \"adaptive error\" is set to 0, " \
-        "every edge on input face will be uniformly tessellated to "           \
-        "\"mesh resolution\". Otherwise renderer will adaptively tessellate "  \
-        "mesh based on camera information");                                   \
+        "The maximum resolution to which a mesh will be tessellated. "         \
+        "NOTE: to prevent t-junctions, only even values are supported. If "    \
+        "\"mesh resolution\" is set to n, it will first be rounded up to "     \
+        "N=n+1 for odd n, N=n for even n. An edge on an input face will then " \
+        "be tessellated to at most N segments. If \"adaptive error\" is set "  \
+        "to 0, every edge on the input face will be uniformly tessellated to " \
+        "N segments. Otherwise the mesh will tessellated adaptively based on " \
+        "its relationship to the camera.");                                    \
     sceneClass.setGroup("Mesh", attrMeshResolution);                           \
     attrAdaptiveError =                                                        \
         sceneClass.declareAttribute<scene_rdl2::rdl2::Float>("adaptive_error", 0.0f,       \
