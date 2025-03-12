@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmData.h"
 #include "ShmFb.h"
@@ -35,16 +35,29 @@ execCommand(const std::string& cmd, std::vector<std::string>& outVecStr)
     FILE* fp {nullptr};
     if ((fp = popen(cmd.c_str(), "r")) == NULL) return false;
 
-    char* lineBuff {nullptr};
+    char* lineBuff {nullptr}; // automatically allocated by getline()
     size_t lineLen {0};
     while (getline(&lineBuff, &lineLen, fp) != -1) {
         if (isBlankLine(lineBuff)) continue;
         outVecStr.emplace_back(lineBuff);
     }
-    free(lineBuff);
+    free(lineBuff); // must free after used
     pclose(fp);
 
     return true;
+}
+
+std::vector<std::string>
+splitString(const std::string& line)
+{
+    std::vector<std::string> wordArray;
+    
+    std::string word;
+    std::stringstream sstr(line);
+    while (sstr >> word) {
+        wordArray.push_back(word);
+    }
+    return wordArray;
 }
 
 #ifdef __APPLE__
@@ -67,18 +80,21 @@ crawlAllShm(const size_t minHeaderSize,
 
     if (ipcsResultVecStr.size() < skipLines) return false; // format error
     for (size_t i = skipLines; i < ipcsResultVecStr.size(); ++i) {
-        std::stringstream sstr(ipcsResultVecStr[i]);
+        std::vector<std::string> wordArray = splitString(ipcsResultVecStr[i]);
 
-        std::string typeStr, shmIdStr, keyStr, modeStr, ownerStr, groupStr, bytesStr;
-        sstr >> typeStr >> shmIdStr >> keyStr >> modeStr >> ownerStr >> groupStr >> bytesStr;
+        // The expected information order would be "Type" "ShmId" "Key" "Mode" "Owner" "Group" "Size"
+        // for example : m 65536 0x00000000 --rw-r--r-- userA GroupABC 123
+        // User some conditions, there are some possibilities to include 'space' inside Group-Name string and
+        // this required a little bit tricky solution to read the "size" field. We pick the last word as a size.
+        const std::string& typeStr = wordArray[0];
+        const std::string& shmIdStr = wordArray[1];
+        const std::string& modeStr = wordArray[3];
+        const std::string& bytesStr = wordArray.back();
 
         /* for debug
         std::cerr << "typeStr:" << typeStr
                   << " shmIdStr:" << shmIdStr
-                  << " keyStr:" << keyStr
                   << " modeStr:" << modeStr
-                  << " ownerStr:" << ownerStr
-                  << " groupStr:" << groupStr
                   << " bytesStr:" << bytesStr
                   << '\n';
         */
@@ -88,7 +104,6 @@ crawlAllShm(const size_t minHeaderSize,
             unsigned currShmId = std::stoi(shmIdStr);
             callBack(currShmId);
         }
-        
     }
     return true;
 }
@@ -115,6 +130,7 @@ crawlAllShm(const size_t minHeaderSize,
     for (size_t i = skipLines; i < ipcsResultVecStr.size(); ++i) {
         std::stringstream sstr(ipcsResultVecStr[i]);
 
+        // The expected information order would be "Key" "shmId" "owner" "perms" "bytes" "nattch" ...
         std::string keyStr, shmIdStr, ownerStr, permsStr, bytesStr, nattchStr;
         sstr >> keyStr >> shmIdStr >> ownerStr >> permsStr >> bytesStr >> nattchStr;
 
@@ -218,7 +234,9 @@ ShmDataManager::shmGet(const int shmId, const size_t size)
     catch (std::string err) {
         std::ostringstream ostr;
         ostr << "ERROR : Could not construct ShmDataManager."
-             << " shmId:" << shmId << " size:" << size << " err:" + err; 
+             << " shmId:" << shmId << " size:" << size << " error=>{"
+             << str_util::addIndent(err) << '\n'
+             << "}";
         return ostr.str();
     }
 }
@@ -232,24 +250,32 @@ ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const
         manager.accessSetupShm(shmId, ShmDataIO::headerSize);
         const std::string header = manager.getHeader(ShmDataIO::headerSize);
         if (!cmpHeader(header, headerKey)) return true;
-        
+
         // found shared memory that has headerKey
         if (manager.mShmNAttach == 1) {
-            manager.rmShm();
+            if (!manager.rmShm()) return false;
             if (msgCallBack) {
                 std::ostringstream ostr;
-                ostr << "shmId:" << shmId << " headerKey:" << headerKey << "is deleted";
+                ostr << "shmId:" << shmId
+                     << " headerSize:" << ShmDataIO::headerSize
+                     << " headerKey:\"" << headerKey << "\" is deleted";
                 return msgCallBack(ostr.str() + '\n');
             }
         }
     }
     catch (std::string err) {
+        //
+        // We tried to access an unknown shared memory and failed.
+        // So we skip this shared memory.
+        //
         std::ostringstream ostr;
-        ostr << "ERROR : construct ShmDataManager failed."
-             << " shmId:" << shmId << " headerSize:" << ShmDataIO::headerSize << " headerKey:" << headerKey
-             << " err:" << err;
-        std::cerr << ostr.str();
-        return false;
+        ostr << "WARNING : Failed to access unknown shared memory."
+             << " shmId:" << shmId
+             << " headerSize:" << ShmDataIO::headerSize << " headerKey:\"" << headerKey << "\""
+             << " error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
+        std::cerr << ostr.str() << '\n';
     }
     return true;
 }
@@ -371,7 +397,7 @@ ShmDataManager::constructNewShm(const size_t memSize)
     int shmId;
     if ((shmId = shmget(IPC_PRIVATE, memSize, 0644)) < 0) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager shmget() failed. memSize:" << memSize << " error:" << strerror(errno);
+        ostr << "ShmDataManager shmget() failed. memSize:" << memSize << " error:>" << strerror(errno) << '<';
         throw(ostr.str()); 
    }
     std::cerr << "=====>>>>> ShmDataManager shmId:" << shmId << " <<<<<=====\n";
@@ -387,14 +413,16 @@ ShmDataManager::accessSetupShm(const int shmId, const size_t minDataSize)
     mShmAddr = nullptr; 
    if ((mShmAddr = static_cast<void*>(shmat(mShmId, NULL, 0))) == reinterpret_cast<void*>(-1)) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmat() failed";
+        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmat() failed."
+             << " error:>" << strerror(errno) << '<';
         throw(ostr.str());
     }
     
     struct shmid_ds shmIdInfo;
     if (shmctl(mShmId, IPC_STAT, &shmIdInfo) == -1) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmctl() failed";
+        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmctl() failed."
+             << " error:>" << strerror(errno) << '<';
         throw(ostr.str());
     }
     mShmSize = shmIdInfo.shm_segsz;

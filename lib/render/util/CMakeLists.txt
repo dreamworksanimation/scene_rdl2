@@ -1,4 +1,4 @@
-# Copyright 2023-2024 DreamWorks Animation LLC
+# Copyright 2023-2025 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(component render_util)
@@ -43,6 +43,7 @@ set_property(TARGET ${component}
         Arena.isph
         Args.h
         Array2D.h
+	Atomic128.h
         AtomicFloat.h
         BitUtils.h
         BitUtils.isph

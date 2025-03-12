@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmFb.h"
 
@@ -452,7 +452,9 @@ ShmFbManager::ShmFbManager(const int shmId)
     }
     catch (std::string err) {
         std::ostringstream ostr;
-        ostr << "ShmFbManager::ShmFbManager(shmId:" << shmId << ") construct failed. err:" << err;
+        ostr << "ShmFbManager::ShmFbManager(shmId:" << shmId << ") construct failed. error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
         throw(ostr.str());
     }
 }
@@ -490,7 +492,9 @@ ShmFbManager::setupFb()
     }
     catch (std::string err) {
         std::ostringstream ostr;
-        ostr << "ShmFbManager construct ShmFb failed. err:" << err;
+        ostr << "ShmFbManager construct ShmFb failed. error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
         throw(ostr.str());
     }
 }
@@ -553,7 +557,9 @@ ShmFbCtrlManager::ShmFbCtrlManager(const int shmId)
     }
     catch (std::string err) {
         std::ostringstream ostr;
-        ostr << "ShmFbCtrlManager::ShmFbCtrlManager(shmId:" << shmId << ") construct failed. err:" << err;
+        ostr << "ShmFbCtrlManager::ShmFbCtrlManager(shmId:" << shmId << ") construct failed. error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
         throw(ostr.str());
     }
 }
@@ -586,7 +592,9 @@ ShmFbCtrlManager::setupFbCtrl()
     }
     catch (std::string err) {
         std::ostringstream ostr;
-        ostr << "ShmFbCtrlManager construct ShmFbCtrl failed. err:" << err;
+        ostr << "ShmFbCtrlManager construct ShmFbCtrl failed. error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
         throw(ostr.str());
     }
 }

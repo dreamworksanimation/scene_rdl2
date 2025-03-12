@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestShmFb.h"
 
@@ -28,7 +28,9 @@ dataSizeTest(size_t memSize,
     }
     catch (std::string err) {
         if (expectedResult) {
-            std::cerr << ">> TestShmFb.cc dataSizeTest() failed. err:" << err << '\n';
+            std::cerr << ">> TestShmFb.cc dataSizeTest() failed. error=>{\n"
+                      << scene_rdl2::str_util::addIndent(err) << '\n'
+                      << "}\n";
         }
         flag = false;
     }
@@ -149,7 +151,9 @@ TestShmFb::testFbMain(unsigned width, unsigned height, unsigned chanTotal, ShmFb
                   << "  height:" << height << '\n'
                   << "  chanTotal:" << chanTotal << '\n'
                   << "  chanMode:" << ShmFb::chanModeStr(chanMode) << '\n'
-                  << "  err:" << err << '\n';
+                  << "  error=>{\n"
+                  << str_util::addIndent(err, 2) << '\n'
+                  << "  }\n";
         flag = false;
     }
 
@@ -190,7 +194,9 @@ TestShmFb::testFbCtrlMain() const
     }
     catch (std::string err) {
         std::cerr << "ERROR : ShmFbCtrl construction failed (testFbCtrlMain)"
-                  << " err:" << err << '\n';
+                  << " error=>{\n"
+                  << str_util::addIndent(err) << '\n'
+                  << "}\n";
         flag = false;
     }
 
@@ -320,7 +326,6 @@ TestShmFb::testFbOutputSingle(const unsigned width,
          << ")"
          << " expected:" << str_util::boolStr(expectedResult)
          << " result:" << str_util::boolStr(result);
-
 
     if (result != expectedResult) {
         std::cerr << ostr.str() << " => NG\n";

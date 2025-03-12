@@ -1,12 +1,10 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #pragma once
 
 #include <atomic>
 #include <type_traits>
 #include <memory>
-
 
 // In C++17, std::atomic<float>, std::atomic<double>, and std::atomic<long
 // double> behave more like the integral atomic types. We're going to add this
@@ -350,6 +348,15 @@ public:
 
 template <>
 class atomic<long double> : public af_detail::atomic_fp<long double>
+//
+// This is a 128-bit long double atomic operation class.
+// Under some of the OS versions, a 128-bit lock-free atomic operation is not supported. (is_lock_free()
+// always returns false). In this case, this class will not work as expected in that environment. (It
+// is still atomic but not lock-free).
+// However, at this moment, we don't use atomic<long double> objects in MoonRay and so this may not be
+// a concern. However, in the future if we need long double atomic lock-free operation under an environment
+// that doesn't support it, we should consider using the Atomic128.h implementation.
+//
 {
 public:
     atomic() noexcept = default;
@@ -371,5 +378,3 @@ static_assert(std::is_trivially_destructible<atomic<long double>>::value);
 
 } // namespace std
 #endif // #if !defined(__cpp_lib_atomic_float)
-
-
