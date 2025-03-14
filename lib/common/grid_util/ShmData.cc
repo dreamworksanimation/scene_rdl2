@@ -47,6 +47,8 @@ execCommand(const std::string& cmd, std::vector<std::string>& outVecStr)
     return true;
 }
 
+#ifdef PLATFORM_APPLE
+
 std::vector<std::string>
 splitString(const std::string& line)
 {
@@ -59,8 +61,6 @@ splitString(const std::string& line)
     }
     return wordArray;
 }
-
-#ifdef __APPLE__
 
 bool
 crawlAllShm(const size_t minHeaderSize,
@@ -108,7 +108,7 @@ crawlAllShm(const size_t minHeaderSize,
     return true;
 }
 
-#else // else __APPLE__
+#else // else PLATFORM_APPLE
     
 bool
 crawlAllShm(const size_t minHeaderSize,
@@ -151,7 +151,8 @@ crawlAllShm(const size_t minHeaderSize,
     }
     return true;
 }
-#endif // else __APPLE__
+
+#endif // end of Not PLATFORM_APPLE
 
 } // namespace
 
