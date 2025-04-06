@@ -15,6 +15,7 @@ target_link_libraries(${target}
     PRIVATE
         SceneRdl2::common_math
         SceneRdl2::pdevunit
+        ${CMAKE_DL_LIBS}
 )
 
 # Set standard compile/link options
