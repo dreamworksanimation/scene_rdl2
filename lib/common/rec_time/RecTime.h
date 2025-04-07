@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <chrono>
 #include <sstream>
 
-#include <sys/time.h>
 #include <stdint.h>
 #include <time.h> // clock_gettime()
 
@@ -38,9 +38,9 @@ public:
 
     static uint64_t getCurrentMicroSec() // MTsafe
     {
-        struct timeval tv;
-        gettimeofday(&tv, 0x0);
-        return static_cast<uint64_t>(tv.tv_sec) * 1000000 + static_cast<uint64_t>(tv.tv_usec);
+        const auto tnow = std::chrono::high_resolution_clock::now().time_since_epoch();
+        const auto cTime = std::chrono::duration_cast<std::chrono::microseconds>(tnow);
+        return cTime.count();
     }
 
 protected:
@@ -159,7 +159,7 @@ public:
         //
         const uint64_t c0 = __rdtsc();
         const uint64_t ns0 = RecTimeVDSO::getCurrentNanoSec(); // ns
-        usleep(100000); // 100ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         const uint64_t c1 = __rdtsc();
         const uint64_t ns1 = RecTimeVDSO::getCurrentNanoSec(); // ns
         const double deltaNs = static_cast<double>(ns1 - ns0);

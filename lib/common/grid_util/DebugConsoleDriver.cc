@@ -5,8 +5,8 @@
 //
 #include "DebugConsoleDriver.h"
 
+#include <chrono>
 #include <iostream>
-#include <unistd.h>
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -89,7 +89,7 @@ DebugConsoleDriver::threadMain(DebugConsoleDriver *driver)
         if (recvByte == 0 || recvByte == -1) {
             // empty or EOF
             driver->mThreadState = ThreadState::IDLE;
-            usleep(10000); // 10000us = 10ms : wake up every 10ms and check TlSvr
+            std::this_thread::sleep_for(std::chrono::microseconds(10000)); // 10000us = 10ms : wake up every 10ms and check TlSvr
             
         } else if (recvByte < -1) { // error
             std::cerr << "telnet server failed\n";

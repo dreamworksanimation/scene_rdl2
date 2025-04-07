@@ -9,74 +9,89 @@
 
 #include <cstdlib>
 #include <vector>
-#include <dirent.h>
-#include <libgen.h>
+
+#include <filesystem>
 
 namespace scene_rdl2 {
 namespace rdl2 {
 
-using util::Args;
+#ifdef _WIN32
+static const std::string sRaasRender("moonray.exe");
+static const std::string sOsPathSep(";");
+#else
+static const std::string sRaasRender("moonray");
+static const std::string sOsPathSep(":");
+#endif
 
-int isMatching(const dirent* entry) {
-    std::string name = "raas_render";
-    if (name == std::string(entry->d_name)) {
-        return 1;
-    }
-    
-    return 0;
-}
+using util::Args;
 
 std::string
 DsoFinder::guessDsoPath()
 {
     std::string dsoPath = "";
-    dirent** nameList;
-    
+
     // First, search PATH for raas_render executable
     const std::string pathEnv = util::getenv<std::string>("PATH");
     if (pathEnv.empty()) {
         return "";
     }
-    
-    size_t found = pathEnv.find(':');
-    int numFound;
-    std::string path;
+    bool pathFound = false;
+    size_t found = pathEnv.find(sOsPathSep);
+    std::filesystem::path path;
     if (found == std::string::npos) { // single path
-        path = pathEnv;
-        numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
+        path = std::filesystem::path(pathEnv).make_preferred();
+
+        if (std::filesystem::exists(path)) {
+            for (auto const& dirEntry : std::filesystem::directory_iterator(path)) {
+                if (dirEntry.path().filename().string() == sRaasRender) {
+                    pathFound = true;
+                    break;
+                }
+            }
+        }
     } else {
         int counter = 0;
         while (found != std::string::npos) {
-            path = pathEnv.substr(counter, found - counter);
-            numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
-            if (numFound > 0) {
+            path = std::filesystem::path(pathEnv.substr(counter, found - counter)).make_preferred();
+            if (std::filesystem::exists(path)) {
+                for ( const auto & dirEntry : std::filesystem::directory_iterator(path)) {
+                    std::string file = dirEntry.path().stem().string();
+                    if (file == sRaasRender) {
+                        pathFound = true;
+                        break;
+                    }
+                }
+            }
+            if (pathFound) {
                 break;
             }
             counter = found + 1;
-            found = pathEnv.find(':', found + 1);
-        }
-        
-        if (numFound <= 0) { // Haven't found raas_render yet
-            // Process last path
-            path = pathEnv.substr(counter);
-            numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
+            found = pathEnv.find(sOsPathSep, found + 1);
         }
     }
-    
-    if (numFound > 0) {
-        // We found raas_render, now construct path to rdl2dso
-        // This assumes that the immediate parent directory is /bin
-        char* buf = realpath(path.c_str(), NULL); // Resolve any relative links
-        dsoPath = std::string(dirname(buf)) + "/" + "rdl2dso";
-        free(buf);
-    }
-    
-    // clean up
-    /*while (numFound--) {
-        free(nameList[numFound]);
-    }*/
-    free(nameList);
 
+    if (pathFound) {
+        std::filesystem::path raasRdl2dso = std::filesystem::path(std::filesystem::absolute(path.parent_path()) / "rdl2dso").make_preferred();
+        if (std::filesystem::exists(raasRdl2dso)) {
+            dsoPath = raasRdl2dso.string();
+        }
+    }
+#ifndef __APPLE__
+    else {
+#ifdef _WIN32
+        char exePathCStr[MAX_PATH];
+        ::GetModuleFileNameA(nullptr, exePathCStr, MAX_PATH);
+        std::filesystem::path exePath(exePathCStr);
+#else
+        std::filesystem::path exePath("/proc/self/exe");
+        exePath = std::filesystem::canonical(exePath);
+#endif
+        std::filesystem::path raasRdl2dso = std::filesystem::path(std::filesystem::absolute(exePath.parent_path().parent_path()) / "rdl2dso").make_preferred();
+        if (std::filesystem::exists(raasRdl2dso)) {
+            dsoPath = raasRdl2dso.string();
+        }
+    }
+#endif
     return dsoPath;
 }
 
@@ -85,14 +100,14 @@ std::string DsoFinder::find() {
     std::string dsoPathString = "."; // Search '.' path first
     if (const char* const dsoPathEnvVar = util::getenv<const char*>("RDL2_DSO_PATH")) {
         // append dso path as sourced from RDL2_DSO_PATH
-        dsoPathString += ":" + std::string(dsoPathEnvVar);
+        dsoPathString += sOsPathSep + std::string(dsoPathEnvVar);
     }
     
     // finally, guess dso path based on location of raas_render
     std::string guessedDsoPath = guessDsoPath();
     if (!guessedDsoPath.empty()) {
         // append dso path as sourced from location of raas_render executable
-        dsoPathString += ":" + guessedDsoPath;   
+        dsoPathString += sOsPathSep + guessedDsoPath;   
     }
     
     return dsoPathString;
@@ -125,7 +140,7 @@ std::string DsoFinder::parseDsoPath(int argc, char* argv[]) {
     
     if (!dsoPath.empty()) {
         // prepend dso path as sourced from command line
-        return dsoPath + ":" + findPath; 
+        return dsoPath + sOsPathSep + findPath; 
     }
     
     return findPath; 

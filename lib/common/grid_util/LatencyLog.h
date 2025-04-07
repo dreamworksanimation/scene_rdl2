@@ -16,10 +16,9 @@
 #include <scene_rdl2/scene/rdl2/ValueContainerDeq.h>
 #include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
 
+#include <chrono>
 #include <string>
 #include <vector>
-
-#include <sys/time.h>
 
 //
 // We should always use variable length coding.
@@ -196,9 +195,10 @@ protected:
 finline uint64_t
 LatencyItem::getCurrentMicroSec()
 {
-    struct timeval tv;
-    gettimeofday(&tv, 0x0);
-    uint64_t microSec = static_cast<uint64_t>(tv.tv_sec) * 1000 * 1000 + static_cast<uint64_t>(tv.tv_usec);
+    const auto tnow = std::chrono::high_resolution_clock::now().time_since_epoch();
+    const auto cTime = std::chrono::duration_cast<std::chrono::microseconds>(tnow);
+    uint64_t microSec = static_cast<uint64_t>(static_cast<int64_t>(cTime.count()));
+
     if (LatencyClockOffset::getInstance().isPositive()) {
         microSec += LatencyClockOffset::getInstance().getAbsOffsetMicroSec();
     } else {
