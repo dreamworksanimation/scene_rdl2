@@ -4,7 +4,7 @@
 
 #include <scene_rdl2/common/rec_time/RecTime.h>
 
-#include <unistd.h>
+#include <chrono>
 
 // This directive should not commented out for the release version.
 // This is only used for local debugging purposes.
@@ -98,7 +98,7 @@ TestThreadPoolExecutor::watcherThreadMain(const float maxTestDurationSec)
                       << " duration:" << maxTestDurationSec << " sec\n";
             exit(1);
         }
-        usleep(10000);
+        std::this_thread::sleep_for(std::chrono::microseconds(10000));
     }
 
     std::cerr << ">> Watcher thread shutdown <<\n";
