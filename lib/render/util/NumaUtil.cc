@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "NumaUtil.h"
 #include "CpuSocketUtil.h"
@@ -18,6 +18,8 @@ namespace {
 std::string
 getSingleLine(const std::string& fileName, std::string& errMsg)
 {
+    errMsg.clear();
+
     std::ifstream ifs(fileName);
     if (!ifs) {
         std::ostringstream ostr;
@@ -41,16 +43,19 @@ getIdTbl(const std::string& infoFileName)
 // Might throw except::RuntimeError() when error
 //
 {
+    std::vector<unsigned> idTbl;
     std::ostringstream ostr;
 
     std::string errMsg;
     std::string line = getSingleLine(infoFileName, errMsg);
     if (line.empty()) {
-        ostr << "NumaUtil::getIdTbl() failed. err:" << errMsg;
-        throw scene_rdl2::except::RuntimeError(ostr.str());
+        if (!errMsg.empty()) {
+            ostr << "NumaUtil::getIdTbl() failed. err:" << errMsg;
+            throw scene_rdl2::except::RuntimeError(ostr.str());
+        }
+        return idTbl; // empty
     }
 
-    std::vector<unsigned> idTbl;
     if (!scene_rdl2::CpuSocketUtil::parseIdDef(line, idTbl, errMsg)) {
         ostr << "NumaUtil::getIdTbl() failed. err:" << errMsg;
         throw scene_rdl2::except::RuntimeError(ostr.str());
@@ -110,15 +115,19 @@ getNumaNodeDistance(const unsigned numaNodeId)
         return infoFilePrefix + std::to_string(numaNodeId) + "/distance";
     };
 
+    std::vector<int> distanceTbl;
+
     std::ostringstream ostr;
     std::string errMsg;
     std::string line = getSingleLine(getInfoFileName(), errMsg);
     if (line.empty()) {
-        ostr << "NumaUtil::getNumaNodeDistance() failed. err:" << errMsg;
-        throw scene_rdl2::except::RuntimeError(ostr.str());
+        if (!errMsg.empty()) {
+            ostr << "NumaUtil::getNumaNodeDistance() failed. err:" << errMsg;
+            throw scene_rdl2::except::RuntimeError(ostr.str());
+        }
+        return distanceTbl; // empty
     }
     
-    std::vector<int> distanceTbl;
     std::stringstream sstr(line);
     while (true) {
         int val;
@@ -321,6 +330,8 @@ NumaNode::isBelongMem(void* const memory, const size_t size) const
 bool
 NumaNode::isBelongCpu(const unsigned cpuId) const
 {
+    if (isEmptyCPU()) return false;
+
     if (cpuId < mCpuIdList.front() || mCpuIdList.back() < cpuId) return false;
     return std::find(mCpuIdList.begin(), mCpuIdList.end(), cpuId) != mCpuIdList.end();
 }

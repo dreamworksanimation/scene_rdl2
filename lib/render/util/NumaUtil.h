@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -23,6 +23,8 @@ public:
     size_t getMemSize() const { return mMemSize; } // Return NUMA-node memory size
 
     const std::vector<int>& getNodeDistance() const { return mNodeDistance; }
+
+    bool isEmptyCPU() const { return mCpuIdList.empty(); }
 
     //
     // alloc/free which is related to this NUMA-node memory.

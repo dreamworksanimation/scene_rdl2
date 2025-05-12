@@ -72,7 +72,6 @@ set_property(TARGET ${component}
         syncstream.h
         ThreadPoolExecutor.h
         TimeUtil.h
-        ThreadPoolExecutor.h
         type_traits.h
         TypedStaticallySizedMemoryPool.h
         ${PlatformSpecificHeaders}

@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -119,6 +119,8 @@ public:
 
     void run(const TaskFunc& task); // MTsafe
     void wait(); // wait until all queued tasks are processed
+
+    size_t getPoolSize() const { return mThreadTbl.size(); }
 
     void shutdown();
 
