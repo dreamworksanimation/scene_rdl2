@@ -3,9 +3,9 @@
 
 #pragma once
 
+#include <chrono>
 #include <sstream>
 
-#include <sys/time.h>
 #include <stdint.h>
 
 namespace scene_rdl2 {
@@ -26,10 +26,9 @@ public:
     inline float end() const { return (float)(getCurrentMicroSec() - mStartTime) * 0.000001f; } // return sec
 
     static long long getCurrentMicroSec() {
-        struct timeval tv;
-        gettimeofday(&tv, 0x0);
-        long long cTime = (long long)tv.tv_sec * 1000 * 1000 + (long long)tv.tv_usec;
-        return cTime;
+        const auto tnow = std::chrono::high_resolution_clock::now().time_since_epoch();
+        const auto cTime = std::chrono::duration_cast<std::chrono::microseconds>(tnow);
+        return cTime.count();
     }
 
 protected:

@@ -9,74 +9,65 @@
 
 #include <cstdlib>
 #include <vector>
-#include <dirent.h>
-#include <libgen.h>
+
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace scene_rdl2 {
 namespace rdl2 {
 
-using util::Args;
+const std::string g_raasRender("raas_render");
+const std::string g_osPathSep(":");
 
-int isMatching(const dirent* entry) {
-    std::string name = "raas_render";
-    if (name == std::string(entry->d_name)) {
-        return 1;
-    }
-    
-    return 0;
-}
+using util::Args;
 
 std::string
 DsoFinder::guessDsoPath()
 {
     std::string dsoPath = "";
-    dirent** nameList;
-    
+
     // First, search PATH for raas_render executable
     const std::string pathEnv = util::getenv<std::string>("PATH");
     if (pathEnv.empty()) {
         return "";
     }
-    
-    size_t found = pathEnv.find(':');
-    int numFound;
-    std::string path;
+    size_t found = pathEnv.find(g_osPathSep);
+    fs::path path;
     if (found == std::string::npos) { // single path
-        path = pathEnv;
-        numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
+        path = fs::path(pathEnv).make_preferred();
+
+        if (fs::exists(path)) {
+            for (auto const& dirEntry : std::filesystem::directory_iterator(path)) {
+                if (dirEntry.path().filename().string() == g_raasRender) {
+                    break;
+                }
+            }
+        }
     } else {
         int counter = 0;
+        bool pathFound = false;
         while (found != std::string::npos) {
-            path = pathEnv.substr(counter, found - counter);
-            numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
-            if (numFound > 0) {
+            path = fs::path(pathEnv.substr(counter, found - counter)).make_preferred();
+            if (fs::exists(path)) {
+                for ( const auto & dirEntry : std::filesystem::directory_iterator(path)) {
+                    std::string file = dirEntry.path().stem().string();
+                    if (file == g_raasRender) {
+                        pathFound = true;
+                        break;
+                    }
+                }
+            }
+            if (pathFound) {
                 break;
             }
             counter = found + 1;
-            found = pathEnv.find(':', found + 1);
-        }
-        
-        if (numFound <= 0) { // Haven't found raas_render yet
-            // Process last path
-            path = pathEnv.substr(counter);
-            numFound = scandir(path.c_str(), &nameList, isMatching, alphasort);
+            found = pathEnv.find(g_osPathSep, found + 1);
         }
     }
-    
-    if (numFound > 0) {
-        // We found raas_render, now construct path to rdl2dso
-        // This assumes that the immediate parent directory is /bin
-        char* buf = realpath(path.c_str(), NULL); // Resolve any relative links
-        dsoPath = std::string(dirname(buf)) + "/" + "rdl2dso";
-        free(buf);
-    }
-    
-    // clean up
-    /*while (numFound--) {
-        free(nameList[numFound]);
-    }*/
-    free(nameList);
 
+    if (!path.empty()) {
+        dsoPath = fs::path(fs::absolute(path.parent_path()) / "rdl2dso").make_preferred().string();
+    }
     return dsoPath;
 }
 
@@ -85,14 +76,14 @@ std::string DsoFinder::find() {
     std::string dsoPathString = "."; // Search '.' path first
     if (const char* const dsoPathEnvVar = util::getenv<const char*>("RDL2_DSO_PATH")) {
         // append dso path as sourced from RDL2_DSO_PATH
-        dsoPathString += ":" + std::string(dsoPathEnvVar);
+        dsoPathString += g_osPathSep + std::string(dsoPathEnvVar);
     }
     
     // finally, guess dso path based on location of raas_render
     std::string guessedDsoPath = guessDsoPath();
     if (!guessedDsoPath.empty()) {
         // append dso path as sourced from location of raas_render executable
-        dsoPathString += ":" + guessedDsoPath;   
+        dsoPathString += g_osPathSep + guessedDsoPath;   
     }
     
     return dsoPathString;
@@ -125,7 +116,7 @@ std::string DsoFinder::parseDsoPath(int argc, char* argv[]) {
     
     if (!dsoPath.empty()) {
         // prepend dso path as sourced from command line
-        return dsoPath + ":" + findPath; 
+        return dsoPath + g_osPathSep + findPath; 
     }
     
     return findPath; 
