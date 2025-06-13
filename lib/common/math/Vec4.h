@@ -43,6 +43,7 @@ namespace math {
     __forceinline Vec4    ( const Vec4& other ) = default;
     __forceinline Vec4    ( const Vec2<T>& other ) { x = other.x; y = other.y; z = 0; w = 0; }
     __forceinline Vec4    ( const Vec3<T>& other ) { x = other.x; y = other.y; z = other.z; w = 0; }
+    __forceinline Vec4    ( const Vec3<T>& other, float inW ) { x = other.x; y = other.y; z = other.z; w = inW; }
     __forceinline Vec4    ( const Vec3fa& other );
 
     template<typename T1> __forceinline Vec4( const Vec4<T1>& a ) : x(T(a.x)), y(T(a.y)), z(T(a.z)), w(T(a.w)) {}
