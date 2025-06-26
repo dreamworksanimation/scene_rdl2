@@ -1,7 +1,7 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "TestPixelBufferSha1.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/render/util/StrUtil.h>
 
@@ -36,6 +36,8 @@ template <> math::Vec4f TestPixelBufferSha1::randomPix<math::Vec4f>() { return r
 void
 TestPixelBufferSha1::testSingleRegion()
 {
+    TIME_START;
+
     // randomPixTest(); // useful debug message
 
 #   ifdef SINGLE_THREAD
@@ -51,11 +53,15 @@ TestPixelBufferSha1::testSingleRegion()
     singleRegionTestMain<math::Vec2f>(testTotal);
     singleRegionTestMain<math::Vec3f>(testTotal);
     singleRegionTestMain<fb_util::RenderColor>(testTotal);
+
+    TIME_END;
 }
 
 void
 TestPixelBufferSha1::testDualRegion()
 {
+    TIME_START;
+
 #   ifdef SINGLE_THREAD
     constexpr int testTotal = 8;
 #   else // else SINGLE_THREAD
@@ -69,6 +75,8 @@ TestPixelBufferSha1::testDualRegion()
     dualRegionTestMain<math::Vec2f>(testTotal);
     dualRegionTestMain<math::Vec3f>(testTotal);
     dualRegionTestMain<fb_util::RenderColor>(testTotal);
+
+    TIME_END;
 }
 
 //------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 
@@ -115,4 +115,3 @@ inline TestArg::realValHexDump<double>(const double &v) const
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

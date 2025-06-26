@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -29,7 +29,7 @@ public:
         : ShmDataIO {dataStartAddr, dataSize}
     {
         if (!verifyMemBoundary(width, height, chanTotal, chanMode)) {
-            throw(errMsg("ShmFb constructor", "verify memory size/boudnary failed"));
+            throw(errMsg("ShmFb constructor", "verify memory size/boundary failed"));
         }
         if (doInit) {
             {
@@ -54,7 +54,8 @@ public:
 
     static bool strToChanMode(const std::string& str, ChanMode& mode);
 
-    static size_t chanByteSize(const ChanMode chanMode) {
+    static size_t chanByteSize(const ChanMode chanMode)
+    {
         switch (chanMode) {
         case ChanMode::UC8 : return 1;
         case ChanMode::H16 : return 2;
@@ -64,24 +65,28 @@ public:
         return 0;
     }
     static size_t calcFbDataSize(const unsigned width, const unsigned height,
-                                 const unsigned chanTotal, const ChanMode chanMode) {
+                                 const unsigned chanTotal, const ChanMode chanMode)
+    {
         const unsigned pixSize = static_cast<unsigned>(chanByteSize(chanMode)) * chanTotal;
         const unsigned pixTotal = width * height;
         return pixSize * pixTotal;
     }
     static size_t calcDataSize(const unsigned width, const unsigned height,
-                               const unsigned chanTotal, const ChanMode chanMode) {
+                               const unsigned chanTotal, const ChanMode chanMode)
+    {
         return offset_fbDataStart + calcFbDataSize(width, height, chanTotal, chanMode);
     }
     static size_t calcMinDataSize() { return calcDataSize(0, 0, 0, static_cast<ChanMode>(0)); }
-    static std::string retrieveHeadMessage(void* const topAddr) {
+    static std::string retrieveHeadMessage(void* const topAddr)
+    {
         return retrieveMessage(topAddr, offset_headMessage, size_headMessage);
     }
     static size_t retrieveShmDataSize(void* const topAddr) { return retrieveSizeT(topAddr, offset_shmDataSize); }
     static unsigned retrieveWidth(void* const topAddr) { return retrieveUnsigned(topAddr, offset_width); }
     static unsigned retrieveHeight(void* const topAddr) { return retrieveUnsigned(topAddr, offset_height); }
     static unsigned retrieveChanTotal(void* const topAddr) { return retrieveUnsigned(topAddr, offset_chanTotal); }
-    static ChanMode retrieveChanMode(void* const topAddr) {
+    static ChanMode retrieveChanMode(void* const topAddr)
+    {
         return static_cast<ChanMode>(retrieveChar(topAddr, offset_chanMode));
     }
     static bool retrieveTop2BottomFlag(void* const topAddr) { return retrieveBool(topAddr, offset_top2BottomFlag); }
@@ -96,7 +101,8 @@ public:
     unsigned getFbDataSize() const { return getUnsigned(offset_fbDataSize); }
 
     void* getFbDataStartAddr() const { return reinterpret_cast<void*>(calcAddr(offset_fbDataStart)); }
-    void* getFbDataScanlineStartAddr(const unsigned y) const {
+    void* getFbDataScanlineStartAddr(const unsigned y) const
+    {
         return reinterpret_cast<void*>(calcYDataOffset(y) * mScanlineSize +
                                        reinterpret_cast<uintptr_t>(getFbDataStartAddr()));
     }
@@ -188,12 +194,15 @@ public:
     // Access already generated ShmFbManager which is pointed to by shmId
     explicit ShmFbManager(const int shmId);
 
+    // The following get APIs are only valid if constructed fresh shared memory frame buffer
+    // and not valid if accessed to already existing shared memory.
     unsigned getWidth() const { return mWidth; }
     unsigned getHeight() const { return mHeight; }
     unsigned getChanTotal() const { return mChanTotal; }
     ShmFb::ChanMode getChanMode() const { return mChanMode; }
     bool getTop2BottomFlag() const { return mTop2BottomFlag; }
 
+    // client must use this API to access shared memory information and must not use above get APIs.
     std::shared_ptr<ShmFb> getFb() const { return mFb; }
 
     std::string show() const;
@@ -204,12 +213,16 @@ private:
 
     //------------------------------
 
+    // The following members are only valid if constructed fresh shared memory frame buffer
+    // and not valid if accessed to already existing shared memory.
     unsigned mWidth {0};
     unsigned mHeight {0};
     unsigned mChanTotal {0};
     ShmFb::ChanMode mChanMode {0};
     bool mTop2BottomFlag {false};
 
+    //------------------------------
+    
     std::shared_ptr<ShmFb> mFb;
 };
 
@@ -251,7 +264,8 @@ public:
 
     static size_t calcDataSize() { return offset_totalDataSize; }
 
-    static std::string retrieveHeadMessage(void* const topAddr) {
+    static std::string retrieveHeadMessage(void* const topAddr)
+    {
         return retrieveMessage(topAddr, offset_headMessage, size_headMessage);
     }
     static size_t retrieveShmDataSize(void* const topAddr) { return retrieveSizeT(topAddr, offset_shmDataSize); }

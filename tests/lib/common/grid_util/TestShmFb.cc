@@ -1,69 +1,14 @@
 // Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestShmFb.h"
+#include "TestShmUtil.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/common/grid_util/ShmFbOutput.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <memory>
 #include <unistd.h> // test
-
-namespace {
-
-using DataSizeTestConstructionFunc = std::function<void(void* mem, size_t memSize)>;
-
-bool
-dataSizeTest(size_t memSize,
-             bool expectedResult,
-             const DataSizeTestConstructionFunc& constructObjFunc)
-{
-    void* mem = nullptr;
-    if (memSize > 0) {
-        mem = malloc(memSize);
-    }
-
-    bool flag = true;
-    try {
-        constructObjFunc(mem, memSize);
-    }
-    catch (std::string err) {
-        if (expectedResult) {
-            std::cerr << ">> TestShmFb.cc dataSizeTest() failed. error=>{\n"
-                      << scene_rdl2::str_util::addIndent(err) << '\n'
-                      << "}\n";
-        }
-        flag = false;
-    }
-
-    if (memSize > 0) {
-        free(mem);
-    }
-
-    if (flag != expectedResult) {
-        std::cerr << ">> TestShmFb.cc dataSizeTest() failed."
-                  << " memSize:" << memSize << '\n';
-    }
-
-    return flag == expectedResult;
-}
-
-bool
-dataSizeTest2(size_t memSize,
-              bool expectedResultA,
-              bool expectedResultB,
-              bool expectedResultC,
-              const DataSizeTestConstructionFunc& constructObjFunc)
-{
-    const size_t memSizeA = (memSize > 0) ? memSize - 1 : memSize;
-    const size_t memSizeB = memSize;
-    const size_t memSizeC = memSize + 1;
-
-    return (dataSizeTest(memSizeA, expectedResultA, constructObjFunc) &&
-            dataSizeTest(memSizeB, expectedResultB, constructObjFunc) &&
-            dataSizeTest(memSizeC, expectedResultC, constructObjFunc));
-}
-
-} // namespace
 
 //------------------------------------------------------------------------------------------
 
@@ -74,13 +19,15 @@ namespace unittest {
 void
 TestShmFb::testFbDataSize()
 {
+    TIME_START;
+
     constexpr unsigned width {640};
     constexpr unsigned height {480};
     constexpr unsigned chanTotal {3};
     constexpr ShmFb::ChanMode chanMode {ShmFb::ChanMode::UC8};
     constexpr bool top2BottomFlag {true};
     
-    DataSizeTestConstructionFunc func = [](void* mem, size_t memSize) {
+    DataSizeTestConstructionFunc func = [&](void* mem, size_t memSize) {
         ShmFb shmFb(width, height, chanTotal, chanMode, top2BottomFlag, mem, memSize, true);
     };
 
@@ -90,17 +37,25 @@ TestShmFb::testFbDataSize()
         flag = false;
     }
     CPPUNIT_ASSERT("testFbDataSize" && flag);
+
+    TIME_END;
 }
 
 void
 TestShmFb::testFb()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("testFb" && testFbMain(320, 240, 3, ShmFb::ChanMode::UC8));
+
+    TIME_END;
 }
 
 void
 TestShmFb::testFbCtrlDataSize()
 {
+    TIME_START;
+
     DataSizeTestConstructionFunc func = [](void* mem, size_t memSize) {
         ShmFbCtrl shmFbCtrl(mem, memSize, true);
     };
@@ -111,24 +66,38 @@ TestShmFb::testFbCtrlDataSize()
         flag = false;
     }
     CPPUNIT_ASSERT("testFbCtrlDataSize" && flag);
+
+    TIME_END;
 }
 
 void
 TestShmFb::testFbCtrl()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("testFbCtrl" && testFbCtrlMain());
+
+    TIME_END;
 }
 
 void
 TestShmFb::testFbH16()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("testFbH16" && testFbH16Main());
+
+    TIME_END;
 }
 
 void
 TestShmFb::testFbOutput()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("testFbOutput" && testFbOutputMain());
+
+    TIME_END;
 }
 
 //------------------------------------------------------------------------------------------
@@ -145,7 +114,7 @@ TestShmFb::testFbMain(unsigned width, unsigned height, unsigned chanTotal, ShmFb
         fb.fillFbByTestPattern(1);
         flag = verifyFb(fb, width, height, chanTotal, chanMode);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::cerr << "ERROR: ShmFb construction failed (testFbMain)\n"
                   << "  width:" << width << '\n'
                   << "  height:" << height << '\n'
@@ -192,7 +161,7 @@ TestShmFb::testFbCtrlMain() const
         fbCtrl.setCurrentShmId(shmId);
         flag = verifyFbCtrl(fbCtrl, shmId);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::cerr << "ERROR : ShmFbCtrl construction failed (testFbCtrlMain)"
                   << " error=>{\n"
                   << str_util::addIndent(err) << '\n'

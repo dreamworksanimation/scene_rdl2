@@ -1,4 +1,4 @@
-# Copyright 2023-2024 DreamWorks Animation LLC
+# Copyright 2023-2025 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(component common_grid_util)
@@ -13,7 +13,10 @@ target_sources(${component}
     PRIVATE
         ActiveBitTable.cc
         ActivePixelsArray.cc
+        AffinityMapTable.cc
+	AffinityResourceControl.cc
         Arg.cc
+	CpuSocketUtil.cc
         DebugConsoleDriver.cc
         Fb.cc
         FbActivePixels.cc
@@ -31,16 +34,19 @@ target_sources(${component}
         Fb_untile.cc
         FloatValueTracker.cc
         LatencyLog.cc
+	NumaUtil.cc
         PackActiveTiles.cc
         PackTiles.cc
         PackTilesPassPrecision.cc
         PackTilesTest.cc
         Parser.cc
 	PixelBufferSha1Hash.cc
+	Process.cc
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
-	ShmData.cc
+	ShmAffinityInfo.cc
+        ShmData.cc
 	ShmFb.cc
 	ShmFbOutput.cc
 	ShmFootmark.cc
@@ -51,7 +57,9 @@ target_sources(${component}
 set_property(TARGET ${component}
     PROPERTY PUBLIC_HEADER
         ActivePixelsArray.h
+	AffinityResourceControl.h
         Arg.h
+	CpuSocketUtil.h
         DebugConsoleDriver.h
         Fb.h
         FbActivePixels.h
@@ -61,6 +69,7 @@ set_property(TARGET ${component}
         FloatValueTracker.h
         LatencyLog.h
         LiteralUtil.h
+	NumaUtil.h
         PackActiveTiles.h
         PackTiles.h
         PackTilesPassPrecision.h

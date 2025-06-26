@@ -1,6 +1,7 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestFbUtils.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/common/fb_util/Tiler.h>
 #include <scene_rdl2/common/grid_util/FbUtils.h>
@@ -17,7 +18,11 @@ namespace unittest {
 void
 TestFbUtils::testUntileSinglePixelLoop()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("testUntileSinglePixelLoop" && testUntileSinglePixelLoopMain());
+
+    TIME_END;
 }
 
 bool

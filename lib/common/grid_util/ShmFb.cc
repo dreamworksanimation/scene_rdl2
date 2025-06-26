@@ -428,7 +428,7 @@ ShmFb::verifyPixCol4(void* const pixAddr, const float col4[4]) const
 ShmFbManager::ShmFbManager(const int shmId)
 {
     accessSetupShm(shmId, ShmFb::calcMinDataSize());
-    std::cerr << ShmDataManager::show() << '\n';
+    // std::cerr << ShmDataManager::show() << '\n'; // for debug
 
     //------------------------------
 
@@ -437,7 +437,7 @@ ShmFbManager::ShmFbManager(const int shmId)
         std::ostringstream ostr;
         ostr << "ShmFbManager::ShmFbManager(shmId:" << shmId << ") shared memory size mismatch"
              << " storedSize:" << shmSize << " != currSize:" << mShmSize;
-        throw(ostr.str());
+        throw ostr.str();
     }
 
     mWidth = ShmFb::retrieveWidth(mShmAddr);
@@ -450,12 +450,12 @@ ShmFbManager::ShmFbManager(const int shmId)
         mFb = std::make_shared<ShmFb>(mWidth, mHeight, mChanTotal, mChanMode, mTop2BottomFlag,
                                       mShmAddr, mShmSize, false);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::ostringstream ostr;
         ostr << "ShmFbManager::ShmFbManager(shmId:" << shmId << ") construct failed. error=>{\n"
              << str_util::addIndent(err) << '\n'
              << "}";
-        throw(ostr.str());
+        throw ostr.str();
     }
 }
 
@@ -484,18 +484,20 @@ ShmFbManager::showFb() const
 void
 ShmFbManager::setupFb()
 {
-    constructNewShm(ShmFb::calcDataSize(mWidth, mHeight, mChanTotal, mChanMode));
+    // only can read/write by myself 
+    // read-only for other owner's processes 
+    constructNewShm(ShmFb::calcDataSize(mWidth, mHeight, mChanTotal, mChanMode), 0644); // 0644 is octal
 
     try {
         mFb = std::make_shared<ShmFb>(mWidth, mHeight, mChanTotal, mChanMode, mTop2BottomFlag,
                                       mShmAddr, mShmSize, true);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::ostringstream ostr;
         ostr << "ShmFbManager construct ShmFb failed. error=>{\n"
              << str_util::addIndent(err) << '\n'
              << "}";
-        throw(ostr.str());
+        throw ostr.str();
     }
 }
 
@@ -540,7 +542,7 @@ ShmFbCtrl::verifyMemBoundary() const
 ShmFbCtrlManager::ShmFbCtrlManager(const int shmId)
 {
     accessSetupShm(shmId, ShmFbCtrl::calcDataSize());
-    std::cerr << ShmDataManager::show() << '\n';
+    // std::cerr << ShmDataManager::show() << '\n'; // for debug
 
     //------------------------------
 
@@ -549,18 +551,18 @@ ShmFbCtrlManager::ShmFbCtrlManager(const int shmId)
         std::ostringstream ostr;
         ostr << "ShmFbCtrlManager::ShmFbCtrlManager(shmId:" << shmId << ") shared memory size mismatch"
              << " storedSize:" << shmSize << " != currSize:" << mShmSize;
-        throw(ostr.str());
+        throw ostr.str();
     }
 
     try {
         mFbCtrl = std::make_shared<ShmFbCtrl>(mShmAddr, mShmSize, false);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::ostringstream ostr;
         ostr << "ShmFbCtrlManager::ShmFbCtrlManager(shmId:" << shmId << ") construct failed. error=>{\n"
              << str_util::addIndent(err) << '\n'
              << "}";
-        throw(ostr.str());
+        throw ostr.str();
     }
 }
 
@@ -585,17 +587,19 @@ ShmFbCtrlManager::showFbCtrl() const
 void
 ShmFbCtrlManager::setupFbCtrl()
 {
-    constructNewShm(ShmFbCtrl::calcDataSize());
+    // only can read/write by myself 
+    // read-only for other owner's processes 
+    constructNewShm(ShmFbCtrl::calcDataSize(), 0644); // 0644 is octal
 
     try {
         mFbCtrl = std::make_shared<ShmFbCtrl>(mShmAddr, mShmSize, true);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::ostringstream ostr;
         ostr << "ShmFbCtrlManager construct ShmFbCtrl failed. error=>{\n"
              << str_util::addIndent(err) << '\n'
              << "}";
-        throw(ostr.str());
+        throw ostr.str();
     }
 }
 

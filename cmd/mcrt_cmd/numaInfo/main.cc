@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "NumaInfo.h"
 
@@ -12,7 +12,7 @@ main(int ac, char** av)
     std::cerr << "ERROR : numaInfo is not supported on Mac\n";
     return EXIT_FAILURE;
 #else // else PLATFORM_APPLE    
-    scene_rdl2::NumaInfo numaInfo;
+    scene_rdl2::grid_util::NumaInfo numaInfo;
     if (!numaInfo.main(ac, av)) {
         std::cerr << "ERROR : numaInfo.main() failed\n";
         return EXIT_FAILURE;

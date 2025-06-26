@@ -1,8 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "LuaScriptRunner.h"
 #include "StrUtil.h"
 
@@ -383,8 +380,8 @@ LuaScriptRunner::Impl::showLuaStack(lua_State *state)
 {
     std::ostringstream ostr;
     
-    int stackSize = lua_gettop(state);
-    int w = std::to_string(stackSize).size();
+    const int stackSize = lua_gettop(state);
+    const int w = static_cast<int>(std::to_string(stackSize).size());
     ostr << "lua stack (size:" << stackSize << ") {\n";
     for (int i = stackSize; i >= 1; --i) {
         int type = lua_type(state, i);
@@ -595,4 +592,3 @@ LuaScriptRunner::showGlobalVarRoot() const
 
 } // namespace util
 } // namespace scene_rdl2
-

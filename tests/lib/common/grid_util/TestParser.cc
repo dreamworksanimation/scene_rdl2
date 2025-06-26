@@ -1,9 +1,7 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TestParser.h"
+#include "TimeOutput.h"
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -98,6 +96,8 @@ TestParser::runParser(const Parser &parser, const std::string &cmdLine, bool sho
 void
 TestParser::testParserOpt()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("empty opt definition" &&
                    verifyParser(parserConfigure(false, false), "foo 1.23 4.56",
                                 "WARNING : Unknown option/argument {\n"
@@ -141,11 +141,15 @@ TestParser::testParserOpt()
     CPPUNIT_ASSERT("unknown opt no-error mode" &&
                    verifyParser(parserConfigure(true, false, false), "baz qux quux corge",
                                 "main():true"));
+
+    TIME_END;
 }
 
 void
 TestParser::testParserArg()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("argument help" &&
                    verifyParser(parserConfigure(false, true), "help",
                                 "[Argument]\n"
@@ -180,11 +184,15 @@ TestParser::testParserArg()
                                 "   A B C D\n"
                                 "}        ^\n"
                                 "main():false"));
+
+    TIME_END;
 }
 
 void
 TestParser::testParserOptArg()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT("option + argument help" &&
                    verifyParser(parserConfigure(true, true), "help",
                                 "[Argument]\n"
@@ -221,9 +229,10 @@ TestParser::testParserOptArg()
                                 "   bar 7.89 A B C D\n"
                                 "}                 ^\n"
                                 "main():false"));
+
+    TIME_END;
 }
 
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

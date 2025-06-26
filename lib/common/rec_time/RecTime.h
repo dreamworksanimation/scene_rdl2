@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -25,7 +25,8 @@ public:
     inline void start() { mStartTime = getCurrentMicroSec(); }
     inline float end() const { return (float)(getCurrentMicroSec() - mStartTime) * 0.000001f; } // return sec
 
-    static long long getCurrentMicroSec() {
+    static long long getCurrentMicroSec() // MTsafe
+    {
         struct timeval tv;
         gettimeofday(&tv, 0x0);
         long long cTime = (long long)tv.tv_sec * 1000 * 1000 + (long long)tv.tv_usec;
@@ -67,7 +68,8 @@ public:
     float getLastSec() const { return mLog.getLast(); } // return last sec
     float getLastMsec() const { return getLastSec() * 1000.0f; } // return last milli sec 
 
-    bool minBoundCheck(const float minMsec, void (*msgOutFunc)(const std::string &)) {
+    bool minBoundCheck(const float minMsec, void (*msgOutFunc)(const std::string &))
+    {
         float cLastMsec = getLastMsec();
         if (cLastMsec < minMsec) {
             std::ostringstream ostr;

@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmFbTool.h"
 
@@ -40,7 +40,6 @@ std::string
 fbDump(const unsigned shmId)
 {
     const ShmFbManager manager(shmId);
-
     std::ostringstream ostr;
     ostr << "fbDump (shmId:" << shmId << ") {\n"
          << str_util::addIndent(manager.show()) << '\n'
@@ -113,6 +112,7 @@ fbPPM(const int shmId, const std::string& filename, const Msg& msgFunc)
          << "  chanMode:" << ShmFb::chanModeStr(chanMode) << '\n'
          << "  top2BottomFlag:" << str_util::boolStr(top2BottomFlag) << '\n'
          << "} done";
+
     if (!msgFunc(ostr.str() + '\n')) return false;
     return true;
 }
@@ -140,7 +140,6 @@ std::string
 fbCtrlDump(const unsigned shmId)
 {
     const ShmFbCtrlManager manager(shmId);
-
     std::ostringstream ostr;
     ostr << "fbCtrlDump (shmId:" << shmId << ") {\n"
          << str_util::addIndent(manager.show()) << '\n'
@@ -166,7 +165,7 @@ ShmFbTool::parserConfigure()
                 [&](Arg& arg) { return arg.msg(ShmDataManager::showAllShmList() + '\n'); });
     mParser.opt("-shmClear", "", "clean up all unused shmFb/shmFbCtrl",
                 [&](Arg& arg) {
-                    return ShmDataManager::rmAllUnused([&](const std::string& msg) { return arg.msg(msg); });
+                    return ShmDataManager::rmAllUnusedShmFb([&](const std::string& msg) { return arg.msg(msg); });
                 });
 
     mParser.opt("-fbGen",

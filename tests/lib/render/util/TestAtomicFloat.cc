@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 ///
@@ -7,6 +7,8 @@
 ///
 
 #include "TestAtomicFloat.h"
+#include "TimeOutput.h"
+
 #include <scene_rdl2/render/util/AtomicFloat.h>
 
 #include <algorithm>
@@ -140,6 +142,8 @@ bool atomicFloatTest()
 
 void TestAtomicFloat::testAtomicFloat()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT(atomicFloatTest<AtomicFloatAdditionTester>());
     CPPUNIT_ASSERT(atomicFloatTest<AtomicFloatCASTesterWeak>());
     CPPUNIT_ASSERT(atomicFloatTest<AtomicFloatCASTesterStrong>());
@@ -148,12 +152,9 @@ void TestAtomicFloat::testAtomicFloat()
     // hope they are on our platform!
     std::atomic<float> f;
     CPPUNIT_ASSERT(f.is_lock_free());
+
+    TIME_END;
 }
 
 } // namespace pbr
 } // namespace scene_rdl2
-
-CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::pbr::TestAtomicFloat);
-
-
-

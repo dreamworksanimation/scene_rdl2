@@ -1,9 +1,7 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TestArg.h"
+#include "TimeOutput.h"
 
 #include <string.h>
 
@@ -14,6 +12,8 @@ namespace unittest {
 void
 TestArg::testRealToleranceCompare()
 {
+    TIME_START;
+
     {
         float a = 1.234;
         float b = 1.2340001;
@@ -124,11 +124,15 @@ TestArg::testRealToleranceCompare()
         CPPUNIT_ASSERT("double tolerance compare testF" &&
                        real_util::doubleToleranceEqual(a, b, real_util::compareMaskGen64(57)));
     }
+
+    TIME_END;
 }
 
 void
 TestArg::testConstructor()
 {
+    TIME_START;
+
     {
         Arg arg;
         CPPUNIT_ASSERT("default constructor test" &&
@@ -191,11 +195,15 @@ TestArg::testConstructor()
                                   Arg::ArgTbl{"a", "b", "c"},
                                   Arg::ArgTbl{"", "optA", "optB", "a", "b", "c"}));
     }
+
+    TIME_END;
 }
     
 void
 TestArg::testUtil()
 {
+    TIME_START;
+
     {
         std::string cmdLine("optA a b c d");
         Arg arg(cmdLine);
@@ -226,11 +234,15 @@ TestArg::testUtil()
         Arg arg("-optA a b c");
         CPPUNIT_ASSERT("size test" && (arg.size() == 4));
     }
+
+    TIME_END;
 }
 
 void
 TestArg::testGetter()
 {
+    TIME_START;
+
     {
         Arg arg("optA 1 -23 4.56");
         CPPUNIT_ASSERT("operator() test" && (arg(2) == "-23"));
@@ -264,11 +276,15 @@ TestArg::testGetter()
         CPPUNIT_ASSERT("as<float> test" && asTestReal(1.234567f, 2));
         CPPUNIT_ASSERT("as<double> test" && asTestReal((double)1.234567, 2));
     }
+
+    TIME_END;
 }
 
 void
 TestArg::testArgShift()
 {
+    TIME_START;
+
     Arg argOrg("optA", "a b c");
 
     {
@@ -319,9 +335,10 @@ TestArg::testArgShift()
                                   Arg::ArgTbl{},
                                   Arg::ArgTbl{"", "optA", "a", "b", "c"}));
     }
+
+    TIME_END;
 }
 
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

@@ -1,15 +1,15 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "TestMemPool.h"
+#include "TimeOutput.h"
+
 #include <scene_rdl2/render/util/Memory.h>
 #include <scene_rdl2/render/util/MemPool.h>
 #include <scene_rdl2/render/util/Random.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
 #include <tbb/task_scheduler_init.h>
+
 #include <set>
 #include <vector>
 
@@ -469,6 +469,8 @@ testMemPoolAllocator(const char *name,
 void
 TestMemPool::testMemBlocks()
 {
+    TIME_START;
+
     unsigned numIterations = 100000;
 
     fprintf(stderr, "\n------------ Testing MemBlocks ------------\n");
@@ -476,11 +478,15 @@ TestMemPool::testMemBlocks()
     testMemBlockAllocator("<uint64_t, uint64_t>", numIterations);
 
     fprintf(stderr, "MemBlock allocator passed all tests!\n");
+
+    TIME_END;
 }
 
 void
 TestMemPool::testThreadSafety()
 {
+    TIME_START;
+
     const unsigned entriesPerBlock = MemBlock::getNumEntries();
 
     // Test single element allocations and frees.
@@ -494,13 +500,13 @@ TestMemPool::testThreadSafety()
 
     // Test low memory conditions.
     testMemPoolAllocator("low memory conditions", 2, entriesPerBlock, entriesPerBlock * 2, 256, 2048);
+
+    TIME_END;
 }
 
 //----------------------------------------------------------------------------
 
 } // namespace alloc
 } // namespace scene_rdl2
-
-CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::alloc::TestMemPool);
 
 #pragma clang diagnostic pop

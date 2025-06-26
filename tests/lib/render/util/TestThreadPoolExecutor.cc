@@ -1,6 +1,7 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestThreadPoolExecutor.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/common/rec_time/RecTime.h>
 
@@ -14,11 +15,11 @@ namespace scene_rdl2 {
 namespace threadPoolExecutor {
 namespace unittest {
 
-CPPUNIT_TEST_SUITE_REGISTRATION(TestThreadPoolExecutor);
-
 void
 TestThreadPoolExecutor::testBootAndShutdown()
 {
+    TIME_START;
+
     std::cerr << "TestThreadPoolExecutor.cc testBootAndShutdown() start\n";
 
 #ifdef ENDURANCE_TEST
@@ -38,6 +39,7 @@ TestThreadPoolExecutor::testBootAndShutdown()
     shutdownWatcher();
 
     std::cerr << "TestThreadPoolExecutor.cc testBootAndShutdown() finish\n";    
+    TIME_END;
 }
 
 void
@@ -68,8 +70,8 @@ TestThreadPoolExecutor::bootWatcher(const float maxTestDurationSec)
     { // Wait until thread is booted
         std::unique_lock<std::mutex> uqLock(mWatcherMutex);
         mCvWatcherBoot.wait(uqLock, [&]() {
-                return (mWatcherThreadState != ThreadState::INIT); // Not wait if already non INIT condition
-            });
+                return (mWatcherThreadState != ThreadState::INIT); // Not wait if already non INIT condition 
+           });
     }
 }
 
@@ -114,5 +116,3 @@ TestThreadPoolExecutor::shutdownWatcher()
 } // namespace unittest
 } // namespace threadPoolExecutor
 } // namespace scene_rdl2
-
-

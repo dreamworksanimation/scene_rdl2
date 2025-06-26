@@ -1,6 +1,7 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestProcCpuAffinity.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/common/except/exceptions.h>
 
@@ -10,22 +11,28 @@ namespace scene_rdl2 {
 namespace affinity {
 namespace unittest {
 
-CPPUNIT_TEST_SUITE_REGISTRATION(TestProcCpuAffinity);
-
 void
 TestProcCpuAffinity::testPartialAffinity()
 {
+    TIME_START;
+
     testMain([&](const unsigned numCpu, ProcCpuAffinity& proc) {
             for (unsigned cpuId = 0; cpuId < numCpu; cpuId += 2) { proc.set(cpuId); }
         });
+
+    TIME_END;
 }
 
 void
 TestProcCpuAffinity::testFullAffinity()
 {
+    TIME_START;
+
     testMain([&](const unsigned numCpu, ProcCpuAffinity& proc) {
             proc.setFull();
         });
+
+    TIME_END;
 }
 
 void

@@ -1,6 +1,5 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "CpuAffinityMask.h"
 #include "ThreadPoolExecutor.h"
 
@@ -331,7 +330,7 @@ ThreadPoolExecutor::testBootShutdown()
                     nanosleep(&tm, NULL); // yield CPU resources
                 }
 
-                sum += threadId;
+                sum += static_cast<int>(threadId);
             });
     }
 

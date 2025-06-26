@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "CpuSocketUtil.h"
 
@@ -13,7 +13,20 @@
 #include <sstream>
 #include <thread>
 
+//#define DEBUG_MSG
+#ifdef DEBUG_MSG
+#include <iostream> // debug
+#endif // end DEBUG_MSG
+
 namespace scene_rdl2 {
+namespace grid_util {
+
+bool
+CpuSocketInfo::isBelongCpu(const unsigned cpuId) const
+{
+    if (cpuId < mCpuIdTbl.front() || mCpuIdTbl.back() < cpuId) return false;
+    return std::find(mCpuIdTbl.begin(), mCpuIdTbl.end(), cpuId) != mCpuIdTbl.end();
+}
 
 std::string
 CpuSocketInfo::show() const
@@ -47,12 +60,21 @@ CpuSocketInfo::show() const
 
 CpuSocketUtil::CpuSocketUtil()
 {
+    reset("localhost"); // reset internal data for the current localhost
+
+    parserConfigure();
+}
+
+void
+CpuSocketUtil::reset(const std::string& modeStr)
+{
     std::string errMsg;
-    if (!setupCpuInfo(errMsg)) {
+    if (!setupCpuInfo(modeStr, errMsg)) {
         std::ostringstream ostr;
         ostr << "CpuSocketUtil::setupCpuInfo() failed. " << errMsg;
         throw except::RuntimeError(ostr.str());
     }
+
     if (!verifyCpuInfo()) {
         throw except::RuntimeError("CpuSocketUtil::verifyCpuInfo failed");
     }
@@ -101,7 +123,7 @@ CpuSocketUtil::parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, 
     auto convStrToIds = [&](const std::string& str) {
         // Process single id-item or range-item and push the result id(s) to the out.
         offset[0] = offset[1] + 1; // +1 is separator size
-        offset[1] = offset[0] + str.size();
+        offset[1] = offset[0] + static_cast<int>(str.size());
         if (str.find("-") != std::string::npos) { // single range definition
             int idRange[2] {-1, -1}; // 0:start 1:end
             if (!splitStr(str, '-', [&](const std::string& currStr) {
@@ -137,6 +159,42 @@ CpuSocketUtil::parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, 
     }
     std::sort(out.begin(), out.end()); // The result table is always sorted
     return true;
+}
+
+// static function
+std::string
+CpuSocketUtil::idTblToDefStr(const CpuSocketUtil::IdTbl& tbl)
+//
+// reverse operation of parseIdDef()
+//
+{
+    std::string idString;
+
+    constexpr size_t defaultId = ~static_cast<size_t>(0);
+    size_t startId {defaultId}; // initial condition
+    size_t endId {defaultId}; // initial condition
+    auto initRange = [&](const unsigned id) { startId = endId = id; };
+    auto extendRange = [&](const unsigned id) { endId = id; };
+    auto flushRangeId = [&] {
+        if (!idString.empty()) idString += ',';
+        idString += std::to_string(startId);
+        if (startId != endId) idString += ('-' + std::to_string(endId));
+    };
+
+    std::vector<unsigned> workTbl = tbl;
+    std::sort(workTbl.begin(), workTbl.end());
+
+    for (size_t i = 0; i < workTbl.size(); ++i) {
+        if (startId == defaultId) initRange(workTbl[i]); 
+        else if (workTbl[i] == endId + 1) extendRange(workTbl[i]);
+        else {
+            flushRangeId();
+            initRange(workTbl[i]);
+        }
+    }
+    if (startId != defaultId) flushRangeId();
+
+    return idString;
 }
 
 bool
@@ -206,6 +264,15 @@ CpuSocketUtil::getTotalCoresOnSocket(const int socketId) const
     return static_cast<int>(mSocketInfoTbl[socketId].getTotalCores());
 }
 
+const CpuSocketInfo*
+CpuSocketUtil::findSocketByCpuId(const unsigned cpuId) const
+{
+    for (size_t i = 0; i < mSocketInfoTbl.size(); ++i) {
+        if (mSocketInfoTbl[i].isBelongCpu(cpuId)) return &mSocketInfoTbl[i];
+    }
+    return nullptr;
+}
+
 std::string
 CpuSocketUtil::show() const
 {
@@ -253,7 +320,60 @@ CpuSocketUtil::showCpuIdTbl(const std::string& msg, const CpuIdTbl& tbl)
 }
 
 bool
-CpuSocketUtil::setupCpuInfo(std::string& errMsg)
+CpuSocketUtil::setupCpuInfo(const std::string& modeStr,  std::string& errMsg)
+{
+#ifdef DEBUG_MSG
+    auto showIntVec = [](const std::string& msg, const std::vector<int>& tbl) {
+        const int wi = str_util::getNumberOfDigits(tbl.size());
+        const int wv = str_util::getNumberOfDigits(static_cast<unsigned>(*std::max_element(tbl.begin(), tbl.end())));
+        constexpr size_t maxOneLineItems = 10;
+        std::ostringstream ostr;
+        ostr << msg << " (size:" << tbl.size() << ") {\n";
+        for (size_t i = 0; i < tbl.size(); ++i) {
+            if (i % maxOneLineItems == 0) ostr << "  ";
+            ostr << "i:" << std::setw(wi) << i << ' ' << std::setw(wv) << tbl[i] << ' ';
+            if ((i + 1) % maxOneLineItems == 0) ostr << '\n';
+        }
+        if (tbl.size() % maxOneLineItems != 0) ostr << '\n';
+        ostr << "}";
+        return ostr.str();
+    };
+#endif // end DEBUG_MSG
+
+    std::vector<int> cpuIdWorkTbl;
+    std::vector<int> socketIdWorkTbl;
+
+    if (modeStr == "localhost") {
+#ifdef PLATFORM_APPLE
+        const unsigned totalCpu = std::thread::hardware_concurrency();
+        cpuIdWorkTbl.resize(totalCpu);
+        std::iota(cpuIdWorkTbl.begin(), cpuIdWorkTbl.end(), 0);
+        socketIdWorkTbl.resize(totalCpu, 0);
+#else // !PLATFORM_APPLE
+        if (!setupLocalhostCpuInfo(cpuIdWorkTbl, socketIdWorkTbl, errMsg)) return false;
+#endif // end of !PLATFORM_APPLE 
+    } else {
+        setupEmulatedCpuInfo(modeStr, cpuIdWorkTbl, socketIdWorkTbl); 
+    }
+
+#ifdef DEBUG_MSG
+    std::cerr << showIntVec("cpuIdWorkTbl", cpuIdWorkTbl) << '\n'
+              << showIntVec("socketIdWorkTbl", socketIdWorkTbl) << '\n';
+#endif // end DEBUG_MSG
+
+    processCpuInfo(cpuIdWorkTbl, socketIdWorkTbl);
+
+#ifdef DEBUG_MSG
+    std::cerr << show() << '\n';
+#endif // end DEBUG_MSG
+
+    return true;
+}
+
+bool
+CpuSocketUtil::setupLocalhostCpuInfo(std::vector<int>& cpuIdWorkTbl,
+                                     std::vector<int>& socketIdWorkTbl,
+                                     std::string& errMsg)
 {
     std::ifstream ifs("/proc/cpuinfo");
     if (!ifs) {
@@ -263,9 +383,6 @@ CpuSocketUtil::setupCpuInfo(std::string& errMsg)
 
     int currCpuId {-1};
     int currSocketId {-1};
-    std::vector<int> cpuIdWorkTbl;
-    std::vector<int> socketIdWorkTbl;
-
     auto reset = [&] {
         currCpuId = -1;
         currSocketId = -1;
@@ -298,9 +415,54 @@ CpuSocketUtil::setupCpuInfo(std::string& errMsg)
 
     ifs.close();
 
-    processCpuInfo(cpuIdWorkTbl, socketIdWorkTbl);
-
     return true;
+}
+
+void
+CpuSocketUtil::setupEmulatedCpuInfo(const std::string& modeStr,
+                                    std::vector<int>& cpuIdWorkTbl,
+                                    std::vector<int>& socketIdWorkTbl)
+//
+// Might throw exception excep::RuntimeError if error
+//
+{
+    auto setupCpuTbl = [&](const int total) {
+        cpuIdWorkTbl.resize(total);
+        for (size_t i = 0; i < total; ++i) cpuIdWorkTbl[i] = static_cast<int>(i);
+    };
+    auto fillRangeTblVal = [&](std::vector<int>& tbl, const size_t start, const size_t end, const int v) {
+        for (size_t i = start; i <= end; ++i) tbl[i] = v;
+    };
+
+    //
+    // "ag", "tin", "cobalt"  are the major prefixes of host at Dreamworks local farm.
+    //
+    if (modeStr == "ag") {
+        constexpr int cpuTotal = 384;
+        setupCpuTbl(cpuTotal);
+        socketIdWorkTbl.resize(cpuTotal);
+        fillRangeTblVal(socketIdWorkTbl,   0,  95, 0);
+        fillRangeTblVal(socketIdWorkTbl,  96, 191, 1);
+        fillRangeTblVal(socketIdWorkTbl, 192, 287, 0);
+        fillRangeTblVal(socketIdWorkTbl, 288, 383, 1);
+    } else if (modeStr == "tin") {
+        constexpr int cpuTotal = 96;
+        setupCpuTbl(cpuTotal);
+        socketIdWorkTbl.resize(cpuTotal);
+        fillRangeTblVal(socketIdWorkTbl,  0, 23, 0);
+        fillRangeTblVal(socketIdWorkTbl, 24, 47, 1);
+        fillRangeTblVal(socketIdWorkTbl, 48, 71, 0);
+        fillRangeTblVal(socketIdWorkTbl, 72, 95, 1);
+    } else if (modeStr == "cobalt") {
+        constexpr int cpuTotal = 128;
+        setupCpuTbl(cpuTotal);
+        socketIdWorkTbl.resize(cpuTotal);
+        fillRangeTblVal(socketIdWorkTbl, 0, 127, 0);
+    } else {
+        std::ostringstream ostr;
+        ostr << "Unknown modeStr:" << modeStr;
+        throw except::RuntimeError(ostr.str());
+    }
 }
 
 void
@@ -357,4 +519,36 @@ CpuSocketUtil::showSocketInfoTbl() const
     return ostr.str();
 }
 
+void
+CpuSocketUtil::parserConfigure()
+{
+    mParser.description("CpuSocketUtil command");
+
+    mParser.opt("show", "", "show all info",
+                [&](Arg& arg) { return arg.msg(show() + '\n'); });
+    mParser.opt("reset", "<localhost|ag|tin|cobalt>", "reset internal mSocketInfoTbl by givin argument mode",
+                [&](Arg& arg) {
+                    const std::string modeStr = (arg++)();
+                    return resetCmd(modeStr, [&](const std::string& msg) { return arg.msg(msg); });
+                });
+}
+
+bool
+CpuSocketUtil::resetCmd(const std::string& modeStr, const MsgFunc& msgCallBack)
+{
+    try {
+        reset(modeStr);
+    }
+    catch (const except::RuntimeError& e) {
+        std::ostringstream ostr;
+        ostr << "reset() failed. error=>{\n"
+             << str_util::addIndent(e.what()) << '\n'
+             << "}";
+        msgCallBack(ostr.str() + '\n');
+        return false;
+    }
+    return true;
+}
+
+} // namespace grid_util
 } // namespace scene_rdl2

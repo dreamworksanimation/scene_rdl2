@@ -1,4 +1,4 @@
-# Copyright 2023-2024 DreamWorks Animation LLC
+# Copyright 2023-2025 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(target scenerdl2_render_util_tests)
@@ -7,9 +7,7 @@ add_executable(${target})
 
 if(NOT IsDarwinPlatform)
 set(PlatformSpecificSources
-    TestCpuSocketUtil.cc
-    TestProcCpuAffinity.cc
-    TestThreadPoolExecutor.cc)
+    TestProcCpuAffinity.cc)
 endif()
 
 target_sources(${target}
@@ -19,6 +17,7 @@ target_sources(${target}
         TestArray2D.cc
         TestAtomicFloat.cc
         TestMemPool.cc
+        TestThreadPoolExecutor.cc
         ${PlatformSpecificSources}
 )
 

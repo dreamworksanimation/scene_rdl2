@@ -1,6 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "ShmFootmark.h"
 
 #include <scene_rdl2/render/util/StrUtil.h>
@@ -60,7 +59,7 @@ void
 ShmFootmark::push()
 {
     if (getCurrStackMsgSize() == 0) return;
-    mStackOffset.push_back(mActiveSize);
+    mStackOffset.push_back(static_cast<unsigned>(mActiveSize));
 }
 
 void    
@@ -88,7 +87,6 @@ std::string
 ShmFootmark::show() const
 {
     std::ostringstream ostr;
-
     ostr << "ShmFootmark {\n"
          << "  mShmId:" << mShmId << '\n'
          << "  mActiveSize:" << mActiveSize << '\n'

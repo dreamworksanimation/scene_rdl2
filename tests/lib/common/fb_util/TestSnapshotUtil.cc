@@ -1,6 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "TestSnapshotUtil.h"
 
 #include <scene_rdl2/common/fb_util/SnapshotDeltaTestUtil.h>
@@ -814,7 +813,7 @@ TestSnapshotUtil::updateBuff(const float updatePixFraction,
     int totalPix = w * h;
     std::vector<int> pixOffsetArray(totalPix);
     for (size_t pixId = 0; pixId < totalPix; ++pixId) {
-        pixOffsetArray[pixId] = pixId;
+        pixOffsetArray[pixId] = static_cast<int>(pixId);
     }
     std::shuffle(pixOffsetArray.begin(), pixOffsetArray.end(), std::default_random_engine());
 
@@ -1039,7 +1038,7 @@ TestSnapshotUtil::updateBuff2(std::vector<uint64_t>& pixMaskBuff,
         uint64_t currPixMask = pixMaskBuff[i];
         for (int j = 0; j < 64; ++j) {
             if ((currPixMask >> j) & (uint64_t)0x1) {
-                int pixOffset = i * 64 + j;
+                int pixOffset = static_cast<int>(i) * 64 + j;
                 if (updatePixelFunc(pixOffset)) {
                     updatePixIdArray.push_back(pixOffset); // updated pixel
                     updateTargetFunc(pixOffset); // update target buff and weight data
@@ -1338,7 +1337,7 @@ TestSnapshotUtil::verifyPixMask(std::vector<int> &updateList, std::vector<uint64
     int total = 0;
     for (size_t tileId = 0; tileId < pixMaskBuff.size(); ++tileId) {
         if (pixMaskBuff[tileId]) {
-            if (!verifyMask(tileId, pixMaskBuff[tileId], updateList, total)) {
+            if (!verifyMask(static_cast<int>(tileId), pixMaskBuff[tileId], updateList, total)) {
                 return false;
             }
         }

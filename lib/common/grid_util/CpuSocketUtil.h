@@ -1,11 +1,15 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+
+#include "Arg.h"
+#include "Parser.h"
 
 #include <string>
 #include <vector>
 
 namespace scene_rdl2 {
+namespace grid_util {
 
 class CpuSocketInfo
 //
@@ -22,6 +26,9 @@ public:
 
     size_t getTotalCores() const { return mCpuIdTbl.size(); }
     std::vector<int>& getCpuIdTbl() { return mCpuIdTbl; }
+    const std::vector<int>& getCpuIdTbl() const { return mCpuIdTbl; }
+
+    bool isBelongCpu(const unsigned cpuId) const;
 
     std::string show() const;
 
@@ -52,12 +59,22 @@ class CpuSocketUtil
 //        
 {
 public:
+    using Arg = grid_util::Arg;
     using CpuIdTbl = std::vector<unsigned>;
     using IdTbl = std::vector<unsigned>;
+    using Parser = grid_util::Parser;
 
-    CpuSocketUtil(); // Might throw scene_rdl2::except::RuntimeError when error
+    CpuSocketUtil(); // Might throw scene_rdl2::except::RuntimeError if error
+
+    // Reset internal mSocketInfoTbl depending on the modeStr.
+    //   modeStr = "localhost" : Reconstruct data for the current localhost.
+    //           = "ag"        : Reconstruct data for the ag host. This is an emulation mode
+    //           = "tin"       : Reconstruct data for the tin host. This is an emulation mode
+    //           = "cobalt"    : Reconstruct data for the cobalt host. This is an emulation mode
+    void reset(const std::string& modeStr); // Might throw scene_rdl2::except::RuntimeError if error
 
     static bool parseIdDef(const std::string& defStr, CpuSocketUtil::IdTbl& out, std::string& errMsg);
+    static std::string idTblToDefStr(const CpuSocketUtil::IdTbl& tbl); // reverse operation of parseIdDef()
 
     // Convert socketId definition to cpuId table based on the current machine's kernel configurations.
     // Return true when no error.
@@ -74,11 +91,24 @@ public:
     int getMaxSocketId() const; // return -1 if error
     int getTotalCoresOnSocket(const int socketId) const; // return -1 if error
 
+    const CpuSocketInfo* findSocketByCpuId(const unsigned cpuId) const;
+    const CpuSocketInfo* getCpuSocketInfo(const unsigned socketId) const
+    {
+        if (socketId >= getTotalSockets()) return nullptr;
+        return &mSocketInfoTbl[socketId];
+    }
+
     std::string show() const;
     static std::string showCpuIdTbl(const std::string& msg, const CpuIdTbl& tbl);
 
+    Parser& getParser() { return mParser; }
+
 private:
-    bool setupCpuInfo(std::string& errMsg);
+    using MsgFunc = std::function<bool(const std::string& msg)>;
+
+    bool setupCpuInfo(const std::string& modeStr, std::string& errMsg);
+    bool setupLocalhostCpuInfo(std::vector<int>& cpuIdWorkTbl, std::vector<int>& socketIdWorkTbl, std::string& errMsg);
+    void setupEmulatedCpuInfo(const std::string& modeStr, std::vector<int>& cpuIdWorkTbl, std::vector<int>& socketIdWorkTbl);
     void processCpuInfo(const std::vector<int>& cpuIdTbl, const std::vector<int>& socketIdTbl);
     bool verifyCpuInfo();
 
@@ -86,9 +116,15 @@ private:
 
     std::string showSocketInfoTbl() const;
 
+    void parserConfigure();
+    bool resetCmd(const std::string& modeStr, const MsgFunc& msgCallBack);
+
     //------------------------------
 
     std::vector<CpuSocketInfo> mSocketInfoTbl; // sorted by socketId and started from socketId = 0
+
+    Parser mParser;
 };
 
+} // namespace grid_util
 } // namespace scene_rdl2

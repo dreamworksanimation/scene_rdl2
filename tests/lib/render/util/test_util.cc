@@ -1,7 +1,9 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 #include "test_util.h"
+#include "TimeOutput.h"
+
 #include <scene_rdl2/common/platform/DebugLog.h>
 #include <scene_rdl2/render/util/AlignedAllocator.h>
 #include <scene_rdl2/render/util/Alloc.h>
@@ -19,8 +21,6 @@
 #include <type_traits>
 #include <typeinfo>
 #include <vector>
-
-CPPUNIT_TEST_SUITE_REGISTRATION(TestCommonUtil);
 
 using namespace scene_rdl2::util;
 
@@ -119,6 +119,8 @@ void checkAlignmentAndOverlap(scene_rdl2::alloc::Arena& arena)
 
 void TestCommonUtil::testCtorAlloc()
 {
+    TIME_START;
+
     using namespace scene_rdl2::alloc;
 
     struct LocalMoveable
@@ -168,10 +170,14 @@ void TestCommonUtil::testCtorAlloc()
     for (std::size_t i = 0; i < num; ++i) {
         CPPUNIT_ASSERT(p[i].mMov.mX == 42);
     }
+
+    TIME_END;
 }
 
 void TestCommonUtil::testAlloc()
 {
+    TIME_START;
+
     using namespace scene_rdl2::alloc;
 
     struct __attribute__ ((aligned(64))) S
@@ -219,6 +225,8 @@ void TestCommonUtil::testAlloc()
         }
         arena.clear();
     }
+
+    TIME_END;
 }
 
 template <typename T>
@@ -226,6 +234,8 @@ using ArenaVector = std::vector<T, scene_rdl2::alloc::ArenaAllocator<T>>;
 
 void TestCommonUtil::testArenaAllocator()
 {
+    TIME_START;
+
     using namespace scene_rdl2::alloc;
 
     scene_rdl2::util::Ref<scene_rdl2::alloc::ArenaBlockPool> arenaBlockPool =
@@ -273,6 +283,8 @@ void TestCommonUtil::testArenaAllocator()
     CPPUNIT_ASSERT(vs1.at(3) == "Fiona");
     CPPUNIT_ASSERT(vs1.at(4) == "Tighten");
     CPPUNIT_ASSERT(vs1.at(5) == "Po");
+
+    TIME_END;
 }
 
 
@@ -292,6 +304,8 @@ void testVectorAlignment()
 
 void TestCommonUtil::testAlignedAllocator()
 {
+    TIME_START;
+
     // The smallest alignment value we can use.
     constexpr size_t sv = sizeof(void*);
 
@@ -301,10 +315,14 @@ void TestCommonUtil::testAlignedAllocator()
     testVectorAlignment<sv*8>();
     testVectorAlignment<sv*16>();
     testVectorAlignment<sv*32>();
+
+    TIME_END;
 }
 
 void TestCommonUtil::testRoundDownToPowerOfTwo()
 {
+    TIME_START;
+
     const uint32_t kSomePrime = 2147489u;
     const uint32_t kTests = 5000u;
 
@@ -325,6 +343,8 @@ void TestCommonUtil::testRoundDownToPowerOfTwo()
         CPPUNIT_ASSERT(isPowerOfTwo(r));
         CPPUNIT_ASSERT(i == r);
     }
+
+    TIME_END;
 }
 
 namespace {
@@ -694,6 +714,8 @@ void IndexableArrayExtremeErase()
 
 void TestCommonUtil::testIndexableArray()
 {
+    TIME_START;
+
     IndexableArrayFundamentals<std::hash>();
     IndexableArrayFundamentals<PoorHash>();
     IndexableArrayFundamentals<ConstantHash>();
@@ -712,6 +734,8 @@ void TestCommonUtil::testIndexableArray()
     IndexableArrayExtremeErase<std::hash>();
     IndexableArrayExtremeErase<PoorHash>();
     IndexableArrayExtremeErase<ConstantHash>();
+
+    TIME_END;
 }
 
 namespace {
@@ -728,6 +752,8 @@ namespace {
 
 void TestCommonUtil::testIntegerSequence()
 {
+    TIME_START;
+
     constexpr auto is0 = fauxstd::make_integer_sequence<std::uint8_t, 4>{};
     constexpr auto is1 = fauxstd::make_index_sequence<5>{};
     constexpr auto is2 = fauxstd::index_sequence_for<double, float, int>{};
@@ -762,6 +788,8 @@ void TestCommonUtil::testIntegerSequence()
     CPPUNIT_ASSERT(std::get<0>(t2) == 0);
     CPPUNIT_ASSERT(std::get<1>(t2) == 1);
     CPPUNIT_ASSERT(std::get<2>(t2) == 2);
+
+    TIME_END;
 }
 
 namespace {
@@ -864,6 +892,8 @@ SManip<int&, double, MoveOnly&&> mymanip(int& x, double y, MoveOnly&& m)
 
 void TestCommonUtil::testSManip()
 {
+    TIME_START;
+
     MyContainer c = { 3, -10, 5, 521 };
 
     const auto s0 = doBaseConversion(c, 10);
@@ -879,10 +909,14 @@ void TestCommonUtil::testSManip()
     // Just make sure this compiles.
     int x = 42;
     const auto m __attribute__((unused)) = mymanip(x, 3.14, MoveOnly(82));
+
+    TIME_END;
 }
 
 void TestCommonUtil::testGUID()
 {
+    TIME_START;
+
     const GUID g0 = GUID::littleEndian(0x78, 0x56, 0x34, 0x12, 0x34, 0x12, 0x78, 0x56, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34, 0x56, 0x78);
     CPPUNIT_ASSERT(g0.asString() == "12345678-1234-5678-1234-567812345678");
 
@@ -910,10 +944,14 @@ void TestCommonUtil::testGUID()
     const GUID g3 = GUID::uuid4();
     const GUID g4(g3.asString());
     CPPUNIT_ASSERT(g3 == g4);
+
+    TIME_END;
 }
 
 void TestCommonUtil::testGetEnv()
 {
+    TIME_START;
+
     setenv("rdl2_tcu_pi", "3.14", 0);
     setenv("rdl2_tcu_neg_pi", "-3.14", 0);
     setenv("rdl2_tcu_pos_int", "42", 0);
@@ -1013,5 +1051,7 @@ void TestCommonUtil::testGetEnv()
     CPPUNIT_ASSERT_THROW(scene_rdl2::util::getenv<int>("rdl2_tcu_str"), scene_rdl2::util::GetEnvException);
     CPPUNIT_ASSERT_THROW(scene_rdl2::util::getenv<unsigned>("rdl2_tcu_neg_int"), std::range_error);
     CPPUNIT_ASSERT_THROW(scene_rdl2::util::getenv<short>("rdl2_tcu_large_pos_int"), std::range_error);
+
+    TIME_END;
 }
 

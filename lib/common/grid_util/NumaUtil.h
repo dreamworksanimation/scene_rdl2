@@ -1,11 +1,15 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+
+#include "Arg.h"
+#include "Parser.h"
 
 #include <string>
 #include <vector>
 
 namespace scene_rdl2 {
+namespace grid_util {
 
 class NumaNode
 //
@@ -22,6 +26,7 @@ public:
     unsigned getNodeId() const { return mNodeId; }
     size_t getMemSize() const { return mMemSize; } // Return NUMA-node memory size
 
+    const std::vector<unsigned>& getCpuIdList() const { return mCpuIdList; }
     const std::vector<int>& getNodeDistance() const { return mNodeDistance; }
 
     bool isEmptyCPU() const { return mCpuIdList.empty(); }
@@ -29,7 +34,7 @@ public:
     //
     // alloc/free which is related to this NUMA-node memory.
     //
-    void* alloc(const size_t size) const; // might throw except::RuntimeError(std::string) when error
+    void* alloc(const size_t size) const; // might throw except::RuntimeError(std::string) if error
     void free(void* const memory, const size_t size) const;
     /* Not used so far but might be needed in the near future.
     void* alignedAlloc(const size_t size, const size_t align) const;
@@ -66,7 +71,17 @@ class NumaUtil
 //
 {
 public:
-    NumaUtil(); // Might throw scene_rdl2::except::RuntimeError() when error
+    using Arg = grid_util::Arg;
+    using Parser = grid_util::Parser;
+
+    NumaUtil(); // Might throw scene_rdl2::except::RuntimeError() if error
+
+    // Reset internal mNumaNodeTbl depending on the modeStr.
+    //   modeStr = "localhost" : Reconstruct data for the localhost.
+    //           = "ag"        : Reconstruct data for the ag host. This is an emulation mode
+    //           = "tin"       : Reconstruct data for the tin host. This is an emulation mode
+    //           = "cobalt"    : Reconstruct data for the cobalt host. This is an emulation mode
+    void reset(const std::string& modeStr); // Might throw scene_rdl2::except::RuntimeError if error
 
     size_t getTotalNumaNode() const { return mNumaNodeTbl.size(); }
     const NumaNode* getNumaNode(const unsigned nodeId) const;
@@ -76,10 +91,24 @@ public:
 
     static unsigned findNumaNodeByMemAddr(void* addr); // for verify: Throw except::RuntimeError if error
 
+    int cpuIdToNodeId(const unsigned cpuId) const; // negative value is error
+
     std::string show() const;
 
+    Parser& getParser() { return mParser; }
+
 private:
+    using MsgFunc = std::function<bool(const std::string& msg)>;
+    
+    void parserConfigure();
+    bool resetCmd(const std::string& modeStr, const MsgFunc& msgCallBack);
+
+    //------------------------------
+
     std::vector<NumaNode> mNumaNodeTbl;
+
+    Parser mParser;
 };
 
+} // namespace grid_util
 } // namespace scene_rdl2    

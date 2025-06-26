@@ -1,8 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-//
-//
 #include "Arg.h"
 #include "TlSvr.h"
 
@@ -318,9 +315,9 @@ Arg::errMsg(const std::string &msgTitle,
             const int errArgIdOffset) const
 {
     std::ostringstream ostr;
-    ostr << msgTitle << msg << " {\n";
-    ostr << "  " << getCmdLine() << std::endl;
-    ostr << "} " << getErrorCmdLine(mNextId + errArgIdOffset);
+    ostr << msgTitle << msg << " {\n"
+         << "  " << getCmdLine() << '\n'
+         << "} " << getErrorCmdLine(mNextId + errArgIdOffset);
     return ostr.str();
 }
 
@@ -380,7 +377,7 @@ Arg::showArgTbl(const std::string &msg, const ArgTbl &tbl) const
 std::string
 Arg::processComment(const std::string &str) const
 {
-    int i = str.find("#");
+    const size_t i = str.find("#");
     if (i == std::string::npos) return str;
     return str.substr(0, i);
 }
@@ -401,7 +398,7 @@ Arg::processBlankNl(const std::string &str) const
 std::string
 Arg::addSpaceBeforeComment(const std::string &str) const
 {
-    size_t pos = str.find("#");
+    const size_t pos = str.find("#");
     if (pos == std::string::npos) return str;
 
     std::string tmpStr;
@@ -476,4 +473,3 @@ Arg::isBool(const std::string &str)
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

@@ -1,7 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-
 #pragma once
 
 #include <scene_rdl2/common/grid_util/Parser.h>
@@ -43,4 +41,3 @@ protected:
 } // namespace unittest
 } // namespace grid_util
 } // namespace scene_rdl2
-

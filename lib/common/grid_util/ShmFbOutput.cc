@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmFbOutput.h"
 
@@ -87,8 +87,7 @@ ShmFbOutput::testGeneralUpdateFb(const unsigned width,
                                  const bool outTop2BottomFlag)
 {
     if (mShmFbCtrlManager) {
-        std::ostringstream ostr;
-        ostr << "ERROR : Internal mShmFbCtrlManager was already initialized.\n";
+        std::cerr << "ERROR : Internal mShmFbCtrlManager was already initialized.\n";
         return false;
     }
 
@@ -469,14 +468,14 @@ void
 ShmFbOutput::setupShmFbCtrlManager()
 {
     // Clean up unused shmFbCtrl/shmFb
-    ShmDataManager::rmAllUnused([&](const std::string& msg) { return messageOutput(msg); });
+    ShmDataManager::rmAllUnusedShmFb([&](const std::string& msg) { return messageOutput(msg); });
 
     std::ostringstream ostr;
     try {
         mShmFbCtrlManager = std::make_shared<ShmFbCtrlManager>();
         ostr << "====>>> new ShmFbCtrlManager (shmId:" << mShmFbCtrlManager->getShmId() << ") <<<====";
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         ostr << "ERROR : ShmFbOutput.cc ShmFbCtrlManager construction failed";
         mActive = false;
     }
@@ -503,14 +502,14 @@ ShmFbOutput::setupShmFbManager(const unsigned width,
         mShmFbCtrlManager->getFbCtrl()->setCurrentShmId(mShmFbManager->getShmId());
         ostr << "Changed current shmFb to new one (shmId:" << mShmFbManager->getShmId() << ")";
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         ostr << "ERROR : ShmFbOutput.cc ShmFbManager construction failed.\n"
              << "error {\n" << scene_rdl2::str_util::addIndent(err) << "\n}";
         mActive = false;
     }
 
     // Clean up unused shmFbCtrl/shmFb
-    ShmDataManager::rmAllUnused([&](const std::string& msg) { return messageOutput(msg); });
+    ShmDataManager::rmAllUnusedShmFb([&](const std::string& msg) { return messageOutput(msg); });
 
     messageOutput(ostr.str() + '\n');
 }

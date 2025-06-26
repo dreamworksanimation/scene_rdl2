@@ -3,6 +3,7 @@
 #include "ShmData.h"
 #include "ShmFb.h"
 
+#include <scene_rdl2/common/grid_util/Sha1Util.h>
 #include <scene_rdl2/render/cache/ValueContainerUtils.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
@@ -108,7 +109,7 @@ crawlAllShm(const size_t minHeaderSize,
     return true;
 }
 
-#else // else PLATFORM_APPLE
+#else // !PLATFORM_APPLE
     
 bool
 crawlAllShm(const size_t minHeaderSize,
@@ -152,7 +153,22 @@ crawlAllShm(const size_t minHeaderSize,
     return true;
 }
 
-#endif // end of Not PLATFORM_APPLE
+#endif // end of !PLATFORM_APPLE
+
+void
+checkMaxShmSize(const size_t memSize, const size_t max)
+//
+// might throw exception(std::string)
+//
+{
+    if (memSize > max) {
+        std::ostringstream ostr;
+        ostr << "ShmDataManager constructNewShm() failed. too big shared memory size was requested.\n"
+             << " memSize:" << memSize << " > max:" << max << '\n'
+             << "Please consider increasing the shared memory max size";
+        throw ostr.str();
+    }
+}
 
 } // namespace
 
@@ -167,6 +183,11 @@ ShmDataIO::show() const
 {
     std::ostringstream ostr;
     ostr << "ShmDataIO {\n"
+         << "  headerSize:" << headerSize << '\n'
+         << "  headerKeyShmFb:" << headerKeyShmFb << '\n'
+         << "  headerKeyShmFbCtrl:" << headerKeyShmFbCtrl << '\n'
+         << "  headerKeyShmAffInfo:" << headerKeyShmAffInfo << '\n'
+         << "  headerKeyMaxLen:" << headerKeyMaxLen << '\n'
          << "  mDataStartAddr:0x" << std::hex << mDataStartAddr << std::dec << '\n'
          << "  mDataSize:" << mDataSize << '\n'
          << "}";
@@ -212,10 +233,30 @@ ShmDataManager::rmShm()
 }
 
 // static function
+bool
+ShmDataManager::isShmAvailable(const std::string& keyStr)
+//
+// might throw exception(std::string)
+//
+{
+    const int key = genInt32KeyBySHA1(keyStr);
+    if (shmget(key, 0, 0666) == -1) { // call without IPC_CREAT
+        if (errno == ENOENT) {
+            return false; // shared memory does not exist
+        } else {
+            std::ostringstream ostr;
+            ostr << "shmget() failed. keyStr:" << keyStr << " key:0x" << std::hex << key << std::dec;
+            throw(ostr.str());
+        }
+    }
+    return true;
+}
+
+// static function
 std::string
 ShmDataManager::shmHexDump(const int shmId, const size_t size)
 {
-    std::string dumpStr = shmGet(shmId, size);
+    const std::string dumpStr = shmGet(shmId, size);
     if (dumpStr.compare(0, 5, "ERROR", 0, 5) == 0) {
         return dumpStr; // return error message
     }
@@ -232,7 +273,7 @@ ShmDataManager::shmGet(const int shmId, const size_t size)
         manager.accessSetupShm(shmId, size);
         return manager.getHeader(size);
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         std::ostringstream ostr;
         ostr << "ERROR : Could not construct ShmDataManager."
              << " shmId:" << shmId << " size:" << size << " error=>{"
@@ -244,46 +285,10 @@ ShmDataManager::shmGet(const int shmId, const size_t size)
 
 // static function
 bool
-ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const Msg& msgCallBack)
-{
-    try {
-        ShmDataManager manager;
-        manager.accessSetupShm(shmId, ShmDataIO::headerSize);
-        const std::string header = manager.getHeader(ShmDataIO::headerSize);
-        if (!cmpHeader(header, headerKey)) return true;
-
-        // found shared memory that has headerKey
-        if (manager.mShmNAttach == 1) {
-            if (!manager.rmShm()) return false;
-            if (msgCallBack) {
-                std::ostringstream ostr;
-                ostr << "shmId:" << shmId
-                     << " headerSize:" << ShmDataIO::headerSize
-                     << " headerKey:\"" << headerKey << "\" is deleted";
-                return msgCallBack(ostr.str() + '\n');
-            }
-        }
-    }
-    catch (std::string err) {
-        //
-        // We tried to access an unknown shared memory and failed.
-        // So we skip this shared memory.
-        //
-        std::ostringstream ostr;
-        ostr << "WARNING : Failed to access unknown shared memory."
-             << " shmId:" << shmId
-             << " headerSize:" << ShmDataIO::headerSize << " headerKey:\"" << headerKey << "\""
-             << " error=>{\n"
-             << str_util::addIndent(err) << '\n'
-             << "}";
-        std::cerr << ostr.str() << '\n';
-    }
-    return true;
-}
-
-// static function
-bool
-ShmDataManager::rmAllUnused(const Msg& msgCallBack)
+ShmDataManager::rmAllUnusedShmFb(const Msg& msgCallBack)
+//
+// remove all shmFb related shared memory if it is not used
+//
 {
     bool flag = true;
     if (!rmAllUnusedShm(ShmDataIO::headerKeyShmFb, msgCallBack)) flag = false;
@@ -292,15 +297,19 @@ ShmDataManager::rmAllUnused(const Msg& msgCallBack)
 }
 
 // static function
-bool
-ShmDataManager::rmAllUnusedShm(const std::string& headerKey, const Msg& msgCallBack)
+int
+ShmDataManager::genInt32KeyBySHA1(const std::string& keyStr)
 {
-    bool flag = true;
-    crawlAllShm(ShmDataIO::headerSize,
-                [&](const unsigned shmId) {
-                    if (!ShmDataManager::rmUnusedShm(shmId, headerKey, msgCallBack)) { flag = false; }
-                });
-    return flag;
+    // Generate 20 bytes SHA1 hash first.
+    scene_rdl2::grid_util::Sha1Util::Hash sha1Hash = scene_rdl2::grid_util::Sha1Util::hash(keyStr);
+
+    // XOR all. This makes a better key that has less collision compared with the simple use of
+    // part of 4 bytes out of 20 bytes.
+    int workKey[5];
+    for (int i = 0; i < 5; ++i) {
+        memcpy(&workKey[i], &sha1Hash[i * 4], sizeof(int));
+    }
+    return workKey[0] ^ workKey[1] ^ workKey[2] ^ workKey[3] ^ workKey[4];
 }
 
 // static function
@@ -320,6 +329,8 @@ ShmDataManager::showShm(const int shmId, const int maxShmId)
             ostr << " type:" << std::setw(ShmDataIO::headerKeyMaxLen) << std::left << ShmDataIO::headerKeyShmFb;
         } else if (cmpHeader(header, ShmDataIO::headerKeyShmFbCtrl)) {
             ostr << " type:" << std::setw(ShmDataIO::headerKeyMaxLen) << std::left << ShmDataIO::headerKeyShmFbCtrl;
+        } else if (cmpHeader(header, ShmDataIO::headerKeyShmAffInfo)) {
+            ostr << " type:" << std::setw(ShmDataIO::headerKeyMaxLen) << std::left << ShmDataIO::headerKeyShmAffInfo;
         } else {
             return ""; // unknown type and return empty string
         }
@@ -328,7 +339,7 @@ ShmDataManager::showShm(const int shmId, const int maxShmId)
 
         return ostr.str();
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         ostr << "ERROR : Could not construct ShmDataManager."
              << " shmId:" << shmId << " headerSize:" << ShmDataIO::headerSize << " err:" << err;
         return ostr.str();
@@ -383,24 +394,20 @@ ShmDataManager::initMembers()
 }
 
 void
-ShmDataManager::constructNewShm(const size_t memSize)
+ShmDataManager::constructNewShm(const size_t memSize,
+                                const int permissionFlag)
+//
+// always generates new shmId
+//
 {
-    if (memSize > ShmFb::getShmMaxByte()) {
-        std::ostringstream ostr;
-        ostr << "ShmDataManager constructNewShm() failed. too big shared memory size was requested.\n"
-             << " memSize:" << memSize << " > max:" << ShmFb::getShmMaxByte() << '\n'
-             << "Please consider increasing the shared memory max size";
-        throw(ostr.str());
-    }
+    checkMaxShmSize(memSize, ShmFb::getShmMaxByte());
 
-    // only can read/write by myself
-    // read-only for other owner's processes 
     int shmId;
-    if ((shmId = shmget(IPC_PRIVATE, memSize, 0644)) < 0) {
+    if ((shmId = shmget(IPC_PRIVATE, memSize, permissionFlag)) < 0) {
         std::ostringstream ostr;
         ostr << "ShmDataManager shmget() failed. memSize:" << memSize << " error:>" << strerror(errno) << '<';
         throw(ostr.str()); 
-   }
+    }
     std::cerr << "=====>>>>> ShmDataManager shmId:" << shmId << " <<<<<=====\n";
 
     accessSetupShm(shmId, 0);
@@ -412,29 +419,168 @@ ShmDataManager::accessSetupShm(const int shmId, const size_t minDataSize)
     mShmId = shmId;
 
     mShmAddr = nullptr; 
-   if ((mShmAddr = static_cast<void*>(shmat(mShmId, NULL, 0))) == reinterpret_cast<void*>(-1)) {
+    if ((mShmAddr = static_cast<void*>(shmat(mShmId, NULL, 0))) == reinterpret_cast<void*>(-1)) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmat() failed."
+        ostr << "ShmDataManager::accessSetupShm(mShmId:" << mShmId << ") shmat() failed."
              << " error:>" << strerror(errno) << '<';
-        throw(ostr.str());
+        throw ostr.str();
     }
     
     struct shmid_ds shmIdInfo;
     if (shmctl(mShmId, IPC_STAT, &shmIdInfo) == -1) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shmctl() failed."
+        ostr << "ShmDataManager::accessSetupShm(mShmId:" << mShmId << ") shmctl() failed."
              << " error:>" << strerror(errno) << '<';
-        throw(ostr.str());
+        throw ostr.str();
     }
     mShmSize = shmIdInfo.shm_segsz;
     if (minDataSize > 0 && mShmSize < minDataSize) {
         std::ostringstream ostr;
-        ostr << "ShmDataManager::ShmDataManager(mShmId:" << mShmId << ") shared memory size failed"
+        ostr << "ShmDataManager::accessSetupShm(mShmId:" << mShmId << ") shared memory size failed"
              << " mShmSize:" << mShmSize
              << " < minDataSize:" << minDataSize;
-        throw(ostr.str());
+        throw ostr.str();
     }
     mShmNAttach = shmIdInfo.shm_nattch;
+}
+
+bool
+ShmDataManager::constructNewShmByKey(const std::string& keyStr,
+                                     const size_t memSize,
+                                     const int permissionFlag)
+//
+// This function creates a new shmId if there is no existing which is related to the specified keyStr.
+// However, return existed shmId if it is already there. In this case, shared memory data itself does
+// not change anything.
+//
+// This returns the status indicating whether the target shared memory already existed or did not exist
+// before obtaining the shmId.
+// return true : already existed
+//        false : did not existed
+//
+{
+    auto throwShmgetError = [&]() {
+        std::ostringstream ostr;
+        ostr << "ShmDataManager shmget() failed."
+             << " keyStr:" << keyStr
+             << " memSize:" << memSize << " error:" << strerror(errno);
+        throw ostr.str();
+    };
+
+    checkMaxShmSize(memSize, ShmFb::getShmMaxByte());
+
+    const int key = genInt32KeyBySHA1(keyStr);
+
+    int shmId = shmget(key, memSize, IPC_CREAT | IPC_EXCL | permissionFlag);
+    const int keepErr = errno; // Just in case,  errno is saved to protect from a signal handler.
+                               // errno itself is thread-safe actually.
+    bool flag = true;
+    if (shmId == -1) {
+        if (keepErr == EEXIST) {
+            // shared memory already exists
+            if ((shmId = shmget(key, memSize, permissionFlag)) < 0) {
+                throwShmgetError();
+            }
+        } else {
+            throwShmgetError();
+        }
+    } else {
+        // create new shared memory
+        flag = false;
+    }
+    std::cerr << "=====>>>>> ShmDataManager keyStr:" << keyStr << " shmId:" << shmId << " <<<<<=====\n";
+
+    accessSetupShm(shmId, 0);
+
+    return flag;
+}
+
+void
+ShmDataManager::accessSetupShmByKey(const std::string& keyStr,
+                                    const size_t memSize)
+//
+// Accesses already existed shared memory data.
+// This API throws an exception when can not access the shared memory.
+//
+{
+    const int key = genInt32KeyBySHA1(keyStr);
+
+    const int shmId = shmget(key, memSize, 0);
+    if (shmId == -1) {
+        std::ostringstream ostr;
+        ostr << "ShmDataManager::accessSetupShmByKey(keyStr:" << keyStr << ") shmget() failed";
+        throw ostr.str();
+    }
+
+    accessSetupShm(shmId, 0);
+}
+
+// static function
+bool
+ShmDataManager::rmUnusedShmByKey(const std::string& keyStr,
+                                 const std::string& headerKey,
+                                 const Msg& msgCallBack)
+{
+    const int shmId = shmget(genInt32KeyBySHA1(keyStr), 0, 0);
+    if (shmId == -1) {
+        return false; // could not get shmId
+    }
+
+    std::ostringstream ostr;
+    ostr << "rmUnusedShmByKey() KeyStr:\"" << keyStr << "\" ";
+    msgCallBack(ostr.str() + '\n');
+    return rmUnusedShm(shmId, headerKey, msgCallBack);
+}
+
+// static function
+bool
+ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const Msg& msgCallBack)
+{
+    try {
+        ShmDataManager manager;
+        manager.accessSetupShm(shmId, ShmDataIO::headerSize);
+        const std::string header = manager.getHeader(ShmDataIO::headerSize);
+        if (!cmpHeader(header, headerKey)) return true;
+
+        // found shared memory that has headerKey
+        if (manager.mShmNAttach == 1) {
+            if (!manager.rmShm()) return false;
+            if (msgCallBack) {
+                std::ostringstream ostr;
+                ostr << "shmId:" << shmId
+                     << " headerSize:" << ShmDataIO::headerSize
+                     << " headerKey:\"" << headerKey << "\" is deleted";
+                return msgCallBack(ostr.str() + '\n');
+            }
+        }
+    }
+    catch (const std::string& err) {
+        //
+        // We tried to access an unknown shared memory and failed.
+        // So we skip this shared memory.
+        //
+        std::ostringstream ostr;
+        ostr << "WARNING : Failed to access unknown shared memory."
+             << " shmId:" << shmId
+             << " headerSize:" << ShmDataIO::headerSize << " headerKey:\"" << headerKey << "\""
+             << " error=>{\n"
+             << str_util::addIndent(err) << '\n'
+             << "}";
+        msgCallBack(ostr.str() + '\n'); 
+    }
+    return true;
+}
+
+// static function
+bool
+ShmDataManager::rmAllUnusedShm(const std::string& headerKey, const Msg& msgCallBack)
+{
+    bool flag = true;
+    crawlAllShm(ShmDataIO::headerSize,
+                [&](const unsigned shmId) {
+                    if (!ShmDataManager::rmUnusedShm(shmId, headerKey, msgCallBack)) { flag = false; }
+                });
+    return flag;
 }
 
 std::string
@@ -457,7 +603,7 @@ ShmDataManager::getMaxShmId()
                         if (isShmData(shmId)) { if (maxShmId < shmId) maxShmId = shmId; }
                     });
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         return 0; // can not find max shamId
     }
     return maxShmId;
@@ -477,11 +623,10 @@ ShmDataManager::isShmData(const unsigned shmId)
         }
         return false;
     }
-    catch (std::string err) {
+    catch (const std::string& err) {
         return false;
     }
 }
 
 } // namespace grid_util
 } // namespace scene_rdl2
-

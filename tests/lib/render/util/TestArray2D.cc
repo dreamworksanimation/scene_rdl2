@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 ///
@@ -7,6 +7,8 @@
 ///
 
 #include "TestArray2D.h"
+#include "TimeOutput.h"
+
 #include <scene_rdl2/render/util/AlignedAllocator.h>
 #include <scene_rdl2/render/util/Array2D.h>
 
@@ -42,6 +44,8 @@ struct Point2D
 
 void TestArray2D::testStatic()
 {
+    TIME_START;
+
     using STDAllocator = util::Array2D<int, std::allocator<int>>;
     using AAllocator = util::Array2D<int, alloc::AlignedAllocator<int>>;
 
@@ -49,10 +53,14 @@ void TestArray2D::testStatic()
                   "It should be no-throw move constructible with a std::allocator");
     static_assert(std::is_nothrow_move_assignable<AAllocator>::value,
                   "It should be no-throw move constructible with an aligned allocator");
+
+    TIME_END;
 }
 
 void TestArray2D::testConstruction()
 {
+    TIME_START;
+
     {
         using IntArray  = util::Array2D<int>;
         using size_type = IntArray::size_type;
@@ -104,10 +112,14 @@ void TestArray2D::testConstruction()
         CPPUNIT_ASSERT(a.getWidth() == 13);
         CPPUNIT_ASSERT(a.getHeight() == 11);
     }
+
+    TIME_END;
 }
 
 void TestArray2D::testRandomInput()
 {
+    TIME_START;
+
     using RandGen = std::mt19937;
     using SeedType = RandGen::result_type;
 
@@ -138,10 +150,14 @@ void TestArray2D::testRandomInput()
         }
     }
 #pragma warning(pop)
+
+    TIME_END;
 }
 
 void TestArray2D::testIteratorConstructionC()
 {
+    TIME_START;
+
     float ca[5][7];
     ca[0][0] =  0.0f;
     ca[0][1] =  1.0f;
@@ -193,10 +209,14 @@ void TestArray2D::testIteratorConstructionC()
         }
     }
 #pragma warning(pop)
+
+    TIME_END;
 }
 
 void TestArray2D::testIteratorConstruction()
 {
+    TIME_START;
+
     float ca[5][7];
     ca[0][0] =  0.0f;
     ca[0][1] =  1.0f;
@@ -250,10 +270,14 @@ void TestArray2D::testIteratorConstruction()
         }
     }
 #pragma warning(pop)
+
+    TIME_END;
 }
 
 void TestArray2D::testIteratorValueC()
 {
+    TIME_START;
+
     using FloatArray = util::Array2DC<float>;
     using size_type  = FloatArray::size_type;
 
@@ -270,10 +294,14 @@ void TestArray2D::testIteratorValueC()
 
     const float* const p = &(ca[0][0]);
     CPPUNIT_ASSERT(std::equal(p, p + 5*7, ba.cbegin()));
+
+    TIME_END;
 }
 
 void TestArray2D::testIteratorValue()
 {
+    TIME_START;
+
     using FloatArray = util::Array2D<float>;
     using size_type  = FloatArray::size_type;
 
@@ -292,10 +320,14 @@ void TestArray2D::testIteratorValue()
         CPPUNIT_ASSERT(v == counter);
         ++counter;
     }
+
+    TIME_END;
 }
 
 void TestArray2D::testCopy()
 {
+    TIME_START;
+
     using FloatArray = util::Array2D<float>;
     using size_type  = FloatArray::size_type;
 
@@ -371,9 +403,13 @@ void TestArray2D::testCopy()
         }
 #pragma warning(pop)
     }
+
+    TIME_END;
 }
 void TestArray2D::testMove()
 {
+    TIME_START;
+
     using FloatArray = util::Array2D<float>;
     using size_type  = FloatArray::size_type;
 
@@ -439,6 +475,8 @@ void TestArray2D::testMove()
         }
 #pragma warning(pop)
     }
+
+    TIME_END;
 }
 
 namespace detail {
@@ -506,6 +544,8 @@ int TimeBomb<numCopies>::sNumActive = 0;
 
 void TestArray2D::testExceptions()
 {
+    TIME_START;
+
     using Bomb = detail::TimeBomb<20>;
     using BombArray = util::Array2D<Bomb>;
     using size_type  = BombArray::size_type;
@@ -570,10 +610,9 @@ void TestArray2D::testExceptions()
     }
 
     CPPUNIT_ASSERT(Bomb::sNumActive == 0);
+
+    TIME_END;
 }
 
 } // namespace pbr
 } // namespace scene_rdl2
-
-CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::pbr::TestArray2D);
-

@@ -1,6 +1,7 @@
 // Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestSha1.h"
+#include "TimeOutput.h"
 
 #include <scene_rdl2/render/util/StrUtil.h>
 #include <scene_rdl2/scene/rdl2/ValueContainerEnq.h>
@@ -15,6 +16,8 @@ namespace unittest {
 void
 TestSha1::testParams()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT(initTest());
 
     CPPUNIT_ASSERT(push<char>(-43));
@@ -29,11 +32,15 @@ TestSha1::testParams()
     CPPUNIT_ASSERT(push<double>(5.4321));
 
     CPPUNIT_ASSERT("testParam" && verifyResult());
+
+    TIME_END;
 }
 
 void
 TestSha1::testBuffer()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT(initTest());
 
     CPPUNIT_ASSERT(pushBuff(randomDataGen(1234)));
@@ -41,11 +48,15 @@ TestSha1::testBuffer()
     CPPUNIT_ASSERT(pushBuff(randomDataGen(123456)));
 
     CPPUNIT_ASSERT("testBuffer" && verifyResult());    
+
+    TIME_END;
 }
 
 void
 TestSha1::testMix()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT(initTest());
 
     CPPUNIT_ASSERT(push<char>(-43));
@@ -63,6 +74,8 @@ TestSha1::testMix()
     CPPUNIT_ASSERT(push<double>(5.4321));
 
     CPPUNIT_ASSERT("testMix" && verifyResult());    
+
+    TIME_END;
 }
 
 bool

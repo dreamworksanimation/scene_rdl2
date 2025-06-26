@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "NumaInfo.h"
 
@@ -7,6 +7,7 @@
 #endif // end of PLATFORM_APPLE 
 
 namespace scene_rdl2 {
+namespace grid_util {
 
 bool
 NumaInfo::allocFreeTest(const unsigned numaNodeId, const size_t size, const MsgFunc& msgFunc) const
@@ -14,9 +15,9 @@ NumaInfo::allocFreeTest(const unsigned numaNodeId, const size_t size, const MsgF
 #ifdef PLATFORM_APPLE
     return false;
 #else // else PLATFORM_APPLE
-    std::ostringstream ostr;
 
     if (numaNodeId >= mNumaUtil.getTotalNumaNode()) {
+        std::ostringstream ostr;
         ostr << "ERROR : numaNodeId:" << numaNodeId << " is out of range";
         msgFunc(ostr.str() + '\n');
         return false;
@@ -26,6 +27,7 @@ NumaInfo::allocFreeTest(const unsigned numaNodeId, const size_t size, const MsgF
 
     void* const mem = numaNode->alloc(size);
     if (!mem) {
+        std::ostringstream ostr;
         ostr << "ERROR : Could not alloc memory from NumaNodeId:" << numaNodeId << " size:" << size;
         msgFunc(ostr.str() + '\n');
         return false;
@@ -38,6 +40,7 @@ NumaInfo::allocFreeTest(const unsigned numaNodeId, const size_t size, const MsgF
     //
     // Verify #1
     //
+    std::ostringstream ostr;
     ostr << "Alloced memory:0x" << std::hex << reinterpret_cast<uintptr_t>(mem) << std::dec
          << " size:" << size << " @ NUMA-nodeId:" << numaNode->getNodeId();
     msgFunc(ostr.str() + '\n');
@@ -86,4 +89,5 @@ NumaInfo::parserConfigure()
 #endif // end of Non PLATFORM_APPLE
 }
 
+} // namespace grid_util
 } // namespace scene_rdl2

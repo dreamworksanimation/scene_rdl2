@@ -1,8 +1,9 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestCpuSocketUtil.h"
+#include "TimeOutput.h"
 
-#include <scene_rdl2/render/util/CpuSocketUtil.h>
+#include <scene_rdl2/common/grid_util/CpuSocketUtil.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <cassert>
@@ -20,7 +21,7 @@ testCpuIdDefMain(const std::string& defStr,
 {
     std::vector<unsigned> out;
     std::string errMsg;
-    const bool resultFlag = scene_rdl2::CpuSocketUtil::cpuIdDefToCpuIdTbl(defStr, out, errMsg);
+    const bool resultFlag = scene_rdl2::grid_util::CpuSocketUtil::cpuIdDefToCpuIdTbl(defStr, out, errMsg);
 
     auto showTbl = [](const std::vector<unsigned>& tbl) {
         std::ostringstream ostr;
@@ -89,7 +90,7 @@ runCommand(const std::string& command)
 }
 
 bool
-testShowCpuIdTblMain(const scene_rdl2::CpuSocketUtil::CpuIdTbl& cpuIdTbl,
+testShowCpuIdTblMain(const scene_rdl2::grid_util::CpuSocketUtil::CpuIdTbl& cpuIdTbl,
                      const std::string& targetMsg)
 {
     auto showCpuIdTbl = [&] {
@@ -100,7 +101,7 @@ testShowCpuIdTblMain(const scene_rdl2::CpuSocketUtil::CpuIdTbl& cpuIdTbl,
         return ostr.str();
     };
 
-    const std::string msg = scene_rdl2::CpuSocketUtil::showCpuIdTbl("CpuIdTbl", cpuIdTbl);
+    const std::string msg = scene_rdl2::grid_util::CpuSocketUtil::showCpuIdTbl("CpuIdTbl", cpuIdTbl);
     bool result = true;
     if (msg != targetMsg) {
         std::cerr << "Verify ERROR : " << showCpuIdTbl() << " => \"" << msg << "\" target:\"" << targetMsg << "\"\n";
@@ -115,14 +116,14 @@ testShowCpuIdTblMain(const scene_rdl2::CpuSocketUtil::CpuIdTbl& cpuIdTbl,
 } // namespace
 
 namespace scene_rdl2 {
-namespace cpuSocketUtil {
+namespace grid_util {
 namespace unittest {
-
-CPPUNIT_TEST_SUITE_REGISTRATION(TestCpuSocketUtil);
 
 void
 TestCpuSocketUtil::testCpuIdDef()
 {
+    TIME_START;
+
     // We have to run this unitTest 8 cores or more environment.
     assert(std::thread::hardware_concurrency() >= 8);
 
@@ -210,29 +211,46 @@ TestCpuSocketUtil::testCpuIdDef()
                                       "  0-2,11-9,5\n"
                                       "      ^^^^\n"
                                       "}" }));
+
+    TIME_END;
 }
 
 void
 TestCpuSocketUtil::testShowCpuIdTbl()
 {
+    TIME_START;
+
     CPPUNIT_ASSERT(testShowCpuIdTblMain(CpuSocketUtil::CpuIdTbl {0,2,4,6}, "CpuIdTbl (total:4) {0,2,4,6}"));
     CPPUNIT_ASSERT(testShowCpuIdTblMain(CpuSocketUtil::CpuIdTbl {0,1,2,3,4,5}, "CpuIdTbl (total:6) {0-5}"));
     CPPUNIT_ASSERT(testShowCpuIdTblMain(CpuSocketUtil::CpuIdTbl {0,1,3,4,6}, "CpuIdTbl (total:5) {0-1,3-4,6}"));
     CPPUNIT_ASSERT(testShowCpuIdTblMain(CpuSocketUtil::CpuIdTbl {0,1,2,4,5}, "CpuIdTbl (total:5) {0-2,4-5}"));
+
+    TIME_END;
 }
 
 void
 TestCpuSocketUtil::testSetupCpuInfo()
 {
+    TIME_START;
+
+#ifdef PLATFORM_APPLE
+    const int totalSockets = 1; // All the Apple Silicon Macs only have a single socket 
+    const int totalCores = std::thread::hardware_concurrency();
+#else // !PLATFORM_APPLE
     const int totalSockets = runCommand("grep physical.id /proc/cpuinfo | sort -u | wc -l");
     const int totalCores = runCommand("grep processor /proc/cpuinfo | wc -l");
+#endif // end of !PLATFORM_APPLE
 
     std::vector<int> totalCoresOnEachSocket(totalSockets);
+#ifdef PLATFORM_APPLE
+    totalCoresOnEachSocket[0] = totalCores;
+#else // !PLATFORM_APPLE
     for (int socketId = 0; socketId < totalSockets; ++socketId) {
         std::ostringstream ostr;
         ostr << "grep physical.id /proc/cpuinfo | grep \": " << socketId << "\" | wc -l";
         totalCoresOnEachSocket[socketId] = runCommand(ostr.str());
     }
+#endif // end of !PLATFORM_APPLE
 
 #   ifdef DEBUG_MSG_SETUP_CPU_INFO
     std::ostringstream ostr;
@@ -284,8 +302,77 @@ TestCpuSocketUtil::testSetupCpuInfo()
     }
 
     CPPUNIT_ASSERT("testSetupCpuInfo" && resultFlag);
+
+    TIME_END;
+}
+
+void
+TestCpuSocketUtil::testIdTblToDefStr()
+{
+    TIME_START;
+
+    CPPUNIT_ASSERT("testIdTblToDefStr A" && testIdTblToDefStrMain("0,1,2,3,4,5"));
+    CPPUNIT_ASSERT("testIdTblToDefStr B" && testIdTblToDefStrMain("0-9"));
+    CPPUNIT_ASSERT("testIdTblToDefStr C" && testIdTblToDefStrMain("0-2,4,6-7"));
+    CPPUNIT_ASSERT("testIdTblToDefStr D" && testIdTblToDefStrMain("0,1-3,5,7-9"));
+    CPPUNIT_ASSERT("testIdTblToDefStr E" && testIdTblToDefStrMain("6-7,0-2,9"));
+
+    TIME_END;
+}
+
+bool
+TestCpuSocketUtil::testIdTblToDefStrMain(const std::string& idTblDefStr) const
+{
+    std::string errMsg;
+    CpuSocketUtil::IdTbl workIdTbl;
+    if (!CpuSocketUtil::parseIdDef(idTblDefStr, workIdTbl, errMsg)) {
+        std::ostringstream ostr;
+        ostr << "TestCpuSocketUtil::testIdTblToDefStrMain() parseIdDef() failed."
+             << " idTblDefStr:" << idTblDefStr << " err=>{\n"
+             << str_util::addIndent(errMsg) << '\n'
+             << "}";
+        std::cerr << ostr.str() << '\n';
+        return false;
+    }
+
+    std::string workIdDefStr = CpuSocketUtil::idTblToDefStr(workIdTbl);
+
+    CpuSocketUtil::IdTbl workIdTbl2;
+    if (!CpuSocketUtil::parseIdDef(workIdDefStr, workIdTbl2, errMsg)) {
+        std::ostringstream ostr;
+        ostr << "TestCpuSocketUtil::testIdTblToDefStrMain() parseIdDef() failed-B."
+             << " workIdDefStr:" << workIdDefStr << " err=>{\n"
+             << str_util::addIndent(errMsg) << '\n'
+             << "}";
+        std::cerr << ostr.str() << '\n';
+        return false;
+    }
+                                     
+    auto showIdTbl = [](const CpuSocketUtil::IdTbl & tbl) {
+        std::ostringstream ostr;
+        ostr << "{ ";
+        for (const auto& v : tbl) ostr << v << ' ';
+        ostr << "}";
+        return ostr.str();
+    };
+    auto showProgress = [&]() {
+        std::ostringstream ostr;
+        ostr << "TestCpuSocketUtil::testIdTblToDefStrMain(idTblDefStr:" << idTblDefStr << ") {\n"
+             << "  => " << showIdTbl(workIdTbl) << '\n'
+             << "  => " << workIdDefStr << '\n'
+             << "  => " << showIdTbl(workIdTbl2) << '\n'
+             << "}";
+        return ostr.str();
+    };
+
+    // std::cerr << showProgress() << '\n'; // for debug
+    if (workIdTbl != workIdTbl2) {
+        std::cerr << "ERROR: " << showProgress() << '\n';
+        return false;
+    }
+    return true;
 }
 
 } // namespace unittest
-} // namespace cpuSocketUtil
+} // namespace grid_util
 } // namespace scene_rdl2

@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -363,6 +363,7 @@ public:
     // Evaluate argument
     bool main(Arg &arg) const;
     bool main(Arg &&arg) const { Arg tmpArg = arg; return main(tmpArg); }
+    bool main(const std::string& singleCommandLine, std::string& outputMessage) const;
 
     std::string show() const;
 

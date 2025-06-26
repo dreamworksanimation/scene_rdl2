@@ -1,4 +1,4 @@
-# Copyright 2023-2024 DreamWorks Animation LLC
+# Copyright 2023-2025 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(target scenerdl2_common_grid_util_tests)
@@ -8,12 +8,16 @@ add_executable(${target})
 target_sources(${target}
     PRIVATE
         main.cc
+	TestAffinityMapTable.cc
         TestArg.cc
+	TestCpuSocketUtil.cc
 	TestFbUtils.cc
         TestParser.cc
         TestPixelBufferSha1.cc
         TestSha1.cc
+	TestShmAffInfo.cc
 	TestShmFb.cc
+	TestShmUtil.cc
 )
 
 target_link_libraries(${target}

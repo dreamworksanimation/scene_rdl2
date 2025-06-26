@@ -1,6 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "Parser.h"
 
 #include <iostream>
@@ -169,7 +168,7 @@ Parser::main(Arg &arg) const
             throw(arg.warnMsgEvalArg("needs more argument"));
         }
     }
-    catch (std::string error) {
+    catch (const std::string& error) {
         arg.msg(error + '\n');
         return false;
     }
@@ -191,6 +190,21 @@ Parser::main(Arg &arg) const
     }
 
     return true;
+}
+
+bool
+Parser::main(const std::string& singleCommandLine, std::string& outputMessage) const
+{
+    outputMessage.clear();
+
+    Arg tmpArg(singleCommandLine);
+    tmpArg.setMessageHandler([&](const std::string& msg) -> bool {
+        outputMessage += msg;
+        return true;
+    });
+    tmpArg.setCerrOutput(false);
+
+    return main(tmpArg);
 }
 
 std::string
