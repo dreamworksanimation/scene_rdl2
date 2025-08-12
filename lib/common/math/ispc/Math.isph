@@ -414,6 +414,9 @@ inline varying float gain(const varying float val, const varying float gain_)
     else return 1.0f - bias(2.0f - 2.0f * val, 1.0f - gain_) * 0.5f;
 }
 
+#if ISPC_MAJOR_VERSION == 1 && ISPC_MINOR_VERSION < 26
+// ISPC 1.26 and newer have fmod() as a builtin and this definition clashes
+
 // float fmod(float, float)
 inline uniform float fmod(const uniform float x, const uniform float y)
 {
@@ -427,6 +430,8 @@ inline varying float fmod(const varying float x, const varying float y)
     MNRY_ASSERT(!isEqual(y, 0.0f));
     return x - trunc(x/y) * y;
 }
+
+#endif
 
 // float saturate(float)
 inline uniform float saturate(const uniform float x)
