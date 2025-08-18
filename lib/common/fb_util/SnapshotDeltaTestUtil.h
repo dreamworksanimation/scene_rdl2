@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory> // shared_ptr
 #include <string>
 #include <vector>

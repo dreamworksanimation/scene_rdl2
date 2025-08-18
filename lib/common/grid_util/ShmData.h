@@ -5,6 +5,7 @@
 #include <cstring> // memcpy
 #include <functional>
 #include <string>
+#include <cstdint>
 
 namespace scene_rdl2 {
 namespace grid_util {
