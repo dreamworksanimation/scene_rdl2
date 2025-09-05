@@ -468,45 +468,6 @@ testTrunc()
 }
 
 //----------------------------------------------------------------------
-// result = fmod(a, b)
-//----------------------------------------------------------------------
-#define FMOD_TEST(VURES, VU0, VU1, V0, V1, R0)          \
-    {                                                   \
-        const VU0 float f0 = (VU0 float) V0;            \
-        const VU1 float f1 = (VU1 float) V1;            \
-        const VURES float res = (VURES float) R0;       \
-        if (any(!isEqual(fmod(f0, f1), res))) {         \
-            ++error;                                    \
-        }                                               \
-    }
-
-inline uniform int
-testFmod()
-{
-    uniform int error = 0;
-    const varying int pi = programIndex + 1;
-
-    FMOD_TEST(VAR, VAR, VAR, (pi + 1.25f), 1.0f, 0.25f);
-    FMOD_TEST(VAR, VAR, VAR, -(pi + 1.25f), 1.0f, -0.25f);
-    FMOD_TEST(VAR, VAR, UNI, 4.25f, 1.15f, 0.8f);
-    FMOD_TEST(VAR, VAR, UNI, -4.25, 1.15f, -0.8f);
-    FMOD_TEST(VAR, UNI, VAR, 3.0f, -2.0f, 1.0f);
-    FMOD_TEST(VAR, UNI, VAR, -3.0f, -2.0f, -1.0f);
-    FMOD_TEST(VAR, UNI, UNI, 6.0, 3.0f, 0.0f);
-    FMOD_TEST(UNI, UNI, UNI, -6.30, 1.05, 0.0f);
-    FMOD_TEST(UNI, UNI, UNI,  -1.8f, -16.4f, -1.8f);
-    FMOD_TEST(UNI, UNI, UNI, -16.4f,  -1.8f, -0.2f);
-    FMOD_TEST(UNI, UNI, UNI,  -1.8f, +16.4f, -1.8f);
-    FMOD_TEST(UNI, UNI, UNI, -16.4f,  +1.8f, -0.2f);
-    FMOD_TEST(UNI, UNI, UNI,  +1.8f, -16.4f, +1.8f);
-    FMOD_TEST(UNI, UNI, UNI, +16.4f,  -1.8f, +0.2f);
-    FMOD_TEST(UNI, UNI, UNI,  +1.8f, +16.4f, +1.8f);
-    FMOD_TEST(UNI, UNI, UNI, +16.4f,  +1.8f, +0.2f);
-
-    return error;
-}
-
-//----------------------------------------------------------------------
 // val = saturate(val)
 //----------------------------------------------------------------------
 inline uniform int

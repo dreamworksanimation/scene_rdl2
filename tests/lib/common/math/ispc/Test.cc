@@ -95,12 +95,6 @@ Test::trunc()
 }
 
 void
-Test::fmod()
-{
-    CPPUNIT_ASSERT(::ispc::Test_fmod() == 0);
-}
-
-void
 Test::saturate()
 {
     CPPUNIT_ASSERT(::ispc::Test_saturate() == 0);

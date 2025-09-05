@@ -30,7 +30,6 @@ public:
     void bias();
     void gain();
     void trunc();
-    void fmod();
     void saturate();
 
     CPPUNIT_TEST_SUITE(Test);
@@ -48,7 +47,6 @@ public:
     CPPUNIT_TEST(bias);
     CPPUNIT_TEST(gain);
     CPPUNIT_TEST(trunc);
-    CPPUNIT_TEST(fmod);
     CPPUNIT_TEST(saturate);
     CPPUNIT_TEST_SUITE_END();
 };

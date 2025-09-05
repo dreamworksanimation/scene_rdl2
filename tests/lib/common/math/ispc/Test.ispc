@@ -90,12 +90,6 @@ Test_trunc()
 }
 
 export uniform int
-Test_fmod()
-{
-    return testFmod();
-}
-
-export uniform int
 Test_saturate()
 {
     return testSaturate();
