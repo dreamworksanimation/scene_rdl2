@@ -734,6 +734,9 @@ interfaceTypeName(SceneObjectInterface type)
     // Check leaf (most specific) types first.
     if (type & INTERFACE_CAMERA) {
         return "Camera";
+    } else if (type & INTERFACE_DWABASE) {
+        // this is a type of material
+        return "DwaBase";
     } else if (type & INTERFACE_DWABASELAYERABLE) {
         // this is a type of material
         return "DwaBaseLayerable";

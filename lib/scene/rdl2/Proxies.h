@@ -227,6 +227,20 @@ MaterialProxy::shade(const rdl2::Material* self,
     throw except::RuntimeError(errMsg.str());
 }
 
+// -------- DwaBaseProxy ----------------------------------------------------
+
+class DwaBaseProxy : public Material
+{
+public:
+    finline DwaBaseProxy(const SceneClass& sceneClass, const std::string& name);
+};
+
+DwaBaseProxy::DwaBaseProxy(const SceneClass& sceneClass, const std::string& name)
+    : Material(sceneClass, name)
+{
+    mType |= INTERFACE_DWABASE;
+}
+
 // -------- DwaBaseLayerableProxy ----------------------------------------------------
 
 class DwaBaseLayerableProxy : public Material
@@ -238,6 +252,7 @@ public:
 DwaBaseLayerableProxy::DwaBaseLayerableProxy(const SceneClass& sceneClass, const std::string& name)
     : Material(sceneClass, name)
 {
+    mType |= INTERFACE_DWABASE;
     mType |= INTERFACE_DWABASELAYERABLE;
 }
 
@@ -252,6 +267,7 @@ public:
 DwaBaseHairLayerableProxy::DwaBaseHairLayerableProxy(const SceneClass& sceneClass, const std::string& name)
     : Material(sceneClass, name)
 {
+    mType |= INTERFACE_DWABASE;
     mType |= INTERFACE_DWABASEHAIRLAYERABLE;
 }
 

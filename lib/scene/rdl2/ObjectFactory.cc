@@ -80,6 +80,8 @@ proxyCreate(const SceneClass& sceneClass, const std::string& name)
             return new DwaBaseLayerableProxy(sceneClass, name);
         } else if (interface & INTERFACE_DWABASEHAIRLAYERABLE) {
             return new DwaBaseHairLayerableProxy(sceneClass, name);
+        } else if (interface & INTERFACE_DWABASE) {
+            return new DwaBaseProxy(sceneClass, name);
         } else {
             return new MaterialProxy(sceneClass, name);
         }
