@@ -211,14 +211,14 @@ typedef uint64_t EntryType;
 typedef MemPool<EntryType> LocalMemPool;
 
 // Counter to hand out unique indices to TLSProxy objects.
-tbb::atomic<unsigned> gNextTLSIndex;
+std::atomic<unsigned> gNextTLSIndex;
 
 // This is a lightweight object which we put into a tbb::enumerable_thread_specific
 // container so that we can map OS thread ids to consistent top level ThreadLocalState
 // objects when running parallel_for loops in the update phase of the frame.
 struct TLSProxy
 {
-    TLSProxy() : mTLSIndex(gNextTLSIndex.fetch_and_increment()) {}
+    TLSProxy() : mTLSIndex(gNextTLSIndex++) {}
     unsigned mTLSIndex;
 };
 

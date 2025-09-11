@@ -6,13 +6,11 @@
 // Include this before any other includes!
 #include <scene_rdl2/common/platform/Platform.h>
 
-#include <tbb/atomic.h>
-
 namespace scene_rdl2 {
 namespace util {
 
 template<typename T>
-struct CACHE_ALIGN CacheLineAtomic : public tbb::atomic<T>
+struct CACHE_ALIGN CacheLineAtomic : public std::atomic<T>
 {
 };
 

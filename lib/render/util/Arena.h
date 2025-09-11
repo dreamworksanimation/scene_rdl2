@@ -152,7 +152,7 @@ protected:
     unsigned mNumaNodeId {~static_cast<unsigned>(0)};
 
     const size_t mBlockSize {DEFAULT_ARENA_BLOCK_SIZE};
-    tbb::atomic<unsigned> mTotalBlocks; // Total block count which is allocated so far (includes FreeBlocks)
+    std::atomic<unsigned> mTotalBlocks; // Total block count which is allocated so far (includes FreeBlocks)
 
     CACHE_ALIGN util::ConcurrentSList mFreeBlocks;
 
