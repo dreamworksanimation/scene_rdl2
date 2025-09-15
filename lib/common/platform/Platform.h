@@ -334,6 +334,8 @@ void debugPrint(const char* name, const Car& car, const Cdr&... cdr)
 /// Basic Types
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <cstdint>
+
 // MoonRay: begin *****
 typedef std::int64_t  int64;
 typedef std::uint64_t uint64;

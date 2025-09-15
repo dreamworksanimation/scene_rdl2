@@ -6,6 +6,8 @@
 #include <iostream>
 #endif // end of PLATFORM_APPLE 
 
+#include <cstdint>
+
 namespace scene_rdl2 {
 namespace grid_util {
 

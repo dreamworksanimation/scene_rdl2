@@ -5,6 +5,7 @@
 
 #include <scene_rdl2/render/util/StrUtil.h>
 
+#include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <sstream>

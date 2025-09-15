@@ -7,6 +7,7 @@
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <iostream> // debug
 #include <sys/mman.h> // mmap, munmap
