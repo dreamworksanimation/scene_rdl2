@@ -71,6 +71,9 @@ int main(void) {
     printf("#define SHADER_INVALID_NORMAL_MAP_LOG_EVENT %lu\n",
         asOFFSET(Shader, mInvalidNormalMapLogEvent));
 
+    printf("#define SHADER_EXCEEDED_MAX_LOBES_LOG_EVENT %lu\n",
+        asOFFSET(Shader, mExceededMaxLobesLogEvent));
+
     printf("#define MAP_SIZEOF %lu\n", sizeof(Map));
     printf("#define NORMALMAP_SIZEOF %lu\n", sizeof(NormalMap));
     printf("#define DISPLACEMENT_SIZEOF %lu\n", sizeof(Displacement));

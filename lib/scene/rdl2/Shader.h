@@ -40,12 +40,16 @@ public:
     : SceneObject(sceneClass, name)
     , mThreadLocalObjectState(nullptr)
     , mInvalidNormalMapLogEvent(-1)
+    , mExceededMaxLobesLogEvent(-1)
     {
         mType |= INTERFACE_SHADER;
 
         // register logging events common to all shaders
         mInvalidNormalMapLogEvent = sLogEventRegistry.createEvent(scene_rdl2::logging::ERROR_LEVEL,
             "Invalid normal map evaluation. Using shading normal instead.");
+
+        mExceededMaxLobesLogEvent = sLogEventRegistry.createEvent(scene_rdl2::logging::ERROR_LEVEL,
+            "Maximum number of lobes exceeded");
     }
 
     virtual ~Shader() = default;
@@ -85,6 +89,11 @@ public:
     int getInvalidNormalMapLogEvent() const
     {
         return mInvalidNormalMapLogEvent;
+    }
+
+    int getExceededMaxLobesLogEvent() const
+    {
+        return mExceededMaxLobesLogEvent;
     }
 
     const std::vector<PrimitiveAttributeKey>& getRequiredAttributes() const
@@ -160,6 +169,7 @@ public:
 
     // Logging messages common to all Shaders
     int mInvalidNormalMapLogEvent;
+    int mExceededMaxLobesLogEvent;
 
 protected:
     //
