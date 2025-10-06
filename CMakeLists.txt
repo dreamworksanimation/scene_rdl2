@@ -59,8 +59,8 @@ find_package(CppUnit REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(JsonCpp REQUIRED)
 find_package(Log4cplus REQUIRED)
-find_package(TBB REQUIRED)
 find_package(Python COMPONENTS Interpreter Development)
+find_package(TBB REQUIRED)
 
 find_program(LUA_BIN_LUAC
     NAMES luac

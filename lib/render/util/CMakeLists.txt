@@ -39,7 +39,7 @@ set_property(TARGET ${component}
         Arena.isph
         Args.h
         Array2D.h
-	Atomic128.h
+        Atomic128.h
         AtomicFloat.h
         BitUtils.h
         BitUtils.isph

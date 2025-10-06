@@ -6,10 +6,16 @@
 #include <scene_rdl2/render/util/Memory.h>
 #include <scene_rdl2/render/util/MemPool.h>
 #include <scene_rdl2/render/util/Random.h>
-#include <tbb/enumerable_thread_specific.h>
-#include <tbb/parallel_for.h>
-#include <tbb/task_scheduler_init.h>
 
+#ifdef TBB_ONEAPI
+#include <tbb/info.h>
+#else
+#include <tbb/task_scheduler_init.h>
+#endif
+#include <tbb/parallel_for.h>
+#include <tbb/enumerable_thread_specific.h>
+
+#include <atomic>
 #include <set>
 #include <vector>
 
@@ -252,7 +258,7 @@ testMemPoolAllocator(const char *name,
                      unsigned numLoops,
                      unsigned numOpsPerLoop)
 {
-    const unsigned numThreads = tbb::task_scheduler_init::default_num_threads();
+    const unsigned numThreads = std::thread::hardware_concurrency();
     const unsigned totalBlocks = numBlocksToReservePerThread * numThreads;
 
     //
@@ -266,6 +272,7 @@ testMemPoolAllocator(const char *name,
     // notify us when threads would get removed from the set of threads taking part in the
     // parallel_for loop.
     //
+    // TODO: Revisit this to see if oneTBB has fixed this issue.
     const unsigned overflowNumThreads = numThreads + 4;
 
     fprintf(stderr, "\n------------ Testing MemPool %s ------------\n\n", name);

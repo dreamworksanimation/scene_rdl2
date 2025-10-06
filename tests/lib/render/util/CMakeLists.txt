@@ -36,6 +36,10 @@ SceneRdl2_cxx_compile_features(${target})
 SceneRdl2_cxx_compile_options(${target})
 SceneRdl2_link_options(${target})
 
+if(${TBB_VERSION} VERSION_GREATER_EQUAL "2021.0")
+    target_compile_definitions(${target} PRIVATE -DTBB_ONEAPI=1)
+endif()
+
 add_test(NAME ${target} COMMAND ${target})
 set_tests_properties(${target} PROPERTIES
     LABELS "unit"

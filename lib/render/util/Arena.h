@@ -14,6 +14,7 @@
 #include "Ref.h"
 #include "SList.h"
 
+#include <atomic>
 #include <cstring>
 #include <vector>
 
@@ -133,7 +134,7 @@ public:
                 mem = util::alignedMallocArray<uint8_t>(mBlockSize, CACHE_LINE_SIZE);
             }
             block = new ArenaBlock(mBlockSize, mem);
-                                   
+
             ++mTotalBlocks;
         }
 
@@ -147,7 +148,7 @@ public:
 protected:
     finline bool isNumaMemAllocation() const { return mNumaNodeId != ~0; }
 
-    // ~0           : no NUMA-node defined (Disabled NUMA-Architecture support) 
+    // ~0           : no NUMA-node defined (Disabled NUMA-Architecture support)
     // 0 ~ (~0 - 1) : NUMA-node id
     unsigned mNumaNodeId {~static_cast<unsigned>(0)};
 
@@ -217,7 +218,7 @@ public:
     finline T* allocWithArgs(Args&&... args)
     {
         return util::construct(alloc<T>(ARENA_DEFAULT_ALIGNMENT), std::forward<Args>(args)...);
-    } 
+    }
     template<typename T, typename... Args>
     finline T* allocArrayWithArgs(unsigned numElems, Args&&... args)
     {
@@ -230,7 +231,7 @@ public:
     finline T* allocAlignedWithArgs(unsigned alignment, Args&&... args)
     {
         return util::construct(alloc<T>(alignment), std::forward<Args>(args)...);
-    } 
+    }
     template<typename T, typename... Args>
     finline T* allocAlignedArrayWithArgs(unsigned alignment, unsigned numElems, Args&&... args)
     {
@@ -357,7 +358,7 @@ Arena::setPtr(uint8_t* const ptr)
 
         if (!mBlocks.empty()) {
 
-            // Rewind until we have only a single block and set the pointer to 
+            // Rewind until we have only a single block and set the pointer to
             // the start of that block. Avoids a pathological case where we
             // continuously clear and alloc new blocks redundantly.
             while (mBlocks.size() > 1) {

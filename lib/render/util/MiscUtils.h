@@ -6,6 +6,8 @@
 // Include this before any other includes!
 #include <scene_rdl2/common/platform/Platform.h>
 
+#include <atomic>
+
 namespace scene_rdl2 {
 namespace util {
 
