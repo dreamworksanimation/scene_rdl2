@@ -9,6 +9,7 @@
 #include <scene_rdl2/common/fb_util/SrgbF2C.h>
 
 #include <functional>
+#include <thread>
 
 // Basically we should use multi-thread version.
 // This single thread mode is used debugging and performance comparison reason mainly.

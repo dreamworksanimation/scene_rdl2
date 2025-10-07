@@ -8,6 +8,7 @@
 #include <iostream>
 #include <pthread.h> // pthread_setaffinity_np
 #include <sstream>
+#include <thread>
 #include <unistd.h> // usleep
 
 //#define DEBUG_MSG_THREAD
@@ -22,7 +23,7 @@
 #include <scene_rdl2/common/rec_time/RecTime.h>
 
 namespace {
-    
+
 class TimeMeasurementOfShutdown
 {
 public:
@@ -270,9 +271,9 @@ ThreadPoolExecutor::shutdown()
     // This is a busy loop with no wait.
     // This code was tested by unitTest (TestThreadPoolExecutor) w/ ENDURANCE_TEST mode and passed for
     // over 1,500,000 runs without hang-up.
-    // The current average time of this shutdown() function on cobaltcard 128 HT-cores 
+    // The current average time of this shutdown() function on cobaltcard 128 HT-cores
     // (AMD Ryzen Threadripper PRO 5995WX 64-Cores) of 10,000 runs is around 2 ~ 3 ms.
-    //    
+    //
     while (true) {
         mShutdown = true;
         mCvTask.notify_all();

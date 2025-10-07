@@ -5,6 +5,7 @@
 
 #include <scene_rdl2/common/rec_time/RecTime.h>
 
+#include <thread>
 #include <unistd.h>
 
 // This directive should not commented out for the release version.

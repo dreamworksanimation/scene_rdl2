@@ -3,6 +3,7 @@
 #include <scene_rdl2/render/util/ThreadPoolExecutor.h>
 
 #include <iostream>
+#include <thread>
 
 void
 testLoop(const size_t threadTotal, const int loopCount)

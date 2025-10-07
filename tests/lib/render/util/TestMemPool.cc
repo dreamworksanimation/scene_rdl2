@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <set>
+#include <thread>
 #include <vector>
 
 // These are here to aid debugging.

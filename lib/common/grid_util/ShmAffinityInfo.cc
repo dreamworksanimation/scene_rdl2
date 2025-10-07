@@ -7,7 +7,7 @@
 
 #include <random>
 #include <sstream>
-#include <thread> // hardware_concurrenty()
+#include <thread>
 
 namespace scene_rdl2 {
 namespace grid_util {
