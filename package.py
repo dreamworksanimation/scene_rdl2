@@ -56,23 +56,30 @@ variants = [
     [   # variant 3
         'os-rocky-9',
         'opt_level-optdebug',
-        'refplat-vfx2022.0',
-        'gcc-9.3.x.1',
-        'python-3.9'
+        'refplat-vfx2024.0',
+        'gcc-11.x',
+        'python-3.11'
     ],
     [   # variant 4
         'os-rocky-9',
         'opt_level-optdebug',
-        'refplat-vfx2024.0',
+        'refplat-vfx2025.0',
         'gcc-11.x',
         'python-3.11'
     ],
     [   # variant 5
         'os-rocky-9',
         'opt_level-optdebug',
-        'refplat-vfx2025.0',
+        'refplat-houdini21.0',
         'gcc-11.x',
         'python-3.11'
+    ],
+    [   # variant 6
+        'os-rocky-9',
+        'opt_level-optdebug',
+        'refplat-vfx2022.0',
+        'gcc-9.3.x.1',
+        'python-3.9'
     ],
 ]
 
