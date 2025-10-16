@@ -45,18 +45,23 @@ TestRecTime::testRecTimeRDTSC()
 
     rec_time::RecTimeRDTSC recTime;
     const bool flag =
-        recTimeOverheadEstimationLoop(threshRatio,
-                                      [&]() {
-                                          // Timing measurement start TSC is saved inside the
-                                          // RecTimeRDTSC object, and it is processed as counter
-                                          // value itself.
-                                          recTime.start();
-                                      },
-                                      [&]() {
-                                          // end() returns the delta TSC value and needs to be
-                                          // converted to seconds here.
-                                          return static_cast<double>(recTime.end()) * secPerCycle;
-                                      });
+        recTimeOverheadEstimationLoop
+        (threshRatio,
+         [&]() {
+             // Timing measurement start TSC is saved inside the
+             // RecTimeRDTSC object, and it is processed as counter
+             // value itself.
+             recTime.start();
+         },
+         [&]() {
+             // end() returns the delta TSC value and needs to be
+             // converted to seconds here.
+             double sec = static_cast<double>(recTime.end()) * secPerCycle;
+             if (sec == 0.0) {
+                 std::cerr << ">> testRecTimeRDTSC() context switching happened\n";
+             }
+             return sec;
+         });
     CPPUNIT_ASSERT_MESSAGE("testRecTimeRDTSC", flag);
 }
 #endif // end of Not PLATFORM_APPLE
@@ -70,14 +75,30 @@ TestRecTime::recTimeLoop(const double intervalSec,
                          const std::function<double()>& timeEndFunc) const
 // timeEndFunc returns 0.0 or a negative if an error
 {
+    constexpr unsigned maxRetryErrorFix = 64; 
     double total = 0.0;
     const useconds_t us = static_cast<useconds_t>(intervalSec * 1000000);
     for (unsigned i = 0; i < maxLoop; ++i) {
-        timeStartFunc();
-        usleep(us);
-        const double sec = timeEndFunc();
-        if (sec <= 0.0) return -1.0; // error
-        total += sec;
+        bool errorFlag = true;
+        for (unsigned j = 0; j < maxRetryErrorFix; ++j) {
+            timeStartFunc();
+            usleep(us);
+            const double sec = timeEndFunc();
+            if (sec > 0.0) {
+                errorFlag = false;
+                total += sec;
+                break;
+            }
+            // In some cases, timeEndFunc() returns 0.0 when context switching happened between
+            // timeStartFunc() and timeEndFunc().
+            // We should retry multiple times if this happens.
+            // If timeEndFunc() returns negative values (this is an unknown case), we also retry.
+            std::cerr << ">> recTimeLoop() retry ...\n";
+        }
+        if (errorFlag) {
+            std::cerr << ">> TestRecTime.cc retry recTimeLoop failed\n";
+            return -1.0; // error
+        }
     }
     return total / static_cast<double>(maxLoop);
 }
@@ -106,7 +127,7 @@ TestRecTime::recTimeOverheadEstimation(const std::function<void()>& timeStartFun
     for (int loopId = 0; loopId < maxIteration; ++loopId) {
         const double recTimeLoopResult = recTimeLoop(intervalSec, maxLoop, timeStartFunc, timeEndFunc);
         if (recTimeLoopResult < 0.0) {
-            std::cerr << "ERROR : recTimeLoop returned negative value\n";
+            std::cerr << "ERROR : recTimeLoop returned error condition\n";
             return -1.0; // error
         }
         const double overheadSec = recTimeLoopResult - intervalSec;
