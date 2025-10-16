@@ -32,10 +32,15 @@ public:
     CPPUNIT_TEST_SUITE_END();
 
 private:
-    double recTimeLoop(const float intervalSec,
+    double recTimeLoop(const double intervalSec,
                        const unsigned maxLoop,
                        const std::function<void()>& timeStartFunc,
                        const std::function<double()>& timeEndFunc) const;
+    double recTimeOverheadEstimation(const std::function<void()>& timeStartFunc,
+                                     const std::function<double()>& timeEndFunc) const;
+    bool recTimeOverheadEstimationLoop(const double threshRatio,
+                                       const std::function<void()>& timeStartFunc,
+                                       const std::function<double()>& timeEndFunc) const;
 };
 
 } // namespace unittest
