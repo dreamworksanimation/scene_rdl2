@@ -14,7 +14,13 @@ namespace unittest {
 
 const float intervalSec = 0.001f;
 const unsigned maxLoop = 512;
+#ifdef PLATFORM_APPLE
+// On Mac, we need to allow a bigger overhead than Linux.
+// 1.5 is an experimental value based on several different tests on the M4 MacBook Pro
+const double threshRatio = 1.5;
+#else // else of PLATFORM_APPLE
 const double threshRatio = 1.1;
+#endif // end of Not PLATFORM_APPLE
 
 void
 TestRecTime::testRecTime()
