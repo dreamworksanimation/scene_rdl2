@@ -25,3 +25,6 @@ cmd/client_apps/Android/bin/
 
 *ConfigVersion.cmake
 CMakeUserPresets.json
+
+# gha created files
+.ci_githooks
