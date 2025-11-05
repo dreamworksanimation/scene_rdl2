@@ -174,12 +174,11 @@ public:
     // The resolution divisor.
     static AttributeKey<Float> sResKey;
 
-    // See http://jira.anim.dreamworks.com/browse/MOONRAY-1999 for a detailed description
-    // of the exact definition of aperture and region window.
+    // Refer to the rdl2_print info for the definitions of aperture_window and region_window.
     static AttributeKey<IntVector> sApertureWindow;
     static AttributeKey<IntVector> sRegionWindow;
 
-    // The sub-viewport. We don't render pixels outside of this viewport.
+    // The sub-viewport. We don't render pixels outside of this viewport - they are left black.
     static AttributeKey<IntVector> sSubViewport;
 
     //

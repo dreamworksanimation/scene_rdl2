@@ -238,15 +238,26 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sApertureWindow, "label", "aperture window");
     sceneClass.setMetadata(sApertureWindow,
         SceneClass::sComment,
-        "The window of the camera aperture. Overrides image_width and image_height. Ordered as xmin, ymin, xmax, and "
-        "ymax, with origin at the bottom-left.");
+        "Assuming no region_window is defined, an aperture_window of {xmin, ymin, xmax, ymax} overrides image_width "
+        "using (xmax-xmin) and image_height using (ymax-ymin). Since the values are overrides, they are not "
+        "restricted to lie in the ranges established by image_width and image_height, but can be arbitrarily large "
+        "and/or negative. The lower left corner of the image rectangle corresponds to (xmin, ymin) and its midpoint "
+        "corresponds to the camera's facing direction (the negative camera z-axis), and for projective cameras each "
+        "boundary edge of the rectangle corresponds to a plane of the view frustum. However, the behavior changes "
+        "when a region_window is defined - see the region_window documentation.");
 
     sRegionWindow = sceneClass.declareAttribute<IntVector>("region_window", viewportVector, {"region window"});
     sceneClass.setMetadata(sRegionWindow, "label", "region window");
     sceneClass.setMetadata(sRegionWindow,
         SceneClass::sComment,
-        "Window that is rendered. Overrides image width / height (and overrides aperture window override). Order: xmin "
-        "ymin xmax ymax, with origin at left bottom.");
+        "A region_window of {xmin, ymin, xmax, ymax} overrides the aperture_window if defined, and overrides "
+        "image_width and image_height otherwise, to establish an image rectangle (xmax-xmin) in width and (ymax-ymin) "
+        "in height, whose lower left corner corresponds to (xmin, ymin). Importantly, the coordinates are expressed "
+        "relative to the origin of the aperture_window, or if aperture_window is not defined, relative to the "
+        "lower-left corner of the image rectangle which would be obtained in the absence of a region_window. The "
+        "region_window is not restricted to a subset of the aperture_window but can extend outside it, including "
+        "asymmetrically. The view frustum is reshaped to correspond to the boundary of the region_window, and may "
+        "therefore end up being skewed.");
 
     // "sub viewport" is defined such that a coordinate of (0, 0) maps to the left,
     // bottom of the region window (i.e. the render buffer).
@@ -254,7 +265,11 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setMetadata(sSubViewport, "label", "sub viewport");
     sceneClass.setMetadata(sSubViewport,
         SceneClass::sComment,
-        "Subviewport of region window. Coordinate (0,0) maps to left, bottom of region window");
+        "A sub_viewport of {xmin, ymin, xmax, ymax} restricts the rendered pixels to the rectangle defined by "
+        "xmin <= x < xmax, ymin <= y < ymax, with origin at the lower left of the image rectangle - no matter how "
+        "this has been defined (i.e. regardless of which combination of image_width, image_height, aperture_window, "
+        "region_window has been used). Pixels outside the sub_viewport are left black. Any part of the sub_viewport "
+        "lying outside the image rectangle has no effect on the result, since there are no pixels there.");
 
     FloatVector defaultMotionSteps = {-1.0f, 0.0f};
     sMotionSteps = sceneClass.declareAttribute<FloatVector>("motion_steps", defaultMotionSteps, {"motion steps"});
@@ -1249,7 +1264,7 @@ HalfOpenViewport SceneVariables::getRezedApertureWindow() const
     const std::vector<int>& window = get(sApertureWindow);
     if (window[0] == std::numeric_limits<int>::lowest()) {
         // Assume the sApertureWindow hasn't been set and key off of the
-        // sWidth and sHeigh attributes instead.
+        // sWidth and sHeight attributes instead.
         int width       = get(sImageWidth);
         int height      = get(sImageHeight);
         int rezedWidth  = math::max(int(float(width) * invRes), 1);
