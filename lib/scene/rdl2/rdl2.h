@@ -110,7 +110,6 @@
 #include "Macros.h"
 #include "Map.h"
 #include "NormalMap.h"
-#include "Displacement.h"
 #include "Material.h"
 #include "Metadata.h"
 #include "Node.h"

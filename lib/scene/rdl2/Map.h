@@ -15,7 +15,6 @@
 
 #include <scene_rdl2/common/except/exceptions.h>
 #include <scene_rdl2/common/math/Color.h>
-#include <scene_rdl2/common/platform/Platform.h>
 #include <scene_rdl2/render/logging/logging.h>
 
 #include <string>
