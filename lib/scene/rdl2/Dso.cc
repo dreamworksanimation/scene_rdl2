@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <filesystem>
 
 namespace scene_rdl2 {
 namespace rdl2 {
@@ -56,12 +57,9 @@ classNameFromFileName(const std::string& baseName,
 std::string
 Dso::classNameFromFileName(const std::string& filePath)
 {
-    char* dirStr = strdup(filePath.c_str());
-    std::string directory(dirname(dirStr));
-    free(dirStr);
-    char* baseStr = strdup(filePath.c_str());
-    std::string baseName(basename(baseStr));
-    free(baseStr);
+    std::filesystem::path p(filePath);
+    std::string directory(p.parent_path().string());
+    std::string baseName(p.stem().string());
 
     // Bail early if we can't determine the class name.
 
@@ -228,15 +226,10 @@ Dso::getDestroy()
 bool
 Dso::isValidDso(const std::string& filePath, bool proxyModeEnabled)
 {
-    // Break the path into directory and basename components. Painfully, both
-    // dirname() and basename() may do just about anything with your pointers,
-    // so its safest to make a copy first.
-    char* dirStr = strdup(filePath.c_str());
-    std::string directory(dirname(dirStr));
-    free(dirStr);
-    char* baseStr = strdup(filePath.c_str());
-    std::string baseName(basename(baseStr));
-    free(baseStr);
+    // Break the path into directory and basename components.
+    std::filesystem::path p = filePath;
+    std::string directory(p.parent_path().string());
+    std::string baseName(p.filename().string());
 
     // Bail early if we can't determine the class name.
     const char* extension = (proxyModeEnabled) ? ".so.proxy" : ".so";
