@@ -84,8 +84,11 @@ Dso::Dso(const std::string& className, const std::string& searchPath, bool proxy
         mFilePath += ".proxy";
     }
 
-    // If they explicitly specified a search path, attempt to find the DSO.
-    if (!searchPath.empty()) {
+    if (searchPath.empty()) {
+        // We need an actual path before we try to dlopen() it.
+        // i.e. 'MyClass.so' -> './MyClass.so'
+        mFilePath = util::findFile(mFilePath, ".");
+    } else {
         mFilePath = util::findFile(mFilePath, searchPath);
     }
 
