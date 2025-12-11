@@ -55,6 +55,11 @@ splitPath(const std::string& filePath)
     std::string directory(p.parent_path().string());
     std::string filename(p.filename().string());
 
+    // Handle special case of filename only with no directory.
+    if (directory.empty()) {
+        directory = ".";
+    }
+
     return std::make_pair(std::move(directory), std::move(filename));
 }
 

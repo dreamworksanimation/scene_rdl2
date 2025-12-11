@@ -16,6 +16,7 @@ target_sources(${target}
         test_util.cc
         TestArray2D.cc
         TestAtomicFloat.cc
+        TestFiles.cc
         TestMemPool.cc
         TestThreadPoolExecutor.cc
         ${PlatformSpecificSources}

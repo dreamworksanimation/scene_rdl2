@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "TestArray2D.h"
 #include "TestAtomicFloat.h"
+#include "TestFiles.h"
 #include "TestMemPool.h"
 #include "TestProcCpuAffinity.h"
 #include "TestThreadPoolExecutor.h"
@@ -16,6 +17,7 @@ main(int argc, char *argv[])
 {
     CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::pbr::TestArray2D);
     CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::pbr::TestAtomicFloat);
+    CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::util::unittest::TestFiles);
     CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::alloc::TestMemPool); // 21.0211 sec on cobaltcard @ Apr/28/2025
 #ifndef PLATFORM_APPLE
     CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::affinity::unittest::TestProcCpuAffinity);
