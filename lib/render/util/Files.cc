@@ -14,12 +14,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <iostream>
 
+// TODO: are all of these actually still necessary
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -33,8 +35,6 @@
 #include <sys/sendfile.h>
 #endif
 #include <unistd.h>
-
-#include <filesystem>
 
 namespace scene_rdl2 {
 namespace util {
@@ -163,30 +163,32 @@ findFile(const std::string& name, const std::string& searchPath)
     return std::string();
 }
 
+// TODO: Use std::filesystem::copy()
+// Is there a performance benefit from rolling our own custom copy() ?
+
 void
 copyFile(const std::string& src, const std::string& dst)
 {
-    // Open the input file.
-    FileDescriptorGuard in(open(src.c_str(), O_RDONLY));
-    if (in.fd == -1) {
-        throw except::IoError(util::buildString("Failed to open '", src, "': ",
-                std::strerror(errno)));
+#if 0
+    #if defined(__APPLE__)
+    // No custom copy file implementation for macOS.
+    // TODO: If we go with this std::filesystem::copy() solution, should we modify
+    // our unit test to expect a std::filesystem::filesystem_error so we don't need
+    // to wrap it in a scene_rdl2::except::IoError ?
+    try {
+        // May throw std::filesystem::filesystem_error
+        std::filesystem::copy(src, dst);
+    } catch (const std::filesystem::filesystem_error &e) {
+        throw except::IoError(e.what());
     }
-
-    // Open the output file (umask will handle the proper permissions).
-    FileDescriptorGuard out(open(dst.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666));
-    if (out.fd == -1) {
-        throw except::IoError(util::buildString("Failed to open '", dst, "': ",
-                std::strerror(errno)));
-    }
-
-    // Get the input file size.
-    struct stat statBuf;
-    if (fstat(in.fd, &statBuf) == -1) {
-        throw except::IoError(util::buildString("Failed to stat '", src, "': ",
-                std::strerror(errno)));
-    }
-    size_t numBytes = statBuf.st_size;
+    #else
+    // pre-C++17 low-level kernel-space copy implementation for linux.
+    // Keeping this handy because we may need it if production encounters
+    // any issues with std::filesystemcopy.  This copyFile() function is
+    // used by ImageWriteCache and it's a potentially critical/sensitive
+    // operation in the production case where there are many AOVs.  If
+    // std::filesystem::copy isn't up to the task, we may need to use this
+    // older custom file copy implementation instead.
 
     // Copy the file in kernel space (zero-copy, woo!).
     // Note: A single call to sendfile will copy at most 2,147,479,552 bytes,
@@ -197,11 +199,7 @@ copyFile(const std::string& src, const std::string& dst)
     off_t offset = 0;
 
     while (bytesCopied < numBytes) {
-        #if defined(__APPLE__)
-        ssize_t result = sendfile(in.fd, out.fd, offset, (long long*) &bytesToCopy, NULL, 0);
-        #else
         ssize_t result = sendfile(out.fd, in.fd, &offset, bytesToCopy);
-        #endif
 
         if (result == -1) {
             throw except::IoError(util::buildString("sendfile() failed: ",
@@ -212,6 +210,18 @@ copyFile(const std::string& src, const std::string& dst)
     }
 
     MNRY_ASSERT_REQUIRE(bytesCopied == numBytes);
+    #endif
+#else
+    // TODO: If we go with this std::filesystem::copy() solution, should we modify
+    // our unit test to expect a std::filesystem::filesystem_error so we don't need
+    // to wrap it in a scene_rdl2::except::IoError ?
+    try {
+        // May throw std::filesystem::filesystem_error
+        std::filesystem::copy(src, dst);
+    } catch (const std::filesystem::filesystem_error &e) {
+        throw except::IoError(e.what());
+    }
+#endif
 }
 
 std::string
@@ -301,7 +311,7 @@ createDirectories(const std::string& path)
                 return false;
             }
     }
-    return true;   
+    return true;
 }
 
 } // namespace util
