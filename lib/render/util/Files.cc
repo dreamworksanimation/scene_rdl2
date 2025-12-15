@@ -163,31 +163,28 @@ findFile(const std::string& name, const std::string& searchPath)
     return std::string();
 }
 
-// TODO: Use std::filesystem::copy()
-// Is there a performance benefit from rolling our own custom copy() ?
-
 void
 copyFile(const std::string& src, const std::string& dst)
 {
 #if 0
     #if defined(__APPLE__)
     // No custom copy file implementation for macOS.
-    // TODO: If we go with this std::filesystem::copy() solution, should we modify
+    // TODO: If we go with this std::filesystem::copy_file() solution, should we modify
     // our unit test to expect a std::filesystem::filesystem_error so we don't need
     // to wrap it in a scene_rdl2::except::IoError ?
     try {
         // May throw std::filesystem::filesystem_error
-        std::filesystem::copy(src, dst);
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::filesystem::filesystem_error &e) {
         throw except::IoError(e.what());
     }
     #else
     // pre-C++17 low-level kernel-space copy implementation for linux.
     // Keeping this handy because we may need it if production encounters
-    // any issues with std::filesystemcopy.  This copyFile() function is
+    // any issues with std::filesystem::copy_file.  This copyFile() function is
     // used by ImageWriteCache and it's a potentially critical/sensitive
     // operation in the production case where there are many AOVs.  If
-    // std::filesystem::copy isn't up to the task, we may need to use this
+    // std::filesystem::copy_file isn't up to the task, we may need to use this
     // older custom file copy implementation instead.
 
     // Copy the file in kernel space (zero-copy, woo!).
@@ -212,12 +209,12 @@ copyFile(const std::string& src, const std::string& dst)
     MNRY_ASSERT_REQUIRE(bytesCopied == numBytes);
     #endif
 #else
-    // TODO: If we go with this std::filesystem::copy() solution, should we modify
+    // TODO: If we go with this std::filesystem::copy_file() solution, should we modify
     // our unit test to expect a std::filesystem::filesystem_error so we don't need
     // to wrap it in a scene_rdl2::except::IoError ?
     try {
         // May throw std::filesystem::filesystem_error
-        std::filesystem::copy(src, dst);
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::filesystem::filesystem_error &e) {
         throw except::IoError(e.what());
     }
