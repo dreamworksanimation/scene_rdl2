@@ -152,9 +152,6 @@ AttributeKey<String> SceneVariables::sStatsFile;
 AttributeKey<Bool>   SceneVariables::sAthenaDebug;
 
 AttributeKey<IntVector> SceneVariables::sDebugPixel;
-AttributeKey<String>    SceneVariables::sDebugRaysFile;
-AttributeKey<IntVector> SceneVariables::sDebugRaysPrimaryRange;
-AttributeKey<IntVector> SceneVariables::sDebugRaysDepthRange;
 AttributeKey<Int>       SceneVariables::sDebugConsole;
 AttributeKey<Bool>      SceneVariables::sValidateGeometry;
 
@@ -1079,27 +1076,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
         "Allows for rendering a single pixel and is typically used for debugging. The value given specifies "
         "the 2D pixel coordinate expressed from the bottom-left of the frame-viewport");
 
-    // TODO: Do a more detailed analysis of how exactly debug rays is/was used, and decide if this is
-    // truly deprecated (in which case all related functionality should be removed) or if still relevant
-    // provide a a more informative comment.
-    sDebugRaysFile = sceneClass.declareAttribute<String>("debug_rays_file", "", {"debug rays file"});
-    sceneClass.setMetadata(sDebugRaysFile, "label", "debug rays file");
-    sceneClass.setMetadata(sDebugRaysFile, SceneClass::sComment, "Deprecated.");
-
-    IntVector debugRaysRange = {minIntVal, minIntVal};
-    sDebugRaysPrimaryRange   = sceneClass.declareAttribute<IntVector>("debug_rays_primary_range",
-        debugRaysRange,
-        {"debug rays primary range"});
-    sceneClass.setMetadata(sDebugRaysPrimaryRange, "label", "debug rays primary range");
-    sceneClass.setMetadata(sDebugRaysPrimaryRange, SceneClass::sComment, "Deprecated.");
-
-    IntVector debugRaysDepthRange = {minIntVal, minIntVal};
-    sDebugRaysDepthRange          = sceneClass.declareAttribute<IntVector>("debug_rays_depth_range",
-        debugRaysDepthRange,
-        {"debug rays depth range"});
-    sceneClass.setMetadata(sDebugRaysDepthRange, "label", "debug rays depth range");
-    sceneClass.setMetadata(sDebugRaysDepthRange, SceneClass::sComment, "Deprecated.");
-
     // Debug console
     sDebugConsole = sceneClass.declareAttribute<Int>("debug_console", Int(-1), {"debug console"});
     sceneClass.setMetadata(sDebugConsole, "label", "debug console");
@@ -1238,9 +1214,6 @@ SceneObjectInterface SceneVariables::declare(SceneClass& sceneClass)
     sceneClass.setGroup("Logging", sAthenaDebug);
 
     sceneClass.setGroup("Debug", sDebugPixel);
-    sceneClass.setGroup("Debug", sDebugRaysFile);
-    sceneClass.setGroup("Debug", sDebugRaysPrimaryRange);
-    sceneClass.setGroup("Debug", sDebugRaysDepthRange);
     sceneClass.setGroup("Debug", sDebugConsole);
     sceneClass.setGroup("Debug", sValidateGeometry);
 
@@ -1406,32 +1379,6 @@ bool SceneVariables::getDebugPixel(math::Vec2i& pixel) const
     } else {
         pixel.x = debugPixel[0];
         pixel.y = debugPixel[1];
-    }
-
-    return true;
-}
-
-bool SceneVariables::getDebugRaysPrimaryRange(int& start, int& end) const
-{
-    const std::vector<int>& raysRange = get(sDebugRaysPrimaryRange);
-    if (raysRange[0] == std::numeric_limits<int>::lowest()) { // unset
-        return false;
-    } else {
-        start = raysRange[0];
-        end   = raysRange[1];
-    }
-
-    return true;
-}
-
-bool SceneVariables::getDebugRaysDepthRange(int& start, int& end) const
-{
-    const std::vector<int>& raysDepthRange = get(sDebugRaysDepthRange);
-    if (raysDepthRange[0] == std::numeric_limits<int>::lowest()) { // unset
-        return false;
-    } else {
-        start = raysDepthRange[0];
-        end   = raysDepthRange[1];
     }
 
     return true;

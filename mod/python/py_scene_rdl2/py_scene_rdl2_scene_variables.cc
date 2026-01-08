@@ -27,38 +27,6 @@ namespace py_scene_rdl2
         return res;
     }
 
-    bp::list
-    PySceneVariables_getDebugRaysPrimaryRange(rdl2::SceneVariables& self)
-    {
-        int start = 0;
-        int end = 0;
-
-        self.getDebugRaysPrimaryRange(start, end);
-
-        bp::list res;
-
-        res.append(start);
-        res.append(end);
-
-        return res;
-    }
-
-    bp::list
-    PySceneVariables_getDebugRaysDepthRange(rdl2::SceneVariables& self)
-    {
-        int start = 0;
-        int end = 0;
-
-        self.getDebugRaysDepthRange(start, end);
-
-        bp::list res;
-
-        res.append(start);
-        res.append(end);
-
-        return res;
-    }
-
     math::HalfOpenViewport
     PySceneVariables_getSubViewport(rdl2::SceneVariables& self)
     {
@@ -169,18 +137,6 @@ namespace py_scene_rdl2
                  "(see getFrameViewport()). The debug pixel is initialized to an invalid value. If it has "
                  "not been set to something else, the getter will return false. Therefore, the return boolean "
                  "should be checked by the caller.")
-
-            .def("getDebugRaysPrimaryRange",
-                 &PySceneVariables_getDebugRaysPrimaryRange,
-                 "Returns a list containing two integers: start and end ray to debug, inclusive. The debug rays "
-                 "primary range is initialized to an invalid value. If it has not been set to something else, "
-                 "the getter will return false. Therefore, the return boolean should be checked by the caller.")
-
-            .def("getDebugRaysPrimaryRange",
-                 &PySceneVariables_getDebugRaysDepthRange,
-                 "Get start and end ray depth debug, inclusive. The debug rays depth range is initialized to "
-                 "an invalid value. If it has not been set to something else, the getter will return false. "
-                 "Therefore, the return boolean should be checked by the caller.")
 
             .def("getSubViewport",
                  &PySceneVariables_getSubViewport,

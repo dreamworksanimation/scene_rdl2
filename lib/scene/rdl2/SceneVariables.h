@@ -114,16 +114,6 @@ public:
     /// set to something else, the getter will return false. Therefore, the
     /// return boolean should be checked by the caller.
     bool getDebugPixel(math::Vec2i &pixel) const;
-    /// Get start and end ray to debug, inclusive.
-    /// The debug rays primary range is initialized to an invalid value.
-    /// If it has not been set to something else, the getter will
-    /// return false. Therefore, the return boolean should be checked by the caller.
-    bool getDebugRaysPrimaryRange(int &start, int &end) const;
-    /// Get start and end ray depth debug, inclusive.
-    /// The debug rays depth range is initialized to an invalid value.
-    /// If it has not been set to something else, the getter will
-    /// return false. Therefore, the return boolean should be checked by the caller.
-    bool getDebugRaysDepthRange(int &start, int &end) const;
 
     /// Get sub-viewport. We don't render pixels outside of this viewport.
     /// Max x and y coordinates are inclusive, i.e. we render them.
@@ -378,12 +368,6 @@ public:
 
     // The pixel to debug, expressed in rezed / frame-viewport coordinates.
     static AttributeKey<IntVector> sDebugPixel;
-    // The debug rays output file path.
-    static AttributeKey<String> sDebugRaysFile;
-    // Start and end ray to debug, inclusive.
-    static AttributeKey<IntVector> sDebugRaysPrimaryRange;
-    // Start and end ray depth to debug, inclusive.
-    static AttributeKey<IntVector> sDebugRaysDepthRange;
 
     // Debug console
     static AttributeKey<Int> sDebugConsole;
