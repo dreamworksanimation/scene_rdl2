@@ -10,6 +10,7 @@ target_sources(${target}
         main.cc
 	TestAffinityMapTable.cc
         TestArg.cc
+	TestBinPacketDictionary.cc
 	TestCpuSocketUtil.cc
 	TestFbUtils.cc
         TestParser.cc
@@ -17,6 +18,7 @@ target_sources(${target}
         TestSha1.cc
 	TestShmAffInfo.cc
 	TestShmFb.cc
+	TestVectorPacket.cc
 	TestShmUtil.cc
 )
 

@@ -1,7 +1,5 @@
 // Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
-
 #pragma once
 
 #include <scene_rdl2/common/grid_util/Arg.h>
@@ -41,7 +39,7 @@ public:
     CPPUNIT_TEST_SUITE_END();
 
 protected:
-    std::string idRangeTest(const Arg &arg, int id) const
+    std::string idRangeTest(const Arg& arg, int id) const
     {
         try { arg(id); return ""; }
         catch (const std::string err) { return err; }
@@ -50,14 +48,14 @@ protected:
     template <typename T>
     bool asTest() const // for integer value (int, unsigned, long, unsigned long, ...)
     {
-        T min = std::numeric_limits<T>::min();
-        T max = std::numeric_limits<T>::max();
+        const T min = std::numeric_limits<T>::min();
+        const T max = std::numeric_limits<T>::max();
         Arg arg(std::string("asTest ") + std::to_string(min) + " " + std::to_string(max));
         return argAsMinMaxTest(arg, 1, min, 2, max);
     }
 
     template <typename T>
-    bool argAsMinMaxTest(Arg &arg, int id0, const T &v0, int id1, const T &v1) const
+    bool argAsMinMaxTest(Arg& arg, int id0, const T& v0, int id1, const T& v1) const
     {
         try {
             if (arg.as<T>(id0) == v0 && arg.as<T>(id1) == v1) return true;
@@ -67,9 +65,9 @@ protected:
     }
 
     template <typename T>
-    bool realValToleranceEqual(const T &a, const T &b, const unsigned maskBitSize) const { return false; }
+    bool realValToleranceEqual(const T& a, const T& b, const unsigned maskBitSize) const { return false; }
     template <typename T>
-    std::string realValHexDump(const T &v) const { return std::string(); } // for debug
+    std::string realValHexDump(const T& v) const { return std::string(); } // for debug
     template <typename T>
     bool asTestReal(T v, int maskBitSize) const
     {
@@ -79,7 +77,7 @@ protected:
 };
 
 template <> bool
-inline TestArg::realValToleranceEqual<float>(const float &a, const float &b, const unsigned maskBitSize) const
+inline TestArg::realValToleranceEqual<float>(const float& a, const float& b, const unsigned maskBitSize) const
 //
 // Tolerance equal procedure for float value
 // Compare the bit-wise difference of IEEE 32bit float format.
@@ -90,7 +88,7 @@ inline TestArg::realValToleranceEqual<float>(const float &a, const float &b, con
 }
 
 template <> bool
-inline TestArg::realValToleranceEqual<double>(const double &a, const double &b, const unsigned maskBitSize) const
+inline TestArg::realValToleranceEqual<double>(const double& a, const double& b, const unsigned maskBitSize) const
 //
 // Tolerance equal procedure for double value
 // Compare the bit-wise difference of IEEE 64bit double format.
@@ -101,13 +99,13 @@ inline TestArg::realValToleranceEqual<double>(const double &a, const double &b, 
 }
 
 template <> std::string
-inline TestArg::realValHexDump<float>(const float &v) const
+inline TestArg::realValHexDump<float>(const float& v) const
 {
     return real_util::floatDump(v);
 }
 
 template <> std::string
-inline TestArg::realValHexDump<double>(const double &v) const
+inline TestArg::realValHexDump<double>(const double& v) const
 {
     return real_util::doubleDump(v);
 }

@@ -83,7 +83,7 @@ protected:
         ALREADY_EXISTED
     };
 
-    bool open(); // Throw exception(std::string) if error
+    void open(); // Throw exception(std::string) if error
     bool openMain(); // return true:OK false:needRetry : Throw exception(std::string) if error 
 
     static const char* getSemKeyStr(const bool testMode);    
@@ -98,9 +98,9 @@ protected:
     bool lockSemaphoreBlockingWithTimeout(const float timeoutSec) const;
 
     void unlockSemaphore() const; // Throw exception(std::string) if error
-    void removeSemaphore(); // Throw exception(std::string) if error
+    void removeSemaphore(const std::string& rmReason); // Throw exception(std::string) if error
 
-    static void removeSemaphore(const int semId); // Throw exception(std::string) if error
+    static void removeSemaphore(const int semId, const std::string& rmReason); // Throw exception(std::string) if error
     static int getSemaphoreId(const int testMode);
 
     void verifyAndCleanupAffinityInfo();
@@ -110,6 +110,9 @@ protected:
     void parserConfigure();
     bool testOpen(const Msg& msgFunc);
     bool emulateOpenCrash(const Msg& msgFunc);
+
+    // An existing semaphore/shared-memory can be deleted only by its creator or by the root user.
+    // If anyone other than the creator or root attempts to remove it, an error will occur.
     bool rmUnusedSemaphore(const bool testMode, const Msg& msgFunc); // try to clean up testMode semaphore if testMode shm is empty
     bool removeAllSemShm(const Msg& msgFunc);
 

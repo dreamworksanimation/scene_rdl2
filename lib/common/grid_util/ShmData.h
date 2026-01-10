@@ -163,7 +163,7 @@ public:
     virtual ~ShmDataManager() { dtShm(); }
 
     bool dtShm(); // detach shared memory
-    bool rmShm(); // remove shared memory
+    bool rmShm(std::string* errorMsg = nullptr); // remove shared memory
 
     int getShmId() const { return mShmId; }
 
@@ -172,6 +172,8 @@ public:
     static std::string shmHexDump(const int shmId, const size_t size); // for debug
     static std::string shmGet(const int shmId, const size_t size); 
 
+    // An existing shared memory segment can be deleted only by its creator or by the root user.
+    // If anyone other than the creator or root attempts to remove it, an error will occur.
     static bool rmAllUnusedShmFb(const Msg& msgCallBack); // rm all shmFb related shared memory if not used
 
     //------------------------------
@@ -206,6 +208,10 @@ protected:
 
     //------------------------------
 
+    //
+    // An existing shared memory segment can be deleted only by its creator or by the root user.
+    // If anyone other than the creator or root attempts to remove it, an error will occur.
+    //
     static bool rmUnusedShmByKey(const std::string& keyStr, const std::string& headerKey, const Msg& msgCallBack);
     static bool rmUnusedShm(const int shmId, const std::string& headerKey, const Msg& msgCallBack);
     static bool rmAllUnusedShm(const std::string& headerKey, const Msg& msgCallBack);

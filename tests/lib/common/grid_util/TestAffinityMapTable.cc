@@ -14,9 +14,9 @@ TestAffinityMapTable::testAffMapTblOpen()
 {
     TIME_START;
 
-    CPPUNIT_ASSERT("testAffmapTblOpen initial cleanup" && rmOldSemShm());
-    CPPUNIT_ASSERT("openAffmapTbl" && openAffMapTbl());
-    CPPUNIT_ASSERT("testAffmapTblOpen post cleanup" && rmOldSemShm());
+    CPPUNIT_ASSERT_MESSAGE("testAffmapTblOpen initial cleanup", rmOldSemShm());
+    CPPUNIT_ASSERT_MESSAGE("openAffmapTbl", openAffMapTbl());
+    CPPUNIT_ASSERT_MESSAGE("testAffmapTblOpen post cleanup", rmOldSemShm());
 
     TIME_END;
 }
@@ -26,12 +26,12 @@ TestAffinityMapTable::testAffMapTblOpenTimeout()
 {
     TIME_START;
 
-    CPPUNIT_ASSERT("testAffmapTblOpen initial cleanup" && rmOldSemShm());
+    CPPUNIT_ASSERT_MESSAGE("testAffmapTblOpen initial cleanup", rmOldSemShm());
 
     // This test needs around 10 sec due to the involved internal semaphore initialization timeout
-    CPPUNIT_ASSERT("openAffmapTblTimeout" && openAffMapTblTimeout());
+    CPPUNIT_ASSERT_MESSAGE("openAffmapTblTimeout", openAffMapTblTimeout());
 
-    CPPUNIT_ASSERT("testAffmapTblOpen post cleanup" && rmOldSemShm());
+    CPPUNIT_ASSERT_MESSAGE("testAffmapTblOpen post cleanup", rmOldSemShm());
 
     TIME_END;
 }
@@ -50,11 +50,21 @@ TestAffinityMapTable::rmOldSemShm() const
     bool result = true;
     if (!affMapTbl.getParser().main("rmShmIfAlreadyExist", outMsg)) {
         result = false;
-        std::cerr << "ERROR : parser command rmShmIfAlreadyExit failed.\n";
+        std::ostringstream ostr;
+        ostr << "ERROR : TestAffinityMapTable.cc TestAffinityMapTable::rmOldSemShm() "
+             << "parser command \"rmShmIfAlreadyExist\" failed. outMsg={\n"
+             << str_util::addIndent(str_util::rmLastNL(outMsg)) << "\n"
+             << "}";
+        std::cerr << ostr.str() << '\n';
     }
     if (!affMapTbl.getParser().main("rmUnusedSemaphore", outMsg)) {
         result = false;
-        std::cerr << "ERROR : parser command rmUnusedSemaphore failed.\n";
+        std::ostringstream ostr;
+        ostr << "ERROR : TestAffinityMapTable.cc TestAffinityMapTable::rmOldSemShm() "
+             << "parser command \"rmUnusedSemaphore failed. outMsg={\n"
+             << str_util::addIndent(str_util::rmLastNL(outMsg)) << "\n"
+             << "}";
+        std::cerr << ostr.str() << '\n';
     }
     return result;
 }

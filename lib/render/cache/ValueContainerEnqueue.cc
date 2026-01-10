@@ -1,8 +1,6 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "ValueContainerEnqueue.h"
-//#include "SceneObject.h"
 
 #include <scene_rdl2/render/util/StrUtil.h>
 
@@ -13,7 +11,22 @@ namespace scene_rdl2 {
 namespace cache {
 
 std::string
-ValueContainerEnqueue::show(const std::string &hd) const
+ValueContainerEnqueue::show() const
+{
+    std::ostringstream ostr;
+    ostr << "ValueContainerEnqueue {\n"
+         << "      mStartId:" << mStartId << '\n'
+         << "           mId:" << mId << " (current id)\n"
+         << "     &mBuff[0]:0x" << std::hex << reinterpret_cast<uintptr_t>(&(*mBuff)[0]) << std::dec
+         << " (internal buffer start address)\n"
+         << "  mBuff.size():" << mBuff->size() << " (internal buffer size)\n"
+         << "    capacity():" << capacity() << '\n'
+         << "}";
+    return ostr.str();
+}
+
+std::string
+ValueContainerEnqueue::show(const std::string& hd) const
 {
     std::ostringstream ostr;
     ostr << hd << "ValueContainerEnqueue {\n"
@@ -27,7 +40,7 @@ ValueContainerEnqueue::show(const std::string &hd) const
 }
 
 std::string
-ValueContainerEnqueue::hexDump(const std::string &hd, const std::string &titleMsg, const size_t size) const
+ValueContainerEnqueue::hexDump(const std::string& hd, const std::string& titleMsg, const size_t size) const
 {
     return ValueContainerUtil::hexDump(hd, titleMsg, static_cast<const char *>(&(*mBuff)[0]), size);
 }
@@ -50,7 +63,7 @@ ValueContainerEnqueue::showDebug() const
 }
 
 void
-ValueContainerEnqueue::debugDump(const std::string &hd, const std::string &title) const
+ValueContainerEnqueue::debugDump(const std::string& hd, const std::string& title) const
 {
     std::cout << "ValueContainerEnqueue.cc debugDump " << title << " {" << std::endl; {
         std::cout << show("  ") << std::endl;

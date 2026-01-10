@@ -1,6 +1,5 @@
 // Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #pragma once
 
 #include "Arg.h"
@@ -246,24 +245,24 @@ class ParserItem
 //
 {
 public:
-    using ParserFunc = std::function<bool(Arg &)>;
+    using ParserFunc = std::function<bool(Arg&)>;
 
     enum class ItemType: int {
         OPT = 0, // Option definition with option-key and total N (>=0) option argument(s).
         ARG      // Argument definition of command-line.
     };
 
-    ParserItem(ItemType itemType,
-               const std::string &name,
-               const std::string &argMsg,
-               const std::string &shortMsg,
-               const ParserFunc &parserFunc) : // parser action function
-        mItemType(itemType),
-        mName(str_util::trimBlank(name)),
-        mArgMsg(cleanStr(argMsg)),
-        mShortMsg(shortMsg),
-        mParserFunc(parserFunc),
-        mArgCount(0)
+    ParserItem(const ItemType itemType,
+               const std::string& name,
+               const std::string& argMsg,
+               const std::string& shortMsg,
+               const ParserFunc& parserFunc) // parser action function
+        : mItemType(itemType)
+        , mName(str_util::trimBlank(name))
+        , mArgMsg(cleanStr(argMsg))
+        , mShortMsg(shortMsg)
+        , mParserFunc(parserFunc)
+        , mArgCount(0)
     {
         mArgCount = computeArgCount();
     }
@@ -273,9 +272,9 @@ public:
     bool isOpt() const { return (mItemType == ItemType::OPT); }
     bool isArg() const { return (mItemType == ItemType::ARG); }
 
-    const std::string &name() const { return mName; }
-    const std::string &argMsg() const { return mArgMsg; }
-    const std::string &shortMsg() const { return mShortMsg; }
+    const std::string& name() const { return mName; }
+    const std::string& argMsg() const { return mArgMsg; }
+    const std::string& shortMsg() const { return mShortMsg; }
 
     std::string showShortMsgWithConstLen(const size_t offsetShortMsg, const size_t maxLen) const;
 
@@ -284,19 +283,19 @@ public:
     size_t getArgCount() const { return mArgCount; }
 
     // parser command main API
-    bool operator ()(Arg &arg) const { return mParserFunc(arg); }
+    bool operator ()(Arg& arg) const { return mParserFunc(arg); }
 
     std::string show() const;
 
 private:
-    static std::string cleanStr(const std::string &arg) {
+    static std::string cleanStr(const std::string& arg) {
         std::string workStr = str_util::trimBlank(arg);
         workStr = str_util::replaceBlankToSingleSpace(workStr);
         return workStr;
     }
     size_t computeArgCount() const;
 
-    static std::string showItemType(const ItemType &itemType);
+    static std::string showItemType(const ItemType& itemType);
 
     //------------------------------
 
@@ -322,47 +321,47 @@ class Parser
 public:
     using ParserFunc = std::function<bool(Arg &)>;
 
-    Parser() :
-        mErrorUnknownOption(true),
-        mTotalArgCount(0)
+    Parser()
+        : mErrorUnknownOption(true)
+        , mTotalArgCount(0)
     {}
     ~Parser() {}
 
-    void description(const std::string &str) { mDescription = str; }
+    void description(const std::string& str) { mDescription = str; }
 
     // true : main() return false when unknown option condition
     // false : main() return true when unknown option condition
-    void setErrorUnknownOption(bool flag) { mErrorUnknownOption = flag; }
+    void setErrorUnknownOption(const bool flag) { mErrorUnknownOption = flag; }
 
     void reset() { mDescription.clear(); mParserItemTbl.clear(); }
 
     // Configure option
-    void opt(const std::string &name,
-             const std::string &argMsg,
-             const std::string &shortMsg,
-             ParserFunc &&parserFunc) {
+    void opt(const std::string& name,
+             const std::string& argMsg,
+             const std::string& shortMsg,
+             ParserFunc&& parserFunc) {
         mParserItemTbl.emplace_back(ParserItem::ItemType::OPT,
-                                   name,
-                                   argMsg,
-                                   shortMsg,
-                                   std::move(parserFunc));
+                                    name,
+                                    argMsg,
+                                    shortMsg,
+                                    std::move(parserFunc));
     }
 
     // Configure argument
-    void arg(const std::string &argMsg,
-             const std::string &shortMsg,
-             ParserFunc &&parserFunc) {
+    void arg(const std::string& argMsg,
+             const std::string& shortMsg,
+             ParserFunc&& parserFunc) {
         mParserItemTbl.emplace_back(ParserItem::ItemType::ARG,
-                                   "", // not using
-                                   argMsg,
-                                   shortMsg,
-                                   std::move(parserFunc));
+                                    "", // not using
+                                    argMsg,
+                                    shortMsg,
+                                    std::move(parserFunc));
         mTotalArgCount = totalArgCount();
     }
 
     // Evaluate argument
-    bool main(Arg &arg) const;
-    bool main(Arg &&arg) const { Arg tmpArg = arg; return main(tmpArg); }
+    bool main(Arg& arg) const;
+    bool main(Arg&& arg) const { Arg tmpArg = arg; return main(tmpArg); }
     bool main(const std::string& singleCommandLine, std::string& outputMessage) const;
 
     std::string show() const;
@@ -374,7 +373,7 @@ protected:
     std::string optList(const bool sort) const;
     bool hasArgument() const { return (itemCount(ParserItem::ItemType::ARG)) ? true : false; }
     bool hasOptions() const { return (itemCount(ParserItem::ItemType::OPT)) ? true : false; }
-    int itemCount(ParserItem::ItemType itemType) const;
+    int itemCount(const ParserItem::ItemType itemType) const;
     int totalArgCount() const;
     static std::string spaces(const size_t total);
     std::string showParserItemTbl() const;

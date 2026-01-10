@@ -1,6 +1,5 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
-
 #include "ValueContainerDequeue.h"
 
 #include <scene_rdl2/common/except/exceptions.h>
@@ -8,18 +7,15 @@
 namespace scene_rdl2 {
 namespace cache {
 
-ValueContainerDequeue::ValueContainerDequeue(const void *addr, const size_t dataSize) :
-    mCurrPtr(addr),
-    mAddr(addr),
-    mDataSize(0)
+ValueContainerDequeue::ValueContainerDequeue(const void* addr, const size_t dataSize)
+    : ValueContainerDequeue(addr, dataSize, true)
 {
-    dataSizeCheck(addr, dataSize);
 }
 
-ValueContainerDequeue::ValueContainerDequeue(const void *addr, const size_t dataSize, bool sizeCheck) :
-    mCurrPtr(addr),
-    mAddr(addr),
-    mDataSize(0)
+ValueContainerDequeue::ValueContainerDequeue(const void* addr, const size_t dataSize, const bool sizeCheck)
+    : mCurrPtr(addr)
+    , mAddr(addr)
+    , mDataSize(0)
 {
     if (!sizeCheck) {
         skipByteData(sizeof(size_t)); // skip enbeded dataSize data
@@ -31,7 +27,7 @@ ValueContainerDequeue::ValueContainerDequeue(const void *addr, const size_t data
 }
 
 std::string
-ValueContainerDequeue::show(const std::string &hd) const
+ValueContainerDequeue::show(const std::string& hd) const
 {
     std::ostringstream ostr;
     ostr << hd << "ValueContainerDequeue {\n"
@@ -45,7 +41,7 @@ ValueContainerDequeue::show(const std::string &hd) const
 //------------------------------------------------------------------------------------------
 
 void
-ValueContainerDequeue::dataSizeCheck(const void *addr, const size_t dataSize)
+ValueContainerDequeue::dataSizeCheck(const void* addr, const size_t dataSize)
 {
     if (dataSize < sizeof(size_t)) {
         throw except::RuntimeError("Could not get ValueContainerDequeue header size info.");
@@ -64,4 +60,3 @@ ValueContainerDequeue::dataSizeCheck(const void *addr, const size_t dataSize)
 
 } // namespace rdl2
 } // namespace scene_rdl2
-

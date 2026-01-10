@@ -194,7 +194,7 @@ AffinityMapTable::showInfoDump()
 
 //------------------------------------------------------------------------------------------
 
-bool
+void
 AffinityMapTable::open()
 //
 // Throw exception(std::string) if error.
@@ -204,10 +204,14 @@ AffinityMapTable::open()
 {
     for (int i = 0; i < sOpenRetry; ++i) {
         if (openMain()) {
-            return true; // open completed without error.
+            return; // open completed without error.
         }
     }
-    return false; // we tried to open it multiple times but had no luck
+
+    // we tried to open it multiple times but had no luck
+    std::ostringstream ostr;
+    ostr << "AffinityMapTable::open() retry " << sOpenRetry << " times failed.";
+    throw ostr.str();
 }
 
 bool
@@ -249,7 +253,7 @@ AffinityMapTable::openMain()
                         0666);
         if (mSemId == -1) {
             std::ostringstream ostr;
-            ostr << "AffinityMapTable::open() failed. Could not get already existed semId."
+            ostr << "AffinityMapTable::openMain() failed. Could not get already existed semId."
                  << " testMode:" << str_util::boolStr(mTestMode)
                  << " semaphoreKeyStr:" << getSemKeyStr(mTestMode)
                  << " semKey:0x" << std::hex << semKey << std::dec;
@@ -279,7 +283,7 @@ AffinityMapTable::openMain()
                 // 
                 std::cerr << ">>>>> TIMEOUT : AffinityMapTable open semaphore timeout"
                           << " semId:" << mSemId << " -> start retry <<<<<\n";
-                removeSemaphore();
+                removeSemaphore("Timeout and retry of AffinityMapTable open"); // throw exception if error
                 return false;
             }
 
@@ -480,27 +484,44 @@ AffinityMapTable::unlockSemaphore() const
 }
 
 void
-AffinityMapTable::removeSemaphore()
+AffinityMapTable::removeSemaphore(const std::string& rmReason)
 //
 // Throw exception(std::string) if error
 //
+// An existing semaphore can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
-    removeSemaphore(mSemId);
+    removeSemaphore(mSemId, rmReason);
     mSemId = 0;
 }
 
 // static function
 void
-AffinityMapTable::removeSemaphore(const int semId)
+AffinityMapTable::removeSemaphore(const int semId, const std::string& rmReason)
 //
 // Throw exception(std::string) if error
+//
+// An existing semaphore can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
 //
 {
     if (semctl(semId,
                0, // semaphore index
                IPC_RMID) == -1) {
         std::ostringstream ostr;
-        ostr << "AffinityMapTable::removeSemaphore() failed. error=>{\n"
+        if (!rmReason.empty()) {
+            ostr << "Tried to remove semaphore as the reason of: " << rmReason << '\n';
+            if (rmReason.find("Timeout") != std::string::npos) {
+                // Special message for "timeout and retry"
+                ostr << "If a user attempts to delete a semaphore created by another user, an error will occur.\n"
+                     << "This is because a semaphore can be deleted only by its creator or by the root user.\n"
+                     << "If this semaphore deletion issue is related to the AffinityMapTable open timeout and \n"
+                     << "occurs during a retry process, please try manually deleting the semaphore using the \n"
+                     << "account that created it, or as root.\n";
+            }
+        }
+        ostr << "AffinityMapTable::removeSemaphore() failed. semId:" << semId << " error=>{\n"
              << str_util::addIndent(strerror(errno)) << '\n'
              << "}";
         throw ostr.str();
@@ -646,6 +667,10 @@ AffinityMapTable::emulateOpenCrash(const Msg& msgFunc)
 
 bool
 AffinityMapTable::rmUnusedSemaphore(const bool testMode, const Msg& msgFunc)
+//
+// An existing semaphore can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     try {
         //
@@ -661,7 +686,7 @@ AffinityMapTable::rmUnusedSemaphore(const bool testMode, const Msg& msgFunc)
             //
             int semId = getSemaphoreId(testMode);
             if (semId != -1) {
-                removeSemaphore(semId);
+                removeSemaphore(semId, "unused semaphore clean up");
 
                 std::ostringstream ostr;
                 ostr << "Removed unused semaphore. semId:" << semId;
@@ -682,6 +707,10 @@ AffinityMapTable::rmUnusedSemaphore(const bool testMode, const Msg& msgFunc)
 
 bool
 AffinityMapTable::removeAllSemShm(const Msg& msgFunc)
+//
+// An existing semaphore/shared-memory can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     bool result = true;
     if (!ShmAffinityInfoManager::rmShmIfAlreadyExistCmd(true, msgFunc)) {

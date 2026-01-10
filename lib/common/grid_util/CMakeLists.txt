@@ -16,6 +16,7 @@ target_sources(${component}
         AffinityMapTable.cc
 	AffinityResourceControl.cc
         Arg.cc
+	BinPacketDictionary.cc
 	CpuSocketUtil.cc
         DebugConsoleDriver.cc
         Fb.cc
@@ -40,8 +41,10 @@ target_sources(${component}
         PackTilesPassPrecision.cc
         PackTilesTest.cc
         Parser.cc
+	PathVisSimGlobalInfo.cc
 	PixelBufferSha1Hash.cc
 	Process.cc
+	ProgressiveFrameBufferName.cc
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
@@ -52,6 +55,9 @@ target_sources(${component}
 	ShmFootmark.cc
         SockUtil.cc
         TlSvr.cc
+	UserUtil.cc
+	VectorPacket.cc
+	VectorPacketDictionary.cc
 )
 
 set_property(TARGET ${component}
@@ -59,6 +65,7 @@ set_property(TARGET ${component}
         ActivePixelsArray.h
 	AffinityResourceControl.h
         Arg.h
+	BinPacketDictionary.h
 	CpuSocketUtil.h
         DebugConsoleDriver.h
         Fb.h
@@ -75,6 +82,7 @@ set_property(TARGET ${component}
         PackTilesPassPrecision.h
         PackTilesTest.h
         Parser.h
+	PathVisSimGlobalInfo.h
 	ProgressiveFrameBufferName.h
         RenderPrepStats.h
         RunLenBitTable.h
@@ -85,6 +93,9 @@ set_property(TARGET ${component}
 	ShmFootmark.h
         SockUtil.h
         TlSvr.h
+	UserUtil.h
+	VectorPacket.h
+	VectorPacketDictionary.h
 )
 
 target_include_directories(${component}

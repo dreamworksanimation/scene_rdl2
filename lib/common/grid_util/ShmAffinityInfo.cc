@@ -1,10 +1,12 @@
 // Copyright 2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmAffinityInfo.h"
+#include "UserUtil.h"
 
 #include <scene_rdl2/common/except/exceptions.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
+//#include <iostream> // for debug
 #include <random>
 #include <sstream>
 #include <thread>
@@ -286,6 +288,9 @@ ShmAffinityInfoManager::rmShmIfAlreadyExist(const bool testMode, const MsgFunc& 
 // return true  : Successfully removed, or there is no target shared memory 
 //        false : Failed to remove the shared memory
 //
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     if (!doesShmAlreadyExist(testMode)) return true; // not exist -> skip 
     return rmUnusedShmByKey(getShmKeyStr(testMode), SHM_AFFINITY_INFO_HEADKEY, msgCallBack);
@@ -294,6 +299,10 @@ ShmAffinityInfoManager::rmShmIfAlreadyExist(const bool testMode, const MsgFunc& 
 // static function
 bool
 ShmAffinityInfoManager::rmShmIfAlreadyExistCmd(const bool testMode, const MsgFunc& msgCallBack)
+//
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     try {
         if (!ShmAffinityInfoManager::rmShmIfAlreadyExist(testMode, msgCallBack)) {
@@ -497,10 +506,10 @@ ShmAffinityInfoManager::accessAffinityInfo()
 }
 
 // static function
-const char*
+const std::string
 ShmAffinityInfoManager::getShmKeyStr(const bool testMode)
 {
-    return (testMode) ? sShmTestKeyStr : sShmKeyStr;
+    return (testMode) ? std::string(sShmTestKeyStr) + "_" + UserUtil::getUserName() : std::string(sShmKeyStr);
 }
 
 bool

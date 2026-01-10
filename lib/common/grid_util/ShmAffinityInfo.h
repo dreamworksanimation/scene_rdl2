@@ -173,9 +173,12 @@ public:
 
     // Construct a fresh ShmAffinityInfoManager from scratch and generate a new shmId
     // Might throw exception(std::string) if error
-    explicit ShmAffinityInfoManager(const bool accessOnly, const bool testMode = false);
+    ShmAffinityInfoManager(const bool accessOnly, const bool testMode = false);
 
     static bool doesShmAlreadyExist(const bool testMode); // might throw exception(std::string) if error
+
+    // An existing shared memory segment can be deleted only by its creator or by the root user.
+    // If anyone other than the creator or root attempts to remove it, an error will occur.
     static bool rmShmIfAlreadyExist(const bool testMode, const MsgFunc& msgCallBack); // might throw exception(std::string) if error
     static bool rmShmIfAlreadyExistCmd(const bool testMode, const MsgFunc& msgCallBack);
 
@@ -204,7 +207,7 @@ private:
 
     void setupFreshAffinityInfo(); // might throw exception(std::string) if error
     void accessAffinityInfo(); // might throw exception(std::string) if error
-    static const char* getShmKeyStr(const bool testMode);
+    static const std::string getShmKeyStr(const bool testMode);
 
     bool setCore(const unsigned coreId, const bool occupancy, const size_t pid);
 
@@ -243,7 +246,18 @@ private:
     static constexpr const char* sShmKeyStr = "AffinityInfoSharedMemoryKey";
     static constexpr const char* sShmTestKeyStr = "AffinityInfoSharedMemoryTestKey";
 
-    bool mTestMode {false};
+    //
+    // mTestMode = true is used only in UnitTests.
+    // The UnitTests are designed to verify the behavior of ShmAffinityInfo, but runnning these tests using
+    // the same shared memory as the one used in the production environment poses a significant risk.
+    // This is because processes in the production environment may already be using that shared memory,
+    // and they cannot be stopped just to run the tests. To avoid this, the UnitTest internally switches
+    // to use a different shared memory key than the one used in production.
+    // This switching behavior is triggered by the mTestMode flag. Therefore, mTestMode = true must be used
+    // only in the UnitTest environment, and in all release environment, it must always remain set to false.
+    //
+    const bool mTestMode {false};
+
     std::unique_ptr<ShmAffinityInfo> mAffinityInfo;
     SetupCondition mShmSetupCondition { SetupCondition::UNDEFINED };
 

@@ -41,7 +41,7 @@ ParserItem::showShortMsgWithConstLen(const size_t offsetShortMsg,
 
     size_t startId = 0;
     while (1) {
-        size_t endId = startId + maxLen;
+        const size_t endId = startId + maxLen;
         outPartialShortMsg(startId, endId);
 
         if (mShortMsg.size() - 1 <= endId) {
@@ -91,7 +91,7 @@ ParserItem::computeArgCount() const
 
 // static function
 std::string
-ParserItem::showItemType(const ItemType &itemType)
+ParserItem::showItemType(const ItemType& itemType)
 {
     switch (itemType) {
     case ItemType::OPT : return "OPT";
@@ -105,7 +105,7 @@ ParserItem::showItemType(const ItemType &itemType)
 //------------------------------------------------------------------------------------------
 
 bool
-Parser::main(Arg &arg) const
+Parser::main(Arg& arg) const
 {
     if (arg.noNeedToEvalTest(hasArgument())) return true;
 
@@ -221,7 +221,7 @@ Parser::show() const
 //------------------------------------------------------------------------------------------
 
 std::string    
-Parser::usage(const std::string &comName, const bool sort) const
+Parser::usage(const std::string& comName, const bool sort) const
 {
     std::ostringstream ostr;
 
@@ -306,9 +306,9 @@ Parser::optList(const bool sort) const
                   });
     }
 
-    size_t offsetShortMsg = (maxNameLen + maxArgMsgLen +
-                             1 /* space between name and arguments */ +
-                             3 /* space between arguments and shortMessage */);
+    const size_t offsetShortMsg = (maxNameLen + maxArgMsgLen +
+                                   1 /* space between name and arguments */ +
+                                   3 /* space between arguments and shortMessage */);
 
     constexpr size_t totalMaxLen = 110; // 110 column max
     constexpr size_t minimumShortMsgLen = 10;
@@ -336,7 +336,7 @@ Parser::optList(const bool sort) const
 }
     
 int
-Parser::itemCount(ParserItem::ItemType itemType) const
+Parser::itemCount(const ParserItem::ItemType itemType) const
 {
     int count = 0;
     for (auto &itr: mParserItemTbl) {

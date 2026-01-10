@@ -15,8 +15,8 @@ TestArg::testRealToleranceCompare()
     TIME_START;
 
     {
-        float a = 1.234;
-        float b = 1.2340001;
+        const float a = 1.234;
+        const float b = 1.2340001;
         /* for debug
         std::cerr << real_util::floatDump(a) << '\n'
                   << real_util::floatDump(b) << '\n';
@@ -37,8 +37,8 @@ TestArg::testRealToleranceCompare()
                        real_util::floatToleranceEqual(a, b, real_util::compareMaskGen32(1)));
     }
     {
-        float a = -12.34;
-        float b = -12.340002;
+        const float a = -12.34;
+        const float b = -12.340002;
         /* for debug
         std::cerr << real_util::floatDump(a) << '\n'
                   << real_util::floatDump(b) << '\n';
@@ -59,8 +59,8 @@ TestArg::testRealToleranceCompare()
                        real_util::floatToleranceEqual(a, b, real_util::compareMaskGen32(2)));
     }
     {
-        double a = 1234567890.0;
-        double b = 1234567890.000001;
+        const double a = 1234567890.0;
+        const double b = 1234567890.000001;
         /* for debug
         std::cerr << real_util::doubleDump(a) << '\n'
                   << real_util::doubleDump(b) << '\n';
@@ -81,8 +81,8 @@ TestArg::testRealToleranceCompare()
                        real_util::doubleToleranceEqual(a, b, real_util::compareMaskGen64(3)));
     }
     {
-        double a = 78.9;
-        double b = 78.9000000000001;
+        const double a = 78.9;
+        const double b = 78.9000000000001;
         /* for debug
         std::cerr << real_util::doubleDump(a) << '\n'
                   << real_util::doubleDump(b) << '\n';
@@ -103,8 +103,8 @@ TestArg::testRealToleranceCompare()
                        real_util::doubleToleranceEqual(a, b, real_util::compareMaskGen64(3)));
     }
     {
-        double a = -12345678.9;
-        double b = -12.3456789;
+        const double a = -12345678.9;
+        const double b = -12.3456789;
         /* for debug
         std::cerr << real_util::doubleDump(a) << '\n'
                   << real_util::doubleDump(b) << '\n';

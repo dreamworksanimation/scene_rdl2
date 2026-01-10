@@ -218,14 +218,33 @@ ShmDataManager::dtShm()
 }
 
 bool
-ShmDataManager::rmShm()
+ShmDataManager::rmShm(std::string* errorMsg)
 {
+    auto errorMsgGen = [&](const std::string& msg) {
+        std::ostringstream ostr;
+        ostr << "ERROR : ShmData.cc ShmDataManager::rmShm() " << msg << " failed."
+             << " mShmId:" << mShmId << " error={\n"
+             << "  errNo:" << errno << " strError:>" << strerror(errno) << "<\n"
+             << str_util::addIndent(show()) << '\n'
+             << "}";
+        return ostr.str();
+    };
+
     if (mShmId >= 0) {
         // detach shared memory first.
-        if (shmdt(mShmAddr) == -1) return false;
+        if (shmdt(mShmAddr) == -1) {
+            if (errorMsg) { (*errorMsg) = errorMsgGen("shmdt()"); }
+            return false;
+        }
 
         // free shared memory
-        if (shmctl(mShmId, IPC_RMID, 0) == -1) return false;
+        // An existing shared memory segment can be deleted only by its creator or by the root user.
+        // If anyone other than the creator or root attempts to remove it, an error will occur.
+        // The permission bits set on the shared memory segment do not affect deletion privileges.
+        if (shmctl(mShmId, IPC_RMID, 0) == -1) {
+            if (errorMsg) { (*errorMsg) = errorMsgGen("shmctl()"); }
+            return false;
+        }
 
         initMembers();
     }
@@ -288,6 +307,9 @@ bool
 ShmDataManager::rmAllUnusedShmFb(const Msg& msgCallBack)
 //
 // remove all shmFb related shared memory if it is not used
+//
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
 //
 {
     bool flag = true;
@@ -520,6 +542,10 @@ bool
 ShmDataManager::rmUnusedShmByKey(const std::string& keyStr,
                                  const std::string& headerKey,
                                  const Msg& msgCallBack)
+//
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     const int shmId = shmget(genInt32KeyBySHA1(keyStr), 0, 0);
     if (shmId == -1) {
@@ -535,16 +561,34 @@ ShmDataManager::rmUnusedShmByKey(const std::string& keyStr,
 // static function
 bool
 ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const Msg& msgCallBack)
+//
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     try {
         ShmDataManager manager;
-        manager.accessSetupShm(shmId, ShmDataIO::headerSize);
+        manager.accessSetupShm(shmId, ShmDataIO::headerSize); // throw exception if error
         const std::string header = manager.getHeader(ShmDataIO::headerSize);
         if (!cmpHeader(header, headerKey)) return true;
 
         // found shared memory that has headerKey
         if (manager.mShmNAttach == 1) {
-            if (!manager.rmShm()) return false;
+            std::string errMsg;
+            if (!manager.rmShm(&errMsg)) {
+                std::ostringstream ostr;
+                ostr << "ERROR : An unused shared memory segment was found, and an attempt was made\n"
+                     << "        to delete it, but the operation failed. A shared memory segment can\n"
+                     << "        only be deleted by the user who created it or by the root user.\n"
+                     << "        If unused shared memory segments created by other users exist,\n"
+                     << "        please try manually deleting them using either the creator account\n"
+                     << "        or root privileges.\n"
+                     << "manager.rmShm() failed. error={\n"
+                     << str_util::addIndent(errMsg) << '\n'
+                     << "}";
+                msgCallBack(ostr.str() + '\n');
+                return false;
+            }
             if (msgCallBack) {
                 std::ostringstream ostr;
                 ostr << "shmId:" << shmId
@@ -560,8 +604,11 @@ ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const
         // So we skip this shared memory.
         //
         std::ostringstream ostr;
-        ostr << "WARNING : Failed to access unknown shared memory."
-             << " shmId:" << shmId
+        ostr << "WARNING : An attempt was made to access a shared memory segment in order to retrieve its\n"
+             << "          status for the purpose of deleting unused shared memory. However, the access\n"
+             << "          failed, and because the state of the shared memory could not be analyzed,\n"
+             << "          the deletion of this shared memory was skipped.\n"
+             << "shmId:" << shmId
              << " headerSize:" << ShmDataIO::headerSize << " headerKey:\"" << headerKey << "\""
              << " error=>{\n"
              << str_util::addIndent(err) << '\n'
@@ -574,6 +621,10 @@ ShmDataManager::rmUnusedShm(const int shmId, const std::string& headerKey, const
 // static function
 bool
 ShmDataManager::rmAllUnusedShm(const std::string& headerKey, const Msg& msgCallBack)
+//
+// An existing shared memory segment can be deleted only by its creator or by the root user.
+// If anyone other than the creator or root attempts to remove it, an error will occur.
+//
 {
     bool flag = true;
     crawlAllShm(ShmDataIO::headerSize,

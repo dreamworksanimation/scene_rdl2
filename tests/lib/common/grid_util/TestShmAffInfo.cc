@@ -29,7 +29,7 @@ TestShmAffInfo::testAffInfoDataSize()
         !dataSizeTest2(ShmAffinityInfo::calcDataSize(), false, true, false, func)) {
         flag = false;
     }
-    CPPUNIT_ASSERT("testAffInfoDataSize" && flag);
+    CPPUNIT_ASSERT_MESSAGE("testAffInfoDataSize", flag);
 
     TIME_END;
 }
@@ -39,7 +39,7 @@ TestShmAffInfo::testAffInfo()
 {
     TIME_START;
 
-    CPPUNIT_ASSERT("testAffInfo" && testAffInfoMain());
+    CPPUNIT_ASSERT_MESSAGE("testAffInfo", testAffInfoMain());
 
     TIME_END;
 }
@@ -114,7 +114,7 @@ TestShmAffInfo::testAffInfoMain() const
 void
 TestShmAffInfo::testAffInfoManagerMain(const int dataTypeId) const
 {
-    CPPUNIT_ASSERT("testAffinityManager initial cleanup" && rmOldShmAffInfo("testAffInfoManagerMain() before"));
+    CPPUNIT_ASSERT_MESSAGE("testAffinityManager initial cleanup", rmOldShmAffInfo("testAffInfoManagerMain()/before"));
 
     constexpr bool testMode = true;
     std::string dataTypeIdStr = std::to_string(dataTypeId);
@@ -133,7 +133,7 @@ TestShmAffInfo::testAffInfoManagerMain(const int dataTypeId) const
                   << str_util::addIndent(outMessage) << '\n'
                   << "}\n";
     }
-    CPPUNIT_ASSERT("testAffinityManager storeTestData" && flag);
+    CPPUNIT_ASSERT_MESSAGE("testAffinityManager storeTestData", flag);
 
     infoManager.reset();
 
@@ -149,13 +149,13 @@ TestShmAffInfo::testAffInfoManagerMain(const int dataTypeId) const
                   << str_util::addIndent(outMessage) << '\n'
                   << "}\n";
     }
-    CPPUNIT_ASSERT("testAffinityManager verifyTestData" && flag);
+    CPPUNIT_ASSERT_MESSAGE("testAffinityManager verifyTestData", flag);
 
     infoManager.reset(); // release shared memory access.
 
     //------------------------------
 
-    CPPUNIT_ASSERT("testAffinityManager post cleanup" && rmOldShmAffInfo("testAffInfoManagerMain() after"));
+    CPPUNIT_ASSERT_MESSAGE("testAffinityManager post cleanup", rmOldShmAffInfo("testAffInfoManagerMain()/after"));
 }
 
 int
@@ -201,7 +201,7 @@ TestShmAffInfo::testCoreAllocationMain(const std::string& modeStr,
         return 0;
     };
 
-    CPPUNIT_ASSERT("testCoreAllocation initial cleanup" && rmOldShmAffInfo("testCoreAllocationMain() before"));
+    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation initial cleanup", rmOldShmAffInfo("testCoreAllocationMain()/before"));
 
     constexpr bool testMode = true;
     std::shared_ptr<ShmAffinityInfoManager> infoManager = std::make_shared<ShmAffinityInfoManager>(false, testMode);
@@ -220,11 +220,11 @@ TestShmAffInfo::testCoreAllocationMain(const std::string& modeStr,
                   << "}\n";
     } else {
         totalTest = analyzeLogAndGetTotalTestCount(outMessage);
-        CPPUNIT_ASSERT("testCoreAllocation verify log analyze" && totalTest >= 0);
+        CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verify log analyze", totalTest >= 0);
     }
-    CPPUNIT_ASSERT("testCoreAllocation verifyCoreAllocation" && flag);
+    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verifyCoreAllocation", flag);
 
-    CPPUNIT_ASSERT("testCoreAllocation post cleanup" && rmOldShmAffInfo("testCoreAllocationMain() after"));
+    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation post cleanup", rmOldShmAffInfo("testCoreAllocationMain()/after"));
 
     return totalTest;
 }
