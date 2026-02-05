@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <functional>
 #include <vector>
 
 #define ARENA_DEFAULT_ALIGNMENT     SIMD_MEMORY_ALIGNMENT
