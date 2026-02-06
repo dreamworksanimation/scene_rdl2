@@ -1,4 +1,4 @@
-// Copyright 2024-2025 DreamWorks Animation LLC
+// Copyright 2024-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -192,7 +192,7 @@ public:
     }
 
     // Access already generated ShmFbManager which is pointed to by shmId
-    explicit ShmFbManager(const int shmId);
+    explicit ShmFbManager(const int shmId, const bool readOnlyAccess = false);
 
     // The following get APIs are only valid if constructed fresh shared memory frame buffer
     // and not valid if accessed to already existing shared memory.
@@ -256,7 +256,7 @@ public:
             throw(errMsg("ShmFbCtrl constructor", "verify memory size/boundary failed"));
         }
         if (doInit) {
-            setHeadMessage(ShmDataIO::headerKeyShmFbCtrl + time_util::currentTimeStr());
+            setHeadMessage(std::string(ShmDataIO::headerKeyShmFbCtrl) + time_util::currentTimeStr());
             setShmDataSize(dataSize);
             setCurrentShmId(0); // initial value is 0
         }
@@ -309,7 +309,7 @@ public:
     ShmFbCtrlManager() { setupFbCtrl(); }
 
     // Access already generated ShmFbCtrlManager which is pointed by shmId
-    explicit ShmFbCtrlManager(const int shmId);
+    explicit ShmFbCtrlManager(const int shmId, const bool readOnlyAccess = false);
 
     std::shared_ptr<ShmFbCtrl> getFbCtrl() const { return mFbCtrl; }
 

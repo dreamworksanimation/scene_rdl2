@@ -1,14 +1,14 @@
-# Copyright 2024 DreamWorks Animation LLC
+# Copyright 2026 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
-set(target shmFbTool)
+set(target shmUtilTool)
 
 add_executable(${target})
 
 target_sources(${target}
     PRIVATE
         main.cc
-        ShmFbTool.cc
+	ShmUtilTool.cc
 )
 
 target_link_libraries(${target}

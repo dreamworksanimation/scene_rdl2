@@ -1,4 +1,4 @@
-# Copyright 2023-2025 DreamWorks Animation LLC
+# Copyright 2023-2026 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(target scenerdl2_render_util_tests)
@@ -18,6 +18,7 @@ target_sources(${target}
         TestAtomicFloat.cc
         TestFiles.cc
         TestMemPool.cc
+        TestStrUtil.cc
         TestThreadPoolExecutor.cc
         ${PlatformSpecificSources}
 )

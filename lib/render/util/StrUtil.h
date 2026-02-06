@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -101,6 +101,16 @@ getNumberOfDigits(unsigned n)
 // returns number of digits in decimal representation of n
 {
     return (!n) ? 1 : static_cast<int>(std::log10(static_cast<float>(n)) + 1.0f);
+}
+
+inline
+int
+getHexNumberOfDigits(unsigned n)
+// return number of digits in hexadecimal representation of n
+{
+    std::ostringstream ostr;
+    ostr << std::hex << n;
+    return static_cast<int>(ostr.str().size());
 }
 
 inline
@@ -260,6 +270,126 @@ rmLastNL(const std::string& inStr)
         outStr.pop_back();
     }
     return outStr;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+inline
+std::string
+intToOctal3DigitsStr(const int val)
+{
+    if (val < 0) return "";
+
+    std::ostringstream ostr;
+    ostr << std::setw(3) << std::setfill('0') << std::oct << (val & 0777);
+    return ostr.str();
+}
+
+inline
+int
+octal3DigitsStrToInt(const std::string& octalStr)
+{
+    return std::stoi(octalStr, nullptr, 8);
+}
+
+inline
+std::string
+intToPermissionStr(const int val) 
+{
+    if (val < 0) return "";
+
+    auto octalDigitToPermissionStr = [](const char digit) -> std::string {
+        switch (digit) {
+        case '0' : return "---";
+        case '1' : return "--x";
+        case '2' : return "-w-";
+        case '3' : return "-wx";
+        case '4' : return "r--";
+        case '5' : return "r-x";
+        case '6' : return "rw-";
+        case '7' : return "rwx";
+        default : return "   ";
+        }
+    };
+    std::string octalStr = intToOctal3DigitsStr(val);
+
+    std::string permStr;
+    for (const char c : octalStr) {
+        permStr += octalDigitToPermissionStr(c);
+    }
+    return permStr;
+}
+
+inline
+std::string
+intToPermissionStrMacSysVSemaphore(const int val) 
+{
+    if (val < 0) return "";
+
+    auto octalDigitToPermissionStr = [](const char digit) -> std::string {
+        // There is no "execute" flag on Mac SysV semaphore
+        switch (digit) {
+        case '0' : return "---";
+        case '1' : return "---";
+        case '2' : return "-a-";
+        case '3' : return "-a-";
+        case '4' : return "r--";
+        case '5' : return "r--";
+        case '6' : return "ra-";
+        case '7' : return "ra-";
+        default : return "   ";
+        }
+    };
+    std::string octalStr = intToOctal3DigitsStr(val);
+
+    std::string permStr;
+    for (const char c : octalStr) {
+        permStr += octalDigitToPermissionStr(c);
+    }
+    return permStr;
+}
+
+inline
+int
+permissionStrToInt(const std::string& permStr)
+{
+    auto permToDigit = [](const std::string& str) {
+        if (str.size() != 3) return -1; // error
+        int val = 0;
+        if (str[0] == 'r') val += 4;
+        if (str[1] == 'w') val += 2;
+        if (str[2] == 'x') val += 1;
+        return val;
+    };
+
+    if (permStr.size() != 9) return -1; // error
+    int owner = permToDigit(permStr.substr(0, 3));
+    int group = permToDigit(permStr.substr(3, 3));
+    int etc   = permToDigit(permStr.substr(6, 3));
+    if (owner < 0 || group < 0 || etc < 0) return -1; // error
+    return owner * 64 + group * 8 + etc;
+}
+
+inline
+int
+permissionStrToIntMacSysVSemaphore(const std::string& permStr)
+{
+    auto permToDigit = [](const std::string& str) {
+        if (str.size() != 3) return -1; // error
+        int val = 0;
+        if (str[0] == 'r') val += 4;
+        if (str[1] == 'a') val += 2;
+        // There is no "execute" flag on Mac SysV semaphore
+        return val;
+    };
+
+    // first 2 string should be "--" and need to skip
+    if (permStr.size() != 11) return -1; // error
+    int owner = permToDigit(permStr.substr(2, 3));
+    int group = permToDigit(permStr.substr(5, 3));
+    int etc   = permToDigit(permStr.substr(8, 3));
+    if (owner < 0 || group < 0 || etc < 0) return -1; // error
+    return owner * 64 + group * 8 + etc;
 }
 
 } // namespace str_util

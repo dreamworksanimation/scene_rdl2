@@ -1,4 +1,4 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "AffinityMapTool.h"
 
@@ -33,6 +33,17 @@ AffinityMapTool::acquire(const bool testMode,
     return true;
 }
 
+std::string
+affList()
+{
+    std::ostringstream ostr;
+    ostr << "affinityMap sharedMemory/semaphore list {\n"
+         << str_util::addIndent(AffinityMapTable::showAllShmInfoList()) << '\n'
+         << str_util::addIndent(AffinityMapTable::showAllSemaphoreInfoList()) << '\n'
+         << "}";
+    return ostr.str();
+}
+
 void
 AffinityMapTool::parserConfigure()
 {
@@ -48,6 +59,8 @@ AffinityMapTool::parserConfigure()
                 });
     mParser.opt("-affinityMapTable", "...command...", "affinityMapTable command for testing purposes",
                 [&](Arg& arg) { return mAffinityMapTable.getParser().main(arg.childArg()); });
+    mParser.opt("-affList", "", "list all affinityMapTable",
+                [&](Arg& arg) { return arg.msg(affList() + '\n'); });
 }
 
 } // namespace grid_util

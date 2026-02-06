@@ -1,4 +1,4 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmAffinityInfo.h"
 #include "UserUtil.h"
@@ -6,13 +6,45 @@
 #include <scene_rdl2/common/except/exceptions.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
-//#include <iostream> // for debug
 #include <random>
 #include <sstream>
+#include <sys/shm.h>
 #include <thread>
 
 namespace scene_rdl2 {
 namespace grid_util {
+
+namespace shmAffinityInfo_detail {
+
+class HelperManager {
+public:
+    static ShmDataManager::KeyIdByStrVer
+    convertToKeyIdByStrVer(ShmAffinityInfoManager::TestKeyStrFormat formatVersion);    
+
+    static std::string setupConditionStr(ShmAffinityInfoManager::SetupCondition condition);    
+
+    static std::string analyzeShmIdMsg(int shmId, const std::string& userName, bool detailedMsg);
+
+#ifdef RM_CANDIDATE
+    // returns true if targetShmId is existed and it is associated with given argument parameters.
+    // otherwise returns falase.
+    static bool isExpectedExistedShmId(int shmId,
+                                       bool testMode,
+                                       ShmAffinityInfoManager::TestKeyStrFormat formatVersion,
+                                       const std::string& userName);
+#endif // end of RM_CANDIDATE
+    
+private:
+    static bool analyzeShmId(int targetShmId,
+                             const std::string& userName,
+                             bool testMode,
+                             ShmAffinityInfoManager::TestKeyStrFormat keyStrVer,
+                             ShmDataManager::KeyIdByStrVer keyIdByStrVer,
+                             std::string* shortMsg,
+                             std::string* detailedMsg);    
+};
+
+} // namespace shmAffinityInfo_detail
 
 // static function
 std::string
@@ -222,8 +254,11 @@ ShmAffinityInfo::verifySetGetMain_type0(const bool setup)
 
 //------------------------------------------------------------------------------------------
 
-ShmAffinityInfoManager::ShmAffinityInfoManager(const bool accessOnly, const bool testMode)
+ShmAffinityInfoManager::ShmAffinityInfoManager(const bool accessOnly,
+                                               const bool testMode,
+                                               const TestKeyStrFormat formatVersion)
     : mTestMode {testMode}
+    , mTestKeyStrFormatVersion {formatVersion}
 //
 // Might throw exception(std::string) if error
 //
@@ -271,17 +306,38 @@ ShmAffinityInfoManager::ShmAffinityInfoManager(const bool accessOnly, const bool
 
 // static function
 bool
-ShmAffinityInfoManager::doesShmAlreadyExist(const bool testMode)
+ShmAffinityInfoManager::doesShmAlreadyExist(const bool testMode,
+                                            const TestKeyStrFormat formatVersion)
 //
 // Might throw exception(std::string) if error
 //
 {
-    return isShmAvailable(getShmKeyStr(testMode));
+    using shmAffinityInfo_detail::HelperManager;
+
+    return isShmAvailableByKey(getShmKeyStr(testMode, formatVersion),
+                               HelperManager::convertToKeyIdByStrVer(formatVersion));
+}
+
+// static function
+int
+ShmAffinityInfoManager::getShmIdIfAvailable(const bool testMode,
+                                            const TestKeyStrFormat formatVersion)
+// return -1 if there is no shared memory
+// return positiveNumber : return existed shared memory's id related keyStr    
+// never returns 0.
+// throw exception(std::string) if error
+{
+    using shmAffinityInfo_detail::HelperManager;
+    
+    return getShmIdIfAvailableByKey(getShmKeyStr(testMode, formatVersion),
+                                    HelperManager::convertToKeyIdByStrVer(formatVersion));
 }
 
 // static function
 bool
-ShmAffinityInfoManager::rmShmIfAlreadyExist(const bool testMode, const MsgFunc& msgCallBack)
+ShmAffinityInfoManager::removeShmIfAlreadyExist(const bool testMode,
+                                                const TestKeyStrFormat formatVersion,
+                                                const MsgFunc& msgCallBack)
 //
 // Might throw exception(std::string) if error
 //    
@@ -292,27 +348,35 @@ ShmAffinityInfoManager::rmShmIfAlreadyExist(const bool testMode, const MsgFunc& 
 // If anyone other than the creator or root attempts to remove it, an error will occur.
 //
 {
-    if (!doesShmAlreadyExist(testMode)) return true; // not exist -> skip 
-    return rmUnusedShmByKey(getShmKeyStr(testMode), SHM_AFFINITY_INFO_HEADKEY, msgCallBack);
+    using shmAffinityInfo_detail::HelperManager;
+
+    if (!doesShmAlreadyExist(testMode, formatVersion)) {
+        return true; // not exist -> skip
+    }
+    return rmUnusedShmByKey(getShmKeyStr(testMode, formatVersion),
+                            HelperManager::convertToKeyIdByStrVer(formatVersion),
+                            std::string(ShmDataIO::headerKeyShmAffInfo), msgCallBack);
 }
 
 // static function
 bool
-ShmAffinityInfoManager::rmShmIfAlreadyExistCmd(const bool testMode, const MsgFunc& msgCallBack)
+ShmAffinityInfoManager::removeShmIfAlreadyExistCmd(const bool testMode,
+                                                   const TestKeyStrFormat formatVersion,
+                                                   const MsgFunc& msgCallBack)
 //
 // An existing shared memory segment can be deleted only by its creator or by the root user.
 // If anyone other than the creator or root attempts to remove it, an error will occur.
 //
 {
     try {
-        if (!ShmAffinityInfoManager::rmShmIfAlreadyExist(testMode, msgCallBack)) {
+        if (!removeShmIfAlreadyExist(testMode, formatVersion, msgCallBack)) {
             msgCallBack("ERROR : Could not remove already existed shared memory. (ShmAffinityInfoManager)\n");
             return false;
         }
     }
     catch (const std::string& err) {
         std::ostringstream ostr;
-        ostr << "ERROR : ShmAffinityInfoManager::rmShmIfAlreadyExist() failed. err=>{\n"
+        ostr << "ERROR : ShmAffinityInfoManager::removeShmIfAlreadyExist() failed. err=>{\n"
              << str_util::addIndent(err) << '\n'
              << "}";
         msgCallBack(ostr.str() + '\n');
@@ -388,14 +452,17 @@ ShmAffinityInfoManager::releaseAffinityCores(const std::string& coreIdDefStr)
 std::string
 ShmAffinityInfoManager::show() const
 {
+    using shmAffinityInfo_detail::HelperManager;
+
     std::ostringstream ostr;
     ostr << "ShmAffinityInfoManager {\n"
          << str_util::addIndent(ShmDataManager::show()) << '\n'
          << "  sShmKeyStr:" << sShmKeyStr << '\n'
          << "  sShmTestKeyStr:" << sShmTestKeyStr << '\n'
          << "  mTestMode:" << str_util::boolStr(mTestMode) << '\n'
+         << "  mTestKeyStrFormatVersion:" << showTestKeyStrFormat(mTestKeyStrFormatVersion) << '\n'
          << str_util::addIndent(showAffinityInfo()) << '\n'
-         << "  mShmSetupCondition:" << setupConditionStr(mShmSetupCondition) << '\n'
+         << "  mShmSetupCondition:" << HelperManager::setupConditionStr(mShmSetupCondition) << '\n'
          << str_util::addIndent(showNumaUtil()) << '\n'
          << str_util::addIndent(showCpuSocketUtil()) << '\n'
          << "}";
@@ -432,20 +499,40 @@ ShmAffinityInfoManager::showCpuSocketUtil() const
 
 // static function
 std::string
-ShmAffinityInfoManager::showShmDump(const bool testMode)
+ShmAffinityInfoManager::showShmDump(const bool testMode,
+                                    const TestKeyStrFormat formatVersion)
 {
     std::ostringstream ostr;
     ostr << "testMode:" << str_util::boolStr(testMode) << ' '
-         << "ShmKey:\"" << getShmKeyStr(testMode) << "\" {\n";
-    if (!doesShmAlreadyExist(testMode)) {
+         << "formatVersion:" << showTestKeyStrFormat(formatVersion) << ' '
+         << "ShmKey:\"" << getShmKeyStr(testMode, formatVersion) << "\" {\n";
+    if (!doesShmAlreadyExist(testMode, formatVersion)) {
         ostr << "  does not exist\n";
     } else {
-        ShmAffinityInfoManager tmpInfoMgr(true, testMode);
+        ShmAffinityInfoManager tmpInfoMgr(true, testMode, formatVersion);
         ostr << str_util::addIndent(tmpInfoMgr.ShmDataManager::show()) << '\n'
              << str_util::addIndent(tmpInfoMgr.showAffinityInfo()) << '\n';
     }
     ostr << "}";
     return ostr.str();
+}
+
+// static function
+std::string
+ShmAffinityInfoManager::showTestKeyStrFormat(const TestKeyStrFormat formatVersion)
+{
+    switch (formatVersion) {
+    case TestKeyStrFormat::VER_0 : return "VER_0";
+    case TestKeyStrFormat::VER_1 : return "VER_1";
+    default : return "?";
+    }
+}
+
+// static function
+std::string
+ShmAffinityInfoManager::showShmIdDetailedInfo(const int shmId, const std::string& userName)
+{
+    return shmAffinityInfo_detail::HelperManager::analyzeShmIdMsg(shmId, userName, false);
 }
 
 void
@@ -454,8 +541,13 @@ ShmAffinityInfoManager::setupFreshAffinityInfo()
 // Might throw exception(std::string) if error
 //
 {
+    using shmAffinityInfo_detail::HelperManager;
+
     const bool existFlag =
-        constructNewShmByKey(getShmKeyStr(mTestMode), ShmAffinityInfo::calcDataSize(), 0666);
+        constructNewShmByKey(getShmKeyStr(mTestMode, mTestKeyStrFormatVersion),
+                             HelperManager::convertToKeyIdByStrVer(mTestKeyStrFormatVersion),
+                             ShmAffinityInfo::calcDataSize(),
+                             ShmDataManager::SHMAFFINFO_PERMISSION);
     mShmSetupCondition = (existFlag) ? SetupCondition::ALREADY_EXISTED : SetupCondition::INITIALIZED;
 
     try {
@@ -479,7 +571,11 @@ ShmAffinityInfoManager::accessAffinityInfo()
 // Might throw exception(std::string) if error
 //
 {
-    accessSetupShmByKey(getShmKeyStr(mTestMode), ShmAffinityInfo::calcDataSize());
+    using shmAffinityInfo_detail::HelperManager;
+
+    accessSetupShmByKey(getShmKeyStr(mTestMode, mTestKeyStrFormatVersion),
+                        HelperManager::convertToKeyIdByStrVer(mTestKeyStrFormatVersion),
+                        ShmAffinityInfo::calcDataSize());
     mShmSetupCondition = SetupCondition::ALREADY_EXISTED;
 
     //------------------------------
@@ -506,10 +602,27 @@ ShmAffinityInfoManager::accessAffinityInfo()
 }
 
 // static function
-const std::string
-ShmAffinityInfoManager::getShmKeyStr(const bool testMode)
+std::string
+ShmAffinityInfoManager::getShmKeyStr(const bool testMode,
+                                     const TestKeyStrFormat formatVersion)
 {
-    return (testMode) ? std::string(sShmTestKeyStr) + "_" + UserUtil::getUserName() : std::string(sShmKeyStr);
+    return (!testMode) ? std::string(sShmKeyStr) : getShmTestKeyStr(std::string(""), formatVersion);
+}
+
+// static function
+std::string
+ShmAffinityInfoManager::getShmTestKeyStr(const std::string& userName,
+                                         const TestKeyStrFormat formatVersion)
+{
+    auto getShmTestKeyStrVer1 = [&]() {
+        return std::string(sShmTestKeyStr) + "_" + (userName.empty() ? UserUtil::getUserName() : userName);
+    };
+
+    switch(formatVersion) {
+    case TestKeyStrFormat::VER_0 : return std::string(sShmTestKeyStr);
+    case TestKeyStrFormat::VER_1 : return getShmTestKeyStrVer1();
+    default : return "";
+    }
 }
 
 bool
@@ -521,23 +634,13 @@ ShmAffinityInfoManager::setCore(const unsigned coreId,
     return mAffinityInfo->setCoreInfo(coreId, occupancy, pid);
 }
 
-// static function
-std::string
-ShmAffinityInfoManager::setupConditionStr(const SetupCondition& condition)
-{
-    switch (condition) {
-    case SetupCondition::UNDEFINED : return "UNDEFINED";
-    case SetupCondition::INITIALIZED : return "INITIALIZED";
-    case SetupCondition::ALREADY_EXISTED : return "ALREADY_EXISTED";
-    default : return "?";
-    }
-}
-
 void
 ShmAffinityInfoManager::parserConfigure()
 {
     mParser.description("ShmAffinityInfoManager command");
 
+    mParser.opt("shmDataManager", "...command...", "shmDataManager command",
+                [&](Arg& arg) { return ShmDataManager::getParser().main(arg.childArg()); });
     mParser.opt("show", "", "show all info",
                 [&](Arg& arg) { return arg.msg(show() + '\n'); });
     mParser.opt("showTable", "", "show coreInfo as table",
@@ -591,6 +694,12 @@ ShmAffinityInfoManager::parserConfigure()
                 [&](Arg& arg) { return mCpuSocketUtil->getParser().main(arg.childArg()); });
     mParser.opt("numaUtil", "...command...", "mNumaUtil command",
                 [&](Arg& arg) { return mNumaUtil->getParser().main(arg.childArg()); });
+    mParser.opt("analyzeShmId", "<shmId> <userName>", "analyze given shmId in terms of affinityMapTable",
+                [&](Arg& arg) {
+                    const int shmId = (arg++).as<int>(0);
+                    const std::string userName = (arg++)();
+                    return arg.msg(shmAffinityInfo_detail::HelperManager::analyzeShmIdMsg(shmId, userName, true) + '\n');
+                });
 }
 
 bool
@@ -924,6 +1033,171 @@ ShmAffinityInfoManager::msgVerifyStrFinalOK(const std::string& modeStr,
          << "}";
     return ostr.str();
 }
+
+namespace shmAffinityInfo_detail {
+
+// static function
+ShmDataManager::KeyIdByStrVer
+HelperManager::convertToKeyIdByStrVer(const ShmAffinityInfoManager::TestKeyStrFormat formatVersion)
+{
+    switch (formatVersion) {
+    case ShmAffinityInfoManager::TestKeyStrFormat::VER_0 : return ShmDataManager::KeyIdByStrVer::VER_0;
+    case ShmAffinityInfoManager::TestKeyStrFormat::VER_1 : return ShmDataManager::KeyIdByStrVer::VER_1;
+    default : return ShmDataManager::KeyIdByStrVer::VER_1;
+    }
+}
+
+// static function
+std::string
+HelperManager::setupConditionStr(const ShmAffinityInfoManager::SetupCondition condition)
+{
+    switch (condition) {
+    case ShmAffinityInfoManager::SetupCondition::UNDEFINED : return "UNDEFINED";
+    case ShmAffinityInfoManager::SetupCondition::INITIALIZED : return "INITIALIZED";
+    case ShmAffinityInfoManager::SetupCondition::ALREADY_EXISTED : return "ALREADY_EXISTED";
+    default : return "?";
+    }
+}
+
+// static function
+std::string
+HelperManager::analyzeShmIdMsg(const int shmId,
+                               const std::string& userName,
+                               const bool detailedMsg)
+{
+    constexpr ShmAffinityInfoManager::TestKeyStrFormat strVer0 =
+        ShmAffinityInfoManager::TestKeyStrFormat::VER_0;
+    constexpr ShmAffinityInfoManager::TestKeyStrFormat strVer1 =
+        ShmAffinityInfoManager::TestKeyStrFormat::VER_1;
+    constexpr ShmDataManager::KeyIdByStrVer idVer0 = ShmDataManager::KeyIdByStrVer::VER_0;
+    constexpr ShmDataManager::KeyIdByStrVer idVer1 = ShmDataManager::KeyIdByStrVer::VER_1;
+
+    std::string shortMsg0, shortMsg1, longMsg0, longMsg1;
+    bool flag0 = analyzeShmId(shmId, userName, false, strVer1, idVer0, &shortMsg0, &longMsg0);
+    bool flag1 = analyzeShmId(shmId, userName, false, strVer1, idVer1, &shortMsg1, &longMsg1);
+
+    std::string shortTestMsg00, shortTestMsg01, shortTestMsg10, shortTestMsg11;
+    std::string longTestMsg00, longTestMsg01, longTestMsg10, longTestMsg11;
+    bool testFlag00 = analyzeShmId(shmId, userName, true, strVer0, idVer0, &shortTestMsg00, &longTestMsg00);
+    bool testFlag01 = analyzeShmId(shmId, userName, true, strVer0, idVer1, &shortTestMsg01, &longTestMsg01);
+    bool testFlag10 = analyzeShmId(shmId, userName, true, strVer1, idVer0, &shortTestMsg10, &longTestMsg10);
+    bool testFlag11 = analyzeShmId(shmId, userName, true, strVer1, idVer1, &shortTestMsg11, &longTestMsg11);
+    
+    if (!detailedMsg) {
+        const unsigned total = (int)flag0 + (int)flag1 + (int)testFlag00 + (int)testFlag01 + (int)testFlag10 + (int)testFlag11;
+        if (total == 0) return "?";
+
+        std::ostringstream ostr;
+        if (flag0) ostr << shortMsg0 << ' ';
+        if (flag1) ostr << shortMsg1 << ' ';
+        if (testFlag00) ostr << shortTestMsg00 << ' ';
+        if (testFlag01) ostr << shortTestMsg01 << ' ';        
+        if (testFlag10) ostr << shortTestMsg10 << ' ';
+        if (testFlag11) ostr << shortTestMsg11 << ' ';
+
+        return str_util::trimBlank(ostr.str());
+    } else {
+        std::ostringstream ostr;
+        ostr << "====>>> analysis of shmId:" << shmId << " userName:" << userName << " <<<==== {\n"
+             << str_util::addIndent(longMsg0) << '\n'
+             << str_util::addIndent(longMsg1) << '\n'
+             << str_util::addIndent(longTestMsg00) << '\n'
+             << str_util::addIndent(longTestMsg01) << '\n'            
+             << str_util::addIndent(longTestMsg10) << '\n'
+             << str_util::addIndent(longTestMsg11) << '\n'
+             << "}";
+        return ostr.str();
+    }
+}
+
+#ifdef RM_CANDIDATE
+// static function
+bool
+HelperManager::isExpectedExistedShmId(const int targetShmId,
+                                      const bool testMode,
+                                      const ShmAffinityInfoManager::TestKeyStrFormat formatVersion,
+                                      const std::string& userName)
+//
+// returns true if targetShmId is existed and it is associated with given argument parameters.
+// otherwise returns falase.
+// using my process's user name if userName is empty
+//
+{
+    std::string keyStr;
+    if (!testMode) {
+        keyStr = ShmAffinityInfoManager::getShmKeyStr(testMode, formatVersion);
+    } else {
+        keyStr = ShmAffinityInfoManager::getShmTestKeyStr(userName, formatVersion);
+    }
+    int shmId =
+        ShmDataManager::getShmIdIfAvailableByKey(keyStr,
+                                                 convertToKeyIdByStrVer(formatVersion));
+    if (shmId < 0) return false; // There is no shared memory associated with his keyStr
+    return (targetShmId == shmId);
+}
+#endif // end of RM_CANDIDATE
+
+// static function
+bool
+HelperManager::analyzeShmId(const int targetShmId,
+                            const std::string& userName,
+                            const bool testMode,
+                            const ShmAffinityInfoManager::TestKeyStrFormat keyStrVer,
+                            const ShmDataManager::KeyIdByStrVer keyIdByStrVer,
+                            std::string* shortMsg,
+                            std::string* detailedMsg)
+{
+    const std::string keyStr =
+        (!testMode) ?
+        ShmAffinityInfoManager::getShmKeyStr(false, keyStrVer) :
+        ShmAffinityInfoManager::getShmTestKeyStr(userName, keyStrVer);
+    const int keyId = ShmAffinityInfoManager::genKeyIdByStr(keyStr, keyIdByStrVer);
+    const int shmId = shmget(keyId, 0, ShmDataManager::SHMAFFINFO_PERMISSION);
+    const bool flag = (shmId == targetShmId);    
+
+    if (shortMsg) {
+        std::ostringstream ostr;
+        if (flag) {
+            ostr << (testMode ? "TEST" : "LIVE") << '-';
+            if (keyStrVer == ShmAffinityInfoManager::TestKeyStrFormat::VER_0 &&
+                keyIdByStrVer == ShmDataManager::KeyIdByStrVer::VER_0) {
+                ostr << "VER_0";
+            } else if (keyStrVer == ShmAffinityInfoManager::TestKeyStrFormat::VER_1 &&
+                       keyIdByStrVer == ShmDataManager::KeyIdByStrVer::VER_1) {
+                ostr << "VER_1";
+            } else {
+                ostr << "(str:" << ShmAffinityInfoManager::showTestKeyStrFormat(keyStrVer) << '+'
+                     << "id:" << ShmDataManager::showKeyIdByStrVer(keyIdByStrVer) << ')';
+            }
+        } else {
+            ostr << "?";
+        }
+        (*shortMsg) = ostr.str();
+    }
+
+    if (detailedMsg) {
+        std::ostringstream ostr;
+        ostr << "targetShmId:" << targetShmId
+             << " userName:" << userName
+             << " testMode:" << str_util::boolStr(testMode)
+             << " keyStrVer:" << ShmAffinityInfoManager::showTestKeyStrFormat(keyStrVer)
+             << " keyIdVer:" << ShmDataManager::showKeyIdByStrVer(keyIdByStrVer) << " {\n"
+             << "  keyStr:" << keyStr << '\n'
+             << "  keyId:" << keyId << '\n'
+             << "  shmId:" << shmId << '\n'
+             << "}";
+        if (flag) {
+            ostr << " shmId == targetShmId";
+        } else {
+            ostr << " skipped"; 
+        }
+        (*detailedMsg) = ostr.str();
+    }
+    
+    return flag;
+}
+    
+} // namespace shmAffinityInfo_detail
 
 } // namespace grid_util
 } // namespace scene_rdl2

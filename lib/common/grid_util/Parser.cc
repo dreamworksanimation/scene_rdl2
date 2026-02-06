@@ -1,4 +1,4 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+// Copyright 2023-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "Parser.h"
 
@@ -21,7 +21,7 @@ ParserItem::showShortMsgWithConstLen(const size_t offsetShortMsg,
             output += '\n';
             output += std::string(offsetShortMsg, ' '); 
         }
-        output += mShortMsg.substr(startId, endId - startId);
+        output += mShortMsg.substr(startId, endId - startId + 1);                     
     };
     auto isSplitWordAtLineEnd = [&](const size_t id) {
         if (id >= mShortMsg.size()) return false;
@@ -48,8 +48,8 @@ ParserItem::showShortMsgWithConstLen(const size_t offsetShortMsg,
             break; // end of short message
         }
 
-        if (isSplitWordAtLineEnd(endId - 1)) output += '-';
-        if (!getNextStartId(endId, startId)) {
+        if (isSplitWordAtLineEnd(endId)) output += '-';
+        if (!getNextStartId(endId + 1, startId)) {
             break; // end of short message
         }
     }
@@ -204,7 +204,11 @@ Parser::main(const std::string& singleCommandLine, std::string& outputMessage) c
     });
     tmpArg.setCerrOutput(false);
 
-    return main(tmpArg);
+    const bool flag = main(tmpArg);
+
+    outputMessage = str_util::rmLastNL(outputMessage);
+
+    return flag;
 }
 
 std::string

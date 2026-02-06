@@ -1,4 +1,4 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -12,69 +12,114 @@
 namespace scene_rdl2 {
 namespace grid_util {
 
+namespace affMapTbl_detail {
+    class Helper;
+}
+
 class AffinityMapTable
 //
-// This class maintains a CPU affinity mapping table by using shared memory. 
-// This class provides 2 functionalities.
-//  1) The process can save its CPU affinity information into the shared memory,
-//     and this information would be shared with other processes by using this class.
-//  2) This class smartly allocates the new CPU IDs which is not overlapped with
-//     actively used CPUs. This is good for the decision of which CPUs are used for
-//     affinity target on the newly booted process.
-// We can run the new process without overlapping the CPU resources by using this
-// class and maximize the performance easily.
+// This class maintains a CPU affinity mapping table via shared memory.
+// It provides two main functionalities:
+//  1) Processes can save their CPU affinity information into shared memory,
+//     allowing this information to be shared with other processes using this class.
+//  2) The class intelligently allocates new CPU IDs that do not overlap with
+//     actively used CPUs. This facilitates optimal CPU selection for affinity targets
+//     when launching new processes.
+// By using this class, new processes can run without overlapping CPU resources, thereby
+// maximizing performance.
 //
-// acquire() and release() function is multi-process safe function. You can execute
-// them multi-process environment. This class properly initializes the shared memory
-// data automatically if it has not been initialized yet. This means we don't need
-// to explicitly initialization for the shared memory data itself.
-// The multi-process safe access of the shared memory is executed by SYSTEM-V semaphore.
+// The acquire() and release() functions are multi-process-safe and can be executed in a
+// multi-process environment. This class automatically initializes the shared memory data
+// if it has not been initialized yet, eliminating the need for explicit initialization.
+// Multi-process-safe access to shared memory is implemented using SYSTEM-V semaphores.
 //
-// This class only provides and maintains the CPU ID information and does not provide
-// any affinity action itself.
+// This class provides and maintains CPU ID information only; it does not perform any
+// affinity actions itself.
+//
+// An important aspect of this design is that although any process can create the shared
+// memory and semaphore, the fundamental policy is that once created, they must never be
+// deleted. This is because deleting shared memory and semaphores requires either the owner
+// that created them or root privileges; shared memory and semaphores created by others cannot
+// be deleted. Therefore, for AffinityMapTable operations, if resources do not already exist,
+// they will be automatically created; if they already exist, they will be reused. In normal
+// operation, existing AffinityMapTable resources should never be deleted.
+//
+// If, for some reason such as a system malfunction, you need to completely delete the shared
+// memory and semaphore, they must be deleted either by the owner who created them, by root,
+// or by rebooting the system itself. In normal operation, existing shared memory and semaphores
+// are never deleted. However, in unit tests, it may be necessary to delete these resources to
+// test initialization and other procedures. To enable this, shared memory and semaphores for
+// unit tests are created independently for each user ID running the tests.
+// This AffinityMapTable operation mode for unit testing is referred to as "TestMode", and several
+// TestMode flags exist in the related source code. In contrast, the production AffinityMapTable
+// operation mode is called "LiveMode", which is also mentioned in comments throughout the code.
 //
 {
 public:
     using Arg = scene_rdl2::grid_util::Arg;
     using Parser = scene_rdl2::grid_util::Parser;
 
-    AffinityMapTable(const bool testMode = false)
+    enum class TestKeyStrFormat : unsigned int {
+        VER_0 = 0, // Original version: uses sSemaphoreTestKeyStr only
+        VER_1      // Extended version: sSemaphoreTestKeyStr + '_' + userName
+    };
+
+    // In production releases, always use TestKeyStrFormat::VER_1 for formatVersion.
+    // With VER_1, when testMode is enabled, shared memory and semaphores are created independently
+    // for each user running the process, fundamentally preventing data collisions with other users.
+    // With VER_0, shared memory and semaphores created in testMode were shared by all users, which
+    // could cause unit tests to fail depending on the environment.
+    AffinityMapTable(bool testMode = false,
+                     TestKeyStrFormat formatVersion = TestKeyStrFormat::VER_1)
         : mTestMode {testMode}
+        , mTestKeyStrFormatVersion {formatVersion}
     {
         parserConfigure();
     }
 
-    // We have 2 runtime modes for this class. regular mode and test mode.
-    // If test mode is on, all the actions of this class use test mode configuration,
-    // which uses a different semaphore and shared memory from regular configurations.
-    // This allows us to run a test program (and also unitTest) safely without making
-    // any impact on the process that already uses the regular AffinityMapTable.
-    void setTestMode(const bool mode) { mTestMode = mode; }
+    // This class has two runtime modes: live mode (production) and test mode.
+    // When test mode is enabled, all actions use test mode configuration,
+    // which employs different semaphores and shared memory from live mode configurations.
+    // This allows test programs (including unit tests) to run safely without impacting
+    // processes that are already using the live mode AffinityMapTable.
+    void setTestMode(bool mode) { mTestMode = mode; }
     bool getTestMode() const { return mTestMode; }
 
-    // Multi-process safe function. Throw exception(std::string) if error
-    std::string acquire(const int requestedThreadTotal, const float timeoutSec);
+    void setTestKeyStrFormat(TestKeyStrFormat formatVersion) { mTestKeyStrFormatVersion = formatVersion; }
+    TestKeyStrFormat getTestKeyStrFormat() const { return mTestKeyStrFormatVersion; }
 
-    // Multi-process safe function. Throw exception(std::string) if error
-    void release(const float timeoutSec) const;
+    // Multi-process-safe function. Throws exception (std::string) on error.
+    std::string acquire(int requestedThreadTotal,
+                        float timeoutSec); // Semaphore access timeout in seconds
+
+    // Multi-process-safe function. Throws exception (std::string) on error.
+    void release(float timeoutSec) const;
 
     std::string show() const;
     std::string showAffinityInfoManager() const;
-    static std::string showSemaphoreInfo(const int testMode);
+    static std::string showSemaphoreInfo(int testMode,
+                                         TestKeyStrFormat formatVersion);
+    static std::string showTestSemaphoreInfo(const std::string& userName,
+                                             TestKeyStrFormat formatVersion);
 
-    // Output both tests on/off ShmAffinityInfo shared memory information without doing
-    // a lock for debugging purposes.
-    static std::string showShmAffinityInfoDump();
+    // Output ShmAffinityInfo shared memory information for both test and live modes
+    // without acquiring a lock, for debugging purposes.
+    static std::string showShmAffinityInfoDump(TestKeyStrFormat formatVersion);
 
-    // Dump both tests on/off SemaphoreInfo
-    static std::string showSemaphoreInfoDump();
+    static std::string showSemaphoreInfoDump(TestKeyStrFormat formatVersion); // Dump semaphore info for both test and live modes
+    static std::string showAllSemaphoreInfoList(); // List all AffinityMapTable-related semaphores
 
-    // Dump both test on/off of SemaphoreInfo and ShmAffinityInfo
-    static std::string showInfoDump();
+    // Dump both SemaphoreInfo and ShmAffinityInfo for test and live modes
+    static std::string showInfoDump(TestKeyStrFormat formatVersion);
+    static std::string showTestKeyStrFormat(TestKeyStrFormat formatVersion);
+
+    static std::string showAllShmInfoList(); // List all AffinityMapTable-related shared memory
 
     Parser& getParser() { return mParser; }
 
 protected:
+    friend class affMapTbl_detail::Helper; // Helper class requires access to protected members
+
     using Msg = std::function<bool(const std::string& msg)>;
 
     enum class OpenCondition : int {
@@ -83,51 +128,44 @@ protected:
         ALREADY_EXISTED
     };
 
-    void open(); // Throw exception(std::string) if error
-    bool openMain(); // return true:OK false:needRetry : Throw exception(std::string) if error 
+    void open(); // Throws exception (std::string) on error
+    bool openMain(); // Returns true if successful, false if retry needed. Throws exception (std::string) on error. 
 
-    static const char* getSemKeyStr(const bool testMode);    
-    void setupFreshAffinityInfoManager(); // Throw exception(std::string) if error
-    bool checkSemaphoreInitCompletion(); // Throw exception(std::string) if error
-    Sha1Util::Hash genSemInitHash(const int semId) const;
+    static std::string getSemaphoreKeyStr(bool testMode, TestKeyStrFormat formatVersion);
+    static std::string getSemaphoreTestKeyStr(const std::string& userName, // Uses current process's user name if userName is empty
+                                              TestKeyStrFormat formatVersion);
+    
+    void setupFreshAffinityInfoManager(); // Throws exception (std::string) on error
+    bool checkSemaphoreInitCompletion(); // Throws exception (std::string) on error
+    Sha1Util::Hash genSemaphoreInitHash(const int semId) const;
 
-    // Blocking wait until successfully lock semaphore with timeout control
-    // Throw exception(std::string) if error
-    // return true : lock succeesed
-    //        false : lock timed out and lock failed
-    bool lockSemaphoreBlockingWithTimeout(const float timeoutSec) const;
+    // Blocks until semaphore is successfully locked, with timeout control.
+    // Throws exception (std::string) on error.
+    // Returns true if lock succeeded, false if lock timed out and failed.
+    bool lockSemaphoreBlockingWithTimeout(float timeoutSec) const;
 
-    void unlockSemaphore() const; // Throw exception(std::string) if error
-    void removeSemaphore(const std::string& rmReason); // Throw exception(std::string) if error
-
-    static void removeSemaphore(const int semId, const std::string& rmReason); // Throw exception(std::string) if error
-    static int getSemaphoreId(const int testMode);
+    void unlockSemaphore() const; // Throws exception (std::string) on error
+    void removeSemaphore(const std::string& rmReason); // Throws exception (std::string) on error
 
     void verifyAndCleanupAffinityInfo();
-
-    static std::string openConditionStr(const OpenCondition& condition);
 
     void parserConfigure();
     bool testOpen(const Msg& msgFunc);
     bool emulateOpenCrash(const Msg& msgFunc);
-
-    // An existing semaphore/shared-memory can be deleted only by its creator or by the root user.
-    // If anyone other than the creator or root attempts to remove it, an error will occur.
-    bool rmUnusedSemaphore(const bool testMode, const Msg& msgFunc); // try to clean up testMode semaphore if testMode shm is empty
-    bool removeAllSemShm(const Msg& msgFunc);
 
     //------------------------------
 
     static constexpr const char* sSemaphoreKeyStr = "AffinityMapTable";
     static constexpr const char* sSemaphoreTestKeyStr = "AffinitMapTableTest";
     static constexpr const char* sSemaphoreInitCompleteHashStr = "AffinityMapTableSemaphoreInitialized";
-    static constexpr float sOpenTimeoutSec {10.0}; // semaphore open timeout = 10sec
-    static constexpr int sOpenRetry {3}; // semaphore open retry max
+    static constexpr float sOpenTimeoutSec {10.0}; // Semaphore open timeout: 10 seconds
+    static constexpr int sOpenRetry {3}; // Maximum semaphore open retry attempts
 
     bool mTestMode {false};
+    TestKeyStrFormat mTestKeyStrFormatVersion {TestKeyStrFormat::VER_1};
 
-    OpenCondition mSemOpenCondition {OpenCondition::UNDEFINED};
-    int mSemId {0};
+    OpenCondition mSemaphoreOpenCondition {OpenCondition::UNDEFINED};
+    int mSemaphoreId {0};
 
     std::shared_ptr<ShmAffinityInfoManager> mAffinityInfoManager;
 

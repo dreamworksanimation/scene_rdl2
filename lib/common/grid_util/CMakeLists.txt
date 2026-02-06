@@ -1,4 +1,4 @@
-# Copyright 2023-2025 DreamWorks Animation LLC
+# Copyright 2023-2026 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(component common_grid_util)
@@ -41,7 +41,8 @@ target_sources(${component}
         PackTilesPassPrecision.cc
         PackTilesTest.cc
         Parser.cc
-	PathVisSimGlobalInfo.cc
+        PathVisSimGlobalInfo.cc
+        Pipe.cc
 	PixelBufferSha1Hash.cc
 	Process.cc
 	ProgressiveFrameBufferName.cc

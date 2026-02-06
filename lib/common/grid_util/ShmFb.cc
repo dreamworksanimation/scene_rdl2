@@ -1,4 +1,4 @@
-// Copyright 2024-2025 DreamWorks Animation LLC
+// Copyright 2024-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "ShmFb.h"
 
@@ -425,10 +425,9 @@ ShmFb::verifyPixCol4(void* const pixAddr, const float col4[4]) const
 
 //------------------------------------------------------------------------------------------
 
-ShmFbManager::ShmFbManager(const int shmId)
+ShmFbManager::ShmFbManager(const int shmId, const bool readOnlyAccess)
 {
-    accessSetupShm(shmId, ShmFb::calcMinDataSize());
-    // std::cerr << ShmDataManager::show() << '\n'; // for debug
+    accessSetupShm(shmId, ShmFb::calcMinDataSize(), readOnlyAccess);
 
     //------------------------------
 
@@ -486,7 +485,8 @@ ShmFbManager::setupFb()
 {
     // only can read/write by myself 
     // read-only for other owner's processes 
-    constructNewShm(ShmFb::calcDataSize(mWidth, mHeight, mChanTotal, mChanMode), 0644); // 0644 is octal
+    constructNewShm(ShmFb::calcDataSize(mWidth, mHeight, mChanTotal, mChanMode),
+                    ShmDataManager::SHMFB_PERMISSION);
 
     try {
         mFb = std::make_shared<ShmFb>(mWidth, mHeight, mChanTotal, mChanMode, mTop2BottomFlag,
@@ -539,10 +539,9 @@ ShmFbCtrl::verifyMemBoundary() const
 
 //------------------------------------------------------------------------------------------
 
-ShmFbCtrlManager::ShmFbCtrlManager(const int shmId)
+ShmFbCtrlManager::ShmFbCtrlManager(const int shmId, const bool readOnlyAccess)
 {
-    accessSetupShm(shmId, ShmFbCtrl::calcDataSize());
-    // std::cerr << ShmDataManager::show() << '\n'; // for debug
+    accessSetupShm(shmId, ShmFbCtrl::calcDataSize(), readOnlyAccess);
 
     //------------------------------
 
@@ -589,7 +588,7 @@ ShmFbCtrlManager::setupFbCtrl()
 {
     // only can read/write by myself 
     // read-only for other owner's processes 
-    constructNewShm(ShmFbCtrl::calcDataSize(), 0644); // 0644 is octal
+    constructNewShm(ShmFbCtrl::calcDataSize(), ShmDataManager::SHMFB_PERMISSION);
 
     try {
         mFbCtrl = std::make_shared<ShmFbCtrl>(mShmAddr, mShmSize, true);

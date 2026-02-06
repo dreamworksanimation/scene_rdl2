@@ -1,4 +1,4 @@
-// Copyright 2024 DreamWorks Animation LLC
+// Copyright 2024-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include <iostream>
 
@@ -49,6 +49,13 @@ bool
 accessSetupShm(const int shmId, void** addr, size_t* size)
 {
     (*addr) = nullptr;
+
+    // 
+    // This program only accesses the opened shared memory in a read-only manner, so strictly speaking,
+    // the third argument of shmat() does not have to be 0. It will also function correctly if SHM_RDONLY
+    // is specified. However, since this program is intended as a sample implementation of accessing the
+    // shared memory framebuffer without using the MoonRay API, I am using 0 here, i.e., read/write mode.
+    //
     if (((*addr) = static_cast<void*>(shmat(shmId, NULL, 0))) == reinterpret_cast<void*>(-1)) {
         return false; // shmat error
     }

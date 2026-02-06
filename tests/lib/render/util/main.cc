@@ -1,10 +1,11 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+// Copyright 2023-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestArray2D.h"
 #include "TestAtomicFloat.h"
 #include "TestFiles.h"
 #include "TestMemPool.h"
 #include "TestProcCpuAffinity.h"
+#include "TestStrUtil.h"
 #include "TestThreadPoolExecutor.h"
 #include "test_util.h"
 
@@ -24,6 +25,7 @@ main(int argc, char *argv[])
 #endif // end of !PLATFORM_APPLE
     CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::threadPoolExecutor::unittest::TestThreadPoolExecutor);
     CPPUNIT_TEST_SUITE_REGISTRATION(TestCommonUtil); // 65.3025 sec on cobaltcard @ Apr/28/2025
+    CPPUNIT_TEST_SUITE_REGISTRATION(scene_rdl2::str_util::TestStrUtil);
 
     return pdevunit::run(argc, argv);    
 }

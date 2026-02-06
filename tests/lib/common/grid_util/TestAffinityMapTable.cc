@@ -1,9 +1,37 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestAffinityMapTable.h"
 #include "TimeOutput.h"
 
 #include <scene_rdl2/common/grid_util/AffinityMapTable.h>
+
+namespace {
+
+bool
+execDebugConsoleCmd(const std::string& funcName,
+                    scene_rdl2::grid_util::AffinityMapTable& affMapTbl,
+                    const std::string& command)
+{
+    std::string outMsg;
+
+    auto cmdErrorMsg = [&]() {
+        std::ostringstream ostr;
+        ostr << "ERROR : " << funcName << " debugConsoleCommand:\"" << command << "\" failed. outMsg={\n"
+             << scene_rdl2::str_util::addIndent(outMsg) << '\n'
+             << "}";
+        return ostr.str();        
+    };
+
+    bool result = true;
+    if (!affMapTbl.getParser().main(command, outMsg)) {
+        result = false;
+        std::cerr << cmdErrorMsg() << '\n';
+    }
+
+    return result;
+}
+
+} // namespace
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -45,27 +73,11 @@ TestAffinityMapTable::rmOldSemShm() const
 //
 {
     AffinityMapTable affMapTbl(true);
-    std::string outMsg;
 
     bool result = true;
-    if (!affMapTbl.getParser().main("rmShmIfAlreadyExist", outMsg)) {
-        result = false;
-        std::ostringstream ostr;
-        ostr << "ERROR : TestAffinityMapTable.cc TestAffinityMapTable::rmOldSemShm() "
-             << "parser command \"rmShmIfAlreadyExist\" failed. outMsg={\n"
-             << str_util::addIndent(str_util::rmLastNL(outMsg)) << "\n"
-             << "}";
-        std::cerr << ostr.str() << '\n';
-    }
-    if (!affMapTbl.getParser().main("rmUnusedSemaphore", outMsg)) {
-        result = false;
-        std::ostringstream ostr;
-        ostr << "ERROR : TestAffinityMapTable.cc TestAffinityMapTable::rmOldSemShm() "
-             << "parser command \"rmUnusedSemaphore failed. outMsg={\n"
-             << str_util::addIndent(str_util::rmLastNL(outMsg)) << "\n"
-             << "}";
-        std::cerr << ostr.str() << '\n';
-    }
+    if (!execDebugConsoleCmd("rmOldSemShm()", affMapTbl, "removeShmIfAlreadyExist")) result = false;
+    if (!execDebugConsoleCmd("rmOldSemShm()", affMapTbl, "removeOrphanedSemaphore")) result = false;
+
     return result;
 }
 
@@ -73,13 +85,10 @@ bool
 TestAffinityMapTable::openAffMapTbl() const
 {
     AffinityMapTable affMapTbl(true);
-    std::string outMsg;
 
     bool result = true;
-    if (!affMapTbl.getParser().main("testMode on open", outMsg)) {
-        result = false;
-        std::cerr << "ERROR : construct AffinityMapTable failed.\n";
-    }
+    if (!execDebugConsoleCmd("openAffMapTbl()", affMapTbl, "testMode on open")) result = false;
+
     return result;
 }
 
@@ -92,8 +101,6 @@ TestAffinityMapTable::openAffMapTblTimeout() const
 //
 {
     AffinityMapTable affMapTbl(true);
-    std::string outMsg;
-
     bool result = true;
 
     //
@@ -101,20 +108,15 @@ TestAffinityMapTable::openAffMapTblTimeout() const
     // was not properly setup up in the shred memory. In this case, the hash value is
     // all 0x0. The following operation mimics this condition.
     //
-    if (!affMapTbl.getParser().main("testMode on emulateOpenCrash", outMsg)) {
-        result = false;
-        std::cerr << "ERROR : AffinityMapTable emulateOpenCrash failed.\n";
-    }
+    if (!execDebugConsoleCmd("openAffMapTblTimeout()", affMapTbl, "testMode on emulateOpenCrash")) result = false;
 
     //
     // The initial try of open operation wait for the internal hash value to be updated,
     // but times out and retris the open sequence. This timeout is set up for 10 seconds
     // at this moment. If the retry succeeds, return true.
     //
-    if (!affMapTbl.getParser().main("testMode on open", outMsg)) {
-        result = false;
-        std::cerr << "ERROR : retry open AffinityMapTable failed.\n";
-    }
+    if (!execDebugConsoleCmd("openAffMapTblTimeout()", affMapTbl, "testMode on open")) result = false;
+
     return result;
 }
 

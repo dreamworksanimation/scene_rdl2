@@ -1,11 +1,15 @@
-// Copyright 2024-2025 DreamWorks Animation LLC
+// Copyright 2024-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+
+#include "Arg.h"
+#include "Parser.h"
 
 #include <cstdint>
 #include <cstring> // memcpy
 #include <functional>
 #include <string>
+#include <sys/types.h> // uid_t, gid_t
 
 namespace scene_rdl2 {
 namespace grid_util {
@@ -25,10 +29,12 @@ public:
     // This is a list of shared memory data which are recognized by ShmDataIO / ShmDataManager class.
     // You should add header strings here if adding a new data type to manage.
     static constexpr size_t headerSize = 64;
-    static constexpr const char* headerKeyShmFb      = "ShmFb "; // shared memory frame buffer
-    static constexpr const char* headerKeyShmFbCtrl  = "ShmFbCtrl "; // shared memory frame buffer controller
-    static constexpr const char* headerKeyShmAffInfo = "ShmAffInfo "; // shared affinity CPU/Mem info
-    static constexpr const size_t headerKeyMaxLen = sizeof(headerKeyShmAffInfo) - 1; // eliminate last NULL
+    static constexpr const std::string_view headerKeyShmFb      = "ShmFb "; // shared memory frame buffer
+    static constexpr const std::string_view headerKeyShmFbCtrl  = "ShmFbCtrl "; // shared memory frame buffer controller
+    static constexpr const std::string_view headerKeyShmAffInfo = "affinityInfo"; // shared affinity CPU/Mem info
+    static constexpr const size_t headerKeyMaxShmFbLen  = headerKeyShmFbCtrl.length(); // max len of shmFb
+    static constexpr const size_t headerKeyMaxShmAffLen = headerKeyShmAffInfo.length(); // max len of affInfo
+    static constexpr const size_t headerKeyMaxShmLen    = headerKeyMaxShmAffLen; // max len of all
 
     ShmDataIO(void* const dataStartAddr, const size_t dataSize)
         : mDataStartAddr { reinterpret_cast<uintptr_t>(dataStartAddr) }
@@ -157,9 +163,30 @@ class ShmDataManager
 //    
 {
 public:
-    using Msg = std::function<bool(const std::string& msg)>;
+    // Permission for shmFb
+    //   only can read/write by myself 
+    //   read-only for other owner's processes 
+    static constexpr int SHMFB_PERMISSION = 0644; // octal
 
-    ShmDataManager() {}
+    // Permission for AffinityMapTable
+    static constexpr int SHMAFFINFO_PERMISSION = 0666; // octal
+
+    using AffInfoDetailedDumpCallBack = std::function<std::string(const unsigned shmId, const std::string& ownerStr)>;
+    using Arg = scene_rdl2::grid_util::Arg;
+    using Msg = std::function<bool(const std::string& msg)>;
+    using Parser = scene_rdl2::grid_util::Parser;
+    
+    //
+    // This enum is used to specify the version of the logic that generates a KeyID from a Key string.
+    // VER_0 exists for backward compatibility and is mainly used for debugging purposes. At runtime in release
+    // version, VER_1 is used.
+    //
+    enum class KeyIdByStrVer : unsigned int {
+        VER_0 = 0, // Value outside the recommended range (negative value) may also occur. Not recommended
+        VER_1      // Always produces positive value
+    };
+
+    ShmDataManager() { parserConfigure(); }
     virtual ~ShmDataManager() { dtShm(); }
 
     bool dtShm(); // detach shared memory
@@ -167,7 +194,16 @@ public:
 
     int getShmId() const { return mShmId; }
 
-    static bool isShmAvailable(const std::string& keyStr); // might throw exception(std::string) if error
+    static bool isShmAvailableByKey(const std::string& keyStr,
+                                    const KeyIdByStrVer keyIdByStrVer); // might throw exception(std::string) if error
+
+    // return -1 if there is no shared memory
+    // return positiveNumber : return existed shared memory's id related keyStr    
+    // never returns 0.
+    // throw exception(std:string) if error
+    static int getShmIdIfAvailableByKey(const std::string& keyStr, const KeyIdByStrVer keyIdByStrVer);
+
+    static std::string getShmUserNameByShmId(const int shmId);
 
     static std::string shmHexDump(const int shmId, const size_t size); // for debug
     static std::string shmGet(const int shmId, const size_t size); 
@@ -178,58 +214,92 @@ public:
 
     //------------------------------
     
-    static int genInt32KeyBySHA1(const std::string& keyStr);
+    static int genKeyIdByStr(const std::string& keyStr, const KeyIdByStrVer keyIdByStrVer);
 
     // maxShmId is only used digit alignment. skip alignment if set to 0
-    static std::string showShm(const int shmId, const int maxShmId = 0);
+    static std::string showShm(const int shmId,
+                               const int maxShmId = 0,
+                               const bool accessShmFb = true,
+                               const bool accessShmAffInfo = true);
 
-    static std::string showAllShmList();
+    static std::string showAllShmFbList();
+    static std::string showAllShmAffInfoList(const AffInfoDetailedDumpCallBack& callBack);
+    static std::string showAllShmList(const AffInfoDetailedDumpCallBack& callBack); // show ShmFb + ShmAffinityMapTable
+    static std::string showKeyIdByStrVer(const KeyIdByStrVer keyIdByStrVer);
 
     std::string show() const;
+
+    Parser& getParser() { return mParser; }
 
 protected:
 
     void initMembers();
 
+    static int genInt32KeyBySHA1(const std::string& keyStr);
+    static int genPositiveInt32KeyBySHA1(const std::string& keyStr);
+
     //------------------------------
 
     void constructNewShm(const size_t memSize,
-                         const int permissionFlag); // might throw an exception(std::string) 
-    void accessSetupShm(const int shmId, const size_t minDataSize); // might throw an exception(std::string) 
+                         const int permission); // throw an exception(std::string) if error
+    void accessSetupShm(const int shmId,
+                        const size_t minDataSize,
+                        const bool readOnlyAccess); // throw an exception(std::string) if error
 
     // Returns the status indicating whether the target shared memory already existed or did not exist.
     bool constructNewShmByKey(const std::string& keyStr,
+                              const KeyIdByStrVer keyIdByStrVer,
                               const size_t memSize,
-                              const int permissionFlag); // might throw exception(std::string)
+                              const int permission); // might throw exception(std::string)
     // Accesses already existed shared memory data.
     // This API throws an exception when can not access the shared memory.
     void accessSetupShmByKey(const std::string& keyStr,
+                             const KeyIdByStrVer keyIdByStrVer,
                              const size_t memSize); // might throw an exception(std::string)
-
+    
     //------------------------------
 
-    //
     // An existing shared memory segment can be deleted only by its creator or by the root user.
     // If anyone other than the creator or root attempts to remove it, an error will occur.
-    //
-    static bool rmUnusedShmByKey(const std::string& keyStr, const std::string& headerKey, const Msg& msgCallBack);
+    static bool rmUnusedShmByKey(const std::string& keyStr,
+                                 const KeyIdByStrVer keyIdByStrVer,
+                                 const std::string& headerKey,
+                                 const Msg& msgCallBack);
     static bool rmUnusedShm(const int shmId, const std::string& headerKey, const Msg& msgCallBack);
-    static bool rmAllUnusedShm(const std::string& headerKey, const Msg& msgCallBack);
+    static bool rmAllUnusedShm(const std::string& headerKey, const int permission, const Msg& msgCallBack);
 
     //------------------------------
     
     std::string getHeader(const size_t headerSize) const;
     
-    static unsigned getMaxShmId(); // return max shmId of ShmFb and ShmFbCtrl
-    static bool isShmData(const unsigned shmId); // is this shared memory ShmFb or ShmFbCtrl?
+    static std::string showAllShmListMain(const int permission,
+                                          const bool accessShmFb,
+                                          const bool accessShmAffInfo,
+                                          const AffInfoDetailedDumpCallBack& affInfoDetaildDumpCallBack);
+    static std::string showDetailedAffInfo(const unsigned shmId, const std::string& ownerStr);
+
+    static unsigned getMaxShmId(const bool accessShmFb, const bool accessShmAffInfo);
+    static unsigned getMaxShmSize(const bool accessShmFb, const bool accessShmAffInfo);
+    static bool isShmData(const unsigned shmId, const bool checkShmFb, const bool checkShmAffInfo);
 
     //------------------------------
 
+    void parserConfigure();
+
+    //------------------------------
+
+    bool mShmReadOnly {false}; // opened readOnly mode
+
+    int mShmPermission {0}; // shared memory permission
+    uid_t mShmOwnerUid {(uid_t)-1}; // owner UID of this shared memory
+    gid_t mShmOwnerGid {(gid_t)-1}; // owner GID of this shared memory
     int mShmId {-1}; // shared memory index
     size_t mShmSize {0}; // shared memory size
     unsigned mShmNAttach {0}; // attached process count of shared memory when it was opened (i.e. shmat())
     void* mShmAddr {nullptr}; // runtime bound memory address of shared memory 
-};
+
+    Parser mParser;    
+}; // class ShmDataManager
 
 } // namespace grid_util
 } // namespace scene_rdl2

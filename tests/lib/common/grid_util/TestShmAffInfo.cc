@@ -1,4 +1,4 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #include "TestShmAffInfo.h"
 #include "TestShmUtil.h"
@@ -13,6 +13,8 @@ namespace scene_rdl2 {
 namespace grid_util {
 namespace unittest {
 
+constexpr static ShmAffinityInfoManager::TestKeyStrFormat CurrTestKeyStrFormat = ShmAffinityInfoManager::TestKeyStrFormat::VER_1;
+    
 void
 TestShmAffInfo::testAffInfoDataSize()
 {
@@ -120,11 +122,14 @@ TestShmAffInfo::testAffInfoManagerMain(const int dataTypeId) const
     std::string dataTypeIdStr = std::to_string(dataTypeId);
     std::string outMessage;
 
+    constexpr ShmAffinityInfoManager::TestKeyStrFormat formatVersion = CurrTestKeyStrFormat;
+
     //------------------------------
     //
     // Setup data
     //
-    std::shared_ptr<ShmAffinityInfoManager> infoManager = std::make_shared<ShmAffinityInfoManager>(false, testMode);
+    std::shared_ptr<ShmAffinityInfoManager> infoManager =
+        std::make_shared<ShmAffinityInfoManager>(false /*=accessOnly*/, testMode, formatVersion);
 
     bool flag = infoManager->getParser().main("storeTestData " + dataTypeIdStr, outMessage);
     if (!flag) {
@@ -141,7 +146,8 @@ TestShmAffInfo::testAffInfoManagerMain(const int dataTypeId) const
     //
     // Verify data
     //
-    infoManager = std::make_shared<ShmAffinityInfoManager>(true, testMode); // recreate new infoManager
+    infoManager = std::make_shared<ShmAffinityInfoManager>(true /*=accessOnly*/,
+                                                           testMode, formatVersion); // recreate new infoManager
     flag = infoManager->getParser().main("verifyTestData " + dataTypeIdStr, outMessage);
     if (!flag) {
         std::cerr << "RUNTIME-ERROR: TestShmAffInfo.cc parser.main() failed. verifyTestData."
@@ -183,7 +189,7 @@ TestShmAffInfo::testCoreAllocationMain(const std::string& modeStr,
                                        const int randMaxSize, const int myPidUpdateInterval) const
 {
     auto analyzeLogAndGetTotalTestCount = [](const std::string& log) -> int {
-        constexpr const char* key = "verityCoreAllocationTestTotal=";
+        constexpr const char* key = "verifyCoreAllocationTestTotal=";
         size_t keySize = strlen(key); 
         std::istringstream istr(log);
         std::string line;
@@ -203,28 +209,33 @@ TestShmAffInfo::testCoreAllocationMain(const std::string& modeStr,
 
     CPPUNIT_ASSERT_MESSAGE("testCoreAllocation initial cleanup", rmOldShmAffInfo("testCoreAllocationMain()/before"));
 
-    constexpr bool testMode = true;
-    std::shared_ptr<ShmAffinityInfoManager> infoManager = std::make_shared<ShmAffinityInfoManager>(false, testMode);
-
-    std::string outMessage;
-    std::ostringstream ostr;
-    ostr << "verifyCoreAllocation " << modeStr << ' ' << randMaxSize << ' ' << myPidUpdateInterval;
-    bool flag = infoManager->getParser().main(ostr.str(), outMessage);
     int totalTest = 0;
-    if (!flag) {
-        std::cerr << "RUNTIME-ERROR : TestShmAffInfo.cc parser.main() failed verifyCoreAllocation command."
-                  << " modeStr:" << modeStr
-                  << " randMaxSize:" << randMaxSize
-                  << " myPidUpdateInterval:" << myPidUpdateInterval << " {\n"
-                  << str_util::addIndent(outMessage) << '\n'
-                  << "}\n";
-    } else {
-        totalTest = analyzeLogAndGetTotalTestCount(outMessage);
-        CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verify log analyze", totalTest >= 0);
-    }
-    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verifyCoreAllocation", flag);
+    {
+        constexpr bool testMode = true;
+        constexpr ShmAffinityInfoManager::TestKeyStrFormat formatVersion = CurrTestKeyStrFormat;
+        std::shared_ptr<ShmAffinityInfoManager> infoManager =
+            std::make_shared<ShmAffinityInfoManager>(false /*=accessOnly*/, testMode, formatVersion);
 
-    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation post cleanup", rmOldShmAffInfo("testCoreAllocationMain()/after"));
+        std::string outMessage;
+        std::ostringstream ostr;
+        ostr << "verifyCoreAllocation " << modeStr << ' ' << randMaxSize << ' ' << myPidUpdateInterval;
+        bool flag = infoManager->getParser().main(ostr.str(), outMessage);
+        if (!flag) {
+            std::cerr << "RUNTIME-ERROR : TestShmAffInfo.cc parser.main() failed verifyCoreAllocation command."
+                      << " modeStr:" << modeStr
+                      << " randMaxSize:" << randMaxSize
+                      << " myPidUpdateInterval:" << myPidUpdateInterval << " {\n"
+                      << str_util::addIndent(outMessage) << '\n'
+                      << "}\n";
+        } else {
+            totalTest = analyzeLogAndGetTotalTestCount(outMessage);
+            CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verify log analyze", totalTest >= 0);
+        }
+        CPPUNIT_ASSERT_MESSAGE("testCoreAllocation verifyCoreAllocation", flag);
+    }
+
+    // We have to clean up the shm after destructed ShmAffinityInfoManager
+    CPPUNIT_ASSERT_MESSAGE("testCoreAllocation post cleanup", rmOldShmAffInfo("testCoreAllocationMain() after"));
 
     return totalTest;
 }
@@ -233,11 +244,12 @@ bool
 TestShmAffInfo::rmOldShmAffInfo(const std::string& headMsg) const
 {
     constexpr bool testModeEnabled = true;
-    return ShmAffinityInfoManager::rmShmIfAlreadyExistCmd(testModeEnabled,
-                                                         [&](const std::string& msg) {
-                                                             std::cerr << headMsg << ' ' << msg;
-                                                             return true;
-                                                         });
+    return ShmAffinityInfoManager::removeShmIfAlreadyExistCmd(testModeEnabled,
+                                                              CurrTestKeyStrFormat,
+                                                              [&](const std::string& msg) {
+                                                                  std::cerr << headMsg << ' ' << msg;
+                                                                  return true;
+                                                              });
 }
 
 } // namespace unittest

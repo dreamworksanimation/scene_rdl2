@@ -1,4 +1,4 @@
-// Copyright 2025 DreamWorks Animation LLC
+// Copyright 2025-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -16,10 +16,12 @@
 namespace scene_rdl2 {
 namespace grid_util {
 
-#define SHM_AFFINITY_INFO_HEADKEY "affinityInfo"
-
 class CpuSocketUtil;
 class NumaUtil;
+
+namespace shmAffinityInfo_detail {
+    class HelperManager;
+}
 
 class ShmAffinityInfo : public ShmDataIO
 //
@@ -30,14 +32,14 @@ public:
     using Hash = Sha1Util::Hash;
 
     ShmAffinityInfo(const Hash& hash,
-                    void* const dataStartAddr, const size_t dataSize, const bool doInit)
+                    void* const dataStartAddr, size_t dataSize, bool doInit)
         : ShmDataIO {dataStartAddr, dataSize}
     {
         if (!verifyMemBoundary()) {
             throw(errMsg("ShmAffinityInfo constructor", "verify memory size/boundary failed"));
         }
         if (doInit) {
-            setHeadMessage(SHM_AFFINITY_INFO_HEADKEY);
+            setHeadMessage(std::string(ShmDataIO::headerKeyShmAffInfo));
             setShmDataSize(dataSize);
             //------------------------------
             setSemInitHash(hash);
@@ -97,7 +99,7 @@ public:
     std::string showCoreInfoTable2(const NumaUtil* numaUtilObsPtr = nullptr,
                                    const CpuSocketUtil* cpuSocketUtilObsPtr = nullptr) const;
 
-    bool verifySetGet(const int dataTypeId); // so far only available 0 for dataTypeId at this moment
+    bool verifySetGet(int dataTypeId); // so far only available 0 for dataTypeId at this moment
 
 private:
     // We should not remove or change the order of following items. We are only available to add new items at
@@ -157,8 +159,8 @@ private:
     static size_t calcTotalShmSize() { return offset_coreInfoStart + calcCoreInfoTableSize(); }
     static unsigned getTotalNumCores();
 
-    bool verifySetGetMain(const int dataTypeId, const bool setup);
-    bool verifySetGetMain_type0(const bool setup);
+    bool verifySetGetMain(int dataTypeId, bool setup);
+    bool verifySetGetMain_type0(bool setup);
 };
 
 class ShmAffinityInfoManager : public ShmDataManager
@@ -171,19 +173,39 @@ public:
     using Hash = Sha1Util::Hash;
     using MsgFunc = std::function<bool(const std::string& msg)>;
 
+    enum class TestKeyStrFormat : unsigned int {
+        VER_0 = 0, // original version only uses sSemTestKeyStr
+        VER_1      // sSemTestKeyStr + '_' + userName
+    };
+
     // Construct a fresh ShmAffinityInfoManager from scratch and generate a new shmId
     // Might throw exception(std::string) if error
-    ShmAffinityInfoManager(const bool accessOnly, const bool testMode = false);
+    ShmAffinityInfoManager(bool accessOnly,
+                           bool testMode,
+                           TestKeyStrFormat formatVersion);
 
-    static bool doesShmAlreadyExist(const bool testMode); // might throw exception(std::string) if error
+    // might throw exception(std::string) if error
+    static bool doesShmAlreadyExist(bool testMode,
+                                    TestKeyStrFormat formatVersion);
 
-    // An existing shared memory segment can be deleted only by its creator or by the root user.
-    // If anyone other than the creator or root attempts to remove it, an error will occur.
-    static bool rmShmIfAlreadyExist(const bool testMode, const MsgFunc& msgCallBack); // might throw exception(std::string) if error
-    static bool rmShmIfAlreadyExistCmd(const bool testMode, const MsgFunc& msgCallBack);
+    // return -1 if there is no shared memory
+    // return positiveNumber : return existed shared memory's id related keyStr    
+    // never returns 0.
+    // throw exception(std::string) if error
+    static int getShmIdIfAvailable(bool testMode,
+                                   TestKeyStrFormat formatVersion);
 
-    std::string acquireAffinityCores(const int requestedCoreTotal,
-                                    const bool verifyMode = false); // Might throw exception(std::string) if error
+    // might throw exception(std::string) if error
+    static bool removeShmIfAlreadyExist(bool testMode,
+                                        TestKeyStrFormat formatVersion,
+                                        const MsgFunc& msgCallBack);
+
+    static bool removeShmIfAlreadyExistCmd(bool testMode,
+                                           TestKeyStrFormat formatVersion,
+                                           const MsgFunc& msgCallBack);
+
+    std::string acquireAffinityCores(int requestedCoreTotal,
+                                     bool verifyMode = false); // Might throw exception(std::string) if error
     void releaseAffinityCores(const std::string& coreIdDefStr); // Might throw exception(std::string) if error
 
     ShmAffinityInfo& getAffinityInfo() const { return *(mAffinityInfo.get()); };
@@ -194,11 +216,16 @@ public:
     std::string showNumaUtil() const;
     std::string showCpuSocketUtil() const;
 
-    static std::string showShmDump(const bool testMode = false);
+    static std::string showShmDump(bool testMode,
+                                   TestKeyStrFormat formatVersion);
+    static std::string showTestKeyStrFormat(TestKeyStrFormat formatVersion);
+    static std::string showShmIdDetailedInfo(int shmId, const std::string& userName);
 
     Parser& getParser() { return mParser; }
 
 private:
+    friend class shmAffinityInfo_detail::HelperManager; // HelperManager class requires access to protected members
+
     enum class SetupCondition : int {
         UNDEFINED,
         INITIALIZED,
@@ -207,59 +234,48 @@ private:
 
     void setupFreshAffinityInfo(); // might throw exception(std::string) if error
     void accessAffinityInfo(); // might throw exception(std::string) if error
-    static const std::string getShmKeyStr(const bool testMode);
-
-    bool setCore(const unsigned coreId, const bool occupancy, const size_t pid);
-
-    static std::string setupConditionStr(const SetupCondition& condition);
+    static std::string getShmKeyStr(bool testMode, TestKeyStrFormat formatVersion);
+    static std::string getShmTestKeyStr(const std::string& userName, // using my process's user name if userName is empty
+                                        TestKeyStrFormat formatVersion);
+    bool setCore(unsigned coreId, bool occupancy, size_t pid);
 
     void parserConfigure();
-    bool updateCoreInfo(const std::string& coreIdDefStr, const bool occupancy, const size_t pid,
+    bool updateCoreInfo(const std::string& coreIdDefStr, bool occupancy, size_t pid,
                         const MsgFunc& msgCallBack);
-    bool updateCoreInfo(const std::vector<unsigned>& coreIdTbl, const bool occupancy, const size_t pid,
+    bool updateCoreInfo(const std::vector<unsigned>& coreIdTbl, bool occupancy, size_t pid,
                         const MsgFunc& msgCallBack);
-    bool updateAllCoreInfo(const bool occupancy, const size_t pid,
+    bool updateAllCoreInfo(bool occupancy, size_t pid,
                            const MsgFunc& msgCallBack);
-    bool storeTestData(const int testDataTypeId, const MsgFunc& msgCallBack);
-    bool verifyTestData(const int testDataTypeId, const MsgFunc& msgCallBack);
-    bool setGetTestData(const int testDataTypeId, const bool storeFlag);
+    bool storeTestData(int testDataTypeId, const MsgFunc& msgCallBack);
+    bool verifyTestData(int testDataTypeId, const MsgFunc& msgCallBack);
+    bool setGetTestData(int testDataTypeId, bool storeFlag);
 
     bool verifyCoreAllocation(const std::string& modeStr,
-                              const int randMaxSize,
-                              const int myPidUpdateInterval,
+                              int randMaxSize,
+                              int myPidUpdateInterval,
                               const MsgFunc& msgCallBack);
     void resetMode(const std::string& modeStr, const MsgFunc& msgCallBack);
-    bool verifyCoreAllocationMain(const int requestCoresTotal, const MsgFunc& msgCallBack);
-    std::string msgVerifyStrInit(const int randMaxSize, const int myPidUpdateInterval) const;
-    std::string msgVerifyStrTestLoopHeader(const int testId, const size_t testMyPid) const;
-    std::string msgVerifyErrorStrCoreSizeMismatch(const int availableTotal, const int currAvailableTotal) const;
-    std::string msgVerifyStrTestLoopVerifyOK(const int testId, const int changePidTotal) const;
+    bool verifyCoreAllocationMain(int requestCoresTotal, const MsgFunc& msgCallBack);
+    std::string msgVerifyStrInit(int randMaxSize, int myPidUpdateInterval) const;
+    std::string msgVerifyStrTestLoopHeader(int testId, size_t testMyPid) const;
+    std::string msgVerifyErrorStrCoreSizeMismatch(int availableTotal, int currAvailableTotal) const;
+    std::string msgVerifyStrTestLoopVerifyOK(int testId, int changePidTotal) const;
     std::string msgVerifyStrFinalOK(const std::string& modeStr,
-                                    const int initialAvailableTotal,
-                                    const int randMaxSize,
-                                    const int myPidUpdateInterval,
-                                    const int totalTest,
-                                    const int changePidTotal) const;
+                                    int initialAvailableTotal,
+                                    int randMaxSize,
+                                    int myPidUpdateInterval,
+                                    int totalTest,
+                                    int changePidTotal) const;
 
     //------------------------------
 
     static constexpr const char* sShmKeyStr = "AffinityInfoSharedMemoryKey";
     static constexpr const char* sShmTestKeyStr = "AffinityInfoSharedMemoryTestKey";
 
-    //
-    // mTestMode = true is used only in UnitTests.
-    // The UnitTests are designed to verify the behavior of ShmAffinityInfo, but runnning these tests using
-    // the same shared memory as the one used in the production environment poses a significant risk.
-    // This is because processes in the production environment may already be using that shared memory,
-    // and they cannot be stopped just to run the tests. To avoid this, the UnitTest internally switches
-    // to use a different shared memory key than the one used in production.
-    // This switching behavior is triggered by the mTestMode flag. Therefore, mTestMode = true must be used
-    // only in the UnitTest environment, and in all release environment, it must always remain set to false.
-    //
-    const bool mTestMode {false};
-
+    bool mTestMode {false};
+    TestKeyStrFormat mTestKeyStrFormatVersion {TestKeyStrFormat::VER_1};
     std::unique_ptr<ShmAffinityInfo> mAffinityInfo;
-    SetupCondition mShmSetupCondition { SetupCondition::UNDEFINED };
+    SetupCondition mShmSetupCondition {SetupCondition::UNDEFINED};
 
     std::unique_ptr<NumaUtil> mNumaUtil;
     std::unique_ptr<CpuSocketUtil> mCpuSocketUtil;
