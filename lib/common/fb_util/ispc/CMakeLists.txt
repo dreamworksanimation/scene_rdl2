@@ -56,8 +56,8 @@ SConscript_Stub(${component})
 SceneRdl2_ispc_compile_options(${component})
 SceneRdl2_link_options(${component})
 
-get_target_property(objLibDeps ${component} DEPENDENCY)
-if(NOT objLibDeps STREQUAL "")
+get_target_property(objLibDeps ${component} ISPC_DEP_TARGET)
+if(objLibDeps)
     add_dependencies(${objLibDeps} 
         ${PROJECT_NAME}::common_platform
         ${PROJECT_NAME}::math_ispc
