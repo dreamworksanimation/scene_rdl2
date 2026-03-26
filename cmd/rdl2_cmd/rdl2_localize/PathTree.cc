@@ -1,24 +1,23 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+// Copyright 2023-2026 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 
 #include "PathTree.h"
 
-#include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <scene_rdl2/render/util/Files.h>
 #include <scene_rdl2/scene/rdl2/rdl2.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include <iostream>
 
 using namespace scene_rdl2;
-namespace bf = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace rdl2_localize {
 namespace {
@@ -205,29 +204,31 @@ PathTree::expandPaths(const PathNode* current, const std::vector<float>& sampleN
             size_t udimPos;
             if ((udimPos = path.find(UDIM_TOKEN)) != std::string::npos) {
                 try {
-                    bf::path bfpath(path);
+                    fs::path fspath(path);
                     const std::string pthNoUdim = path.substr(0, udimPos);
-                    for (bf::directory_iterator it(bfpath.parent_path()); it != bf::directory_iterator(); ++it) {
-                        std::string tstPath = it->path().string();
+                    for (const auto& entry : fs::directory_iterator(fspath.parent_path())) {
+                        std::string tstPath = entry.path().string();
                         if (tstPath.find(pthNoUdim) != std::string::npos) {
                             // Extract UDIM portion and make sure it's valid
                             std::string udim = tstPath.substr(pthNoUdim.size());
                             // Verify the "UDIM" portion of the path is 4 elements, all digits in the range 1001-9990
                             if (udim.size() > 4) {
                                 try {
-                                    auto udimNumber = boost::lexical_cast<unsigned int>(udim.substr(0, 4));
+                                    unsigned long udimNumber = std::stoul(udim.substr(0, 4));
                                     if (udimNumber >= 1001 && udimNumber <= 9990) {
                                         pathsToInsert.push_back(tstPath);
                                     }
-                                } catch (const boost::bad_lexical_cast&) {
+                                } catch (const std::invalid_argument&) {
                                     // Conversion to unsigned int failed, try the next path
+                                    continue;
+                                } catch (const std::out_of_range&) {
                                     continue;
                                 }
                             }
                         }
                     }
                 }
-                catch (const boost::filesystem::filesystem_error& e) {
+                catch (const fs::filesystem_error& e) {
                     std::cerr << "Warning:" << e.what() << std::endl;
                 }
             }
@@ -268,9 +269,10 @@ PathTree::getFileCopies(const PathNode* current, const std::string& srcPrefix,
             srcPath.append("/");
             srcPath.append(path);
 
-            // If the source path isn't absolute, add the source prefix.
+            // If the source path isn't absolute, resolve it relative to the
+            // source prefix (the input RDL file's directory).
             if (!util::isAbsolute(srcPath)) {
-                srcPath = srcPrefix;
+                srcPath = srcPrefix + "/" + srcPath;
             }
 
             // Construct the destination path.

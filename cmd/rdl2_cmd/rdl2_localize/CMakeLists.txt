@@ -1,4 +1,4 @@
-# Copyright 2023-2024 DreamWorks Animation LLC
+# Copyright 2023-2026 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
 set(target rdl2_localize)
@@ -9,17 +9,12 @@ target_sources(${target}
     PRIVATE
         LocalizableAttributes.cc
         Localizer.cc
-        MinUniqueSuffixMap.cc
         PathTree.cc
         rdl2_localize.cc
 )
 
 target_link_libraries(${target}
     PRIVATE
-        Boost::filesystem
-        Boost::program_options
-        Boost::regex
-        Boost::thread
         ${PROJECT_NAME}::render_logging
         ${PROJECT_NAME}::render_util
         ${PROJECT_NAME}::scene_rdl2
