@@ -12,10 +12,6 @@ target_sources(${target}
 
 target_link_libraries(${target}
     PRIVATE
-        Boost::filesystem
-        Boost::program_options
-        Boost::regex
-        Boost::thread
         ${PROJECT_NAME}::render_logging
         ${PROJECT_NAME}::scene_rdl2
 )
