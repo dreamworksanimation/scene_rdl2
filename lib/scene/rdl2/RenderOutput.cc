@@ -18,6 +18,7 @@ AttributeKey<Int> RenderOutput::sAttrStateVariable;
 AttributeKey<String> RenderOutput::sAttrPrimitiveAttribute;
 AttributeKey<Int> RenderOutput::sAttrPrimitiveAttributeType;
 AttributeKey<String> RenderOutput::sAttrMaterialAov;
+AttributeKey<Bool> RenderOutput::sAttrMaterialAovSecondaryRays;
 AttributeKey<String> RenderOutput::sAttrLpe;
 AttributeKey<String> RenderOutput::sAttrVisibilityAov;
 AttributeKey<String> RenderOutput::sAttrFileName;
@@ -223,6 +224,15 @@ RenderOutput::declare(SceneClass &sceneClass)
                            "\n\t\talbedo              : Albedo of all rendered materials "
                            "\n\t\tR.albedo            : Total reflection albedo "
                            "\n\t\t'spec'.MG.roughness : Roughness of all mirror and glossy lobes that have the 'spec' label");
+    // "material aov secondary rays"
+    sAttrMaterialAovSecondaryRays = sceneClass.declareAttribute<Bool>(
+        "material_aov_secondary_rays", false, { "material aov secondary rays" });
+    sceneClass.setMetadata(sAttrMaterialAovSecondaryRays, "label", "material aov secondary rays");
+    sceneClass.setMetadata(sAttrMaterialAovSecondaryRays, SceneClass::sComment,
+                           "When \"result\" is \"material aov\", this controls whether the material aov "
+                           "is evaluated on secondary (indirect) rays in addition to primary rays.  "
+                           "Enabling this allows material aovs to appear behind refractive or "
+                           "reflective surfaces.  Defaults to false for backward compatibility.");
     // "lpe"
     sAttrLpe = sceneClass.declareAttribute<String>("lpe", "", {"light_aov", "light aov" });
     sceneClass.setMetadata(sAttrLpe, "label", "light path expression");
@@ -494,6 +504,12 @@ void
 RenderOutput::setMaterialAov(const String &materialAov)
 {
     set(sAttrMaterialAov, materialAov);
+}
+
+void
+RenderOutput::setMaterialAovSecondaryRays(bool f)
+{
+    set(sAttrMaterialAovSecondaryRays, f);
 }
 
 void

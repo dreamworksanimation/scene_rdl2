@@ -187,6 +187,11 @@ public:
     finline String getMaterialAov() const;
     void setMaterialAov(const String &materialAov);
 
+    /// If the result is "material aov", should the aov be evaluated
+    /// on secondary (indirect) rays as well as primary rays?
+    finline bool getMaterialAovSecondaryRays() const;
+    void setMaterialAovSecondaryRays(bool f);
+
     /// If the result is "light aov", what is the light path
     /// expression we should use?
     finline String getLpe() const;
@@ -288,6 +293,7 @@ private:
     static AttributeKey<String> sAttrPrimitiveAttribute;
     static AttributeKey<Int> sAttrPrimitiveAttributeType;
     static AttributeKey<String> sAttrMaterialAov;
+    static AttributeKey<Bool> sAttrMaterialAovSecondaryRays;
     static AttributeKey<String> sAttrLpe;
     static AttributeKey<String> sAttrVisibilityAov;
     static AttributeKey<String> sAttrFileName;
@@ -371,6 +377,12 @@ String
 RenderOutput::getMaterialAov() const
 {
     return get(sAttrMaterialAov);
+}
+
+bool
+RenderOutput::getMaterialAovSecondaryRays() const
+{
+    return get(sAttrMaterialAovSecondaryRays);
 }
 
 String
