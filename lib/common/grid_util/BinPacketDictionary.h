@@ -5,6 +5,7 @@
 #include <scene_rdl2/render/cache/ValueContainerDequeue.h>
 #include <scene_rdl2/render/cache/ValueContainerEnqueue.h>
 
+#include <functional>
 #include <string>
 
 namespace scene_rdl2 {
